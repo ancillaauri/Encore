@@ -40,6 +40,15 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Mic track "had everything" in the editor | Measured: Encore's Microphone track contains only the voice (no correlation with any app audio). Cause is the editor's lumping/preview; fixed by the same editor change. | [ ] |
 | Per-app split | Confirmed working: Spotify and Edge on separate tracks, fully separated; all tracks within 5 ms of each other, no drift over 63 s. | [x] |
 
+## Found in testing (0.5.1, 2026-10-31)
+
+| Issue | Finding | Status |
+|---|---|---|
+| Game recordings choppy while playing | Measured on three clips: while the game is in front, only 0–10 of every 60 frames are new (the rest repeat). Smooth in Steam and other windows, and smooth again when the game is in the background. The other tester's clip (Deadlock, same Encore) is smooth. Points to the game using all of the GPU so the capture gets starved, as seen with other recorders using the same Windows capture. Confirming with two tests (game FPS capped; Encore run as administrator), then: raise Encore's GPU priority while recording. | [ ] |
+| Save folder layout | The chosen folder gets an `Encore` folder made inside it, with a folder per category: e.g. `D:\Program Files\` → `D:\Program Files\Encore\Desktop\`, `...\Encore\Warframe\`. Say so next to the setting. | [ ] |
+| File size with many audio tracks | Measured: all audio tracks together are about 0.7 Mbps of a 25–66 Mbps file (1–3 %). Size comes from the video bitrate. Options: smaller app tracks (silent ones already cost almost nothing), HEVC/AV1, custom bitrate with a size-per-minute readout. | [ ] |
+| App track named "App 24720" | An app whose program details couldn't be read (likely a protected process) got a placeholder name. Fall back to its program file name, which is always readable. | [ ] |
+
 ## Match the editor exactly (design rule; next UI pass)
 
 | Difference | Status |
