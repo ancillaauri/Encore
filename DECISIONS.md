@@ -167,6 +167,18 @@ being recorded glows red. "Game" shows "Coming soon" until game detection is bui
 Opens at 1500x920 (shrunk to fit smaller screens), minimum 980x640, and reopens at the size and
 place it was closed at, as the editor does. The monitor picker stays on one line at any size.
 
+## 2026-10-31: In-game stutter, save folder, audio size (0.5.2)
+- Stutter: three clips showed only 0–10 new frames a second while the game was in front; Task
+  Manager showed the game at 90.8 % GPU. The capture (inside FFmpeg) was being starved. FFmpeg now
+  gets raised GPU scheduling priority (realtime when Encore runs as administrator, otherwise high)
+  and above-normal CPU priority, as other recorders do. Capping the game's frame rate also helps.
+- Save folder: recordings go in `<chosen folder>\Encore\<category>\`. The default chosen folder
+  becomes Videos, so the default location is unchanged. A folder already named Encore is used as it
+  is. The folder is checked for write access when the setting changes.
+- Audio size: measured at 1–3 % of the file, so the file size is the video. Extra tracks drop to
+  128 kbps (Full mix stays 192). Bigger savings: custom bitrate, HEVC/AV1.
+- Apps whose details can't be read are named after their program file instead of "App <number>".
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.

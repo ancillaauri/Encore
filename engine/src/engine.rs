@@ -85,6 +85,20 @@ pub struct Engine {
 /// How long the focus must stay on another monitor before the recording moves there.
 const SWITCH_SETTLE: Duration = Duration::from_millis(300);
 
+/// Makes sure recordings can be saved in `dir` (creating it), before the setting is accepted.
+fn check_writable(dir: &std::path::Path) -> Result<(), String> {
+    let test = dir.join(".encore-write-test");
+    std::fs::create_dir_all(dir)
+        .and_then(|_| std::fs::write(&test, b"ok"))
+        .and_then(|_| std::fs::remove_file(&test))
+        .map_err(|e| {
+            format!(
+                "Encore can't save recordings in {} ({e}). Pick another folder: some, like C:\\Program Files, need administrator rights.",
+                dir.display()
+            )
+        })
+}
+
 /// The stable id of the monitor with this handle (what the interface knows monitors by).
 fn monitor_id(handle: u64) -> Option<String> {
     platform::list_monitors().into_iter().find(|m| m.handle == handle).map(|m| m.id)
@@ -201,6 +215,9 @@ impl Engine {
 
     fn set_settings(&mut self, patch: &Value) -> Result<Value, String> {
         let updated = self.settings.apply_patch(patch)?;
+        if updated.output_dir != self.settings.output_dir {
+            check_writable(&paths::encore_root(&PathBuf::from(&updated.output_dir)))?;
+        }
         updated.save()?;
         self.settings = updated;
         Ok(serde_json::to_value(&self.settings).unwrap_or(Value::Null))

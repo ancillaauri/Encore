@@ -157,7 +157,10 @@ Instant replay (step 7):
   History: `rec-format:1` (0.2–0.3.x, and 0.4.0) had Full mix without the mic and no Desktop audio
   track (0.4.0 files have the new layout but the old marker; only test builds made them).
 - Apps that start mid-recording still get a full-length track, silent before they started.
-- Filename: `<Game or App> YYYY.MM.DD - HH.MM.SS.mp4`, saved in a per-game subfolder.
+- Filename: `<Game or App> YYYY.MM.DD - HH.MM.SS.mp4`, saved in
+  `<chosen folder>\Encore\<Game, app or Desktop>\` (default chosen folder: Videos). A chosen folder
+  already named Encore is used as it is.
+- Audio bitrate: Full mix 192 kbps, other tracks 128 kbps (AAC, 48 kHz stereo).
 
 Any change to this section is a breaking change for the companion editor: bump `rec-format`, log it in DECISIONS.md, and notify the companion editor's maintainer.
 

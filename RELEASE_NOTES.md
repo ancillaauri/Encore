@@ -1,48 +1,40 @@
-## Encore 0.5.1 (beta), test build 5: new layout, and recording follows the screen you click on
+## Encore 0.5.2 (beta), test build 6: smoother game recordings, Encore folder, smaller files
 
-**0.5.1:** the window now opens at the same size as the companion clip editor (smaller screens
-get a window that fits), remembers its size and position, and can't be made smaller than the
-editor's minimum. The monitor picker always stays on one line: monitors shrink in a small
-window and grow in a large one, and the content sits in the middle of the window.
-
-### What's new
-- **Recording follows the screen you're using.** In Desktop mode, Encore records the monitor of
-  the window you last clicked on. Click a window on your other monitor while recording and the
-  recording moves there within about half a second, with no gap and the audio still in sync.
-  Moving the mouse across without clicking doesn't move it, and clicking Encore itself doesn't
-  count.
-- **New layout:**
-  - **Under the record button:** your monitors, drawn as holograms and laid out the way Windows
-    has them. The one that will be recorded glows blue; while recording it glows red.
-    - Click a monitor to **always** record that one (it shows "ALWAYS"). Click it again to go
-      back to following the screen you use.
-    - **One app:** pick a window from the list to record only that window.
-    - **Game:** automatic game detection, coming in the next update.
-  - **Left panel:** quick settings (quality, frame rate, resolution, desktop audio, mic, a
-    track for each app) and **Saved this session**. Click a recording there to show it in its
-    folder. All other settings are still under "All settings" or ≡ → File → Settings.
-- The old "Monitor with the mouse" and "Primary monitor" choices are replaced by following the
-  screen you use. If you had picked a specific monitor, it's still picked.
+### What's new in 0.5.2
+- **Smoother recordings while a game uses the whole graphics card.** Tests showed that with the
+  game in front, the capture got as few as 0–10 new frames a second (Task Manager: game at 90 %
+  GPU). Encore now asks Windows to give its capture priority on the graphics card and processor
+  while recording.
+  - **Run Encore as administrator** for the strongest effect (right-click → Run as administrator):
+    Windows only allows the top priority level with admin rights.
+  - Capping the game's frame rate (or V-Sync) also leaves room for recording.
+- **Encore folder:** whatever folder you choose to save to, Encore makes a folder called
+  **Encore** inside it, with a folder for Desktop and each game or app:
+  `D:\Clips\` → `D:\Clips\Encore\Desktop\`, `D:\Clips\Encore\Warframe\`. Settings shows the
+  full path. If the folder you choose is already called Encore, it's used as it is. A folder
+  Encore can't write to is refused with a message (e.g. `C:\Program Files` needs admin rights).
+  Your current setting keeps working: recordings stay in `Videos\Encore`.
+- **Slightly smaller files:** the extra audio tracks are now 128 kbps (the main Full mix track
+  stays 192). Audio was only 1–3 % of a file; the video is what makes files big, and options for
+  that (custom bitrate, size per minute) come later.
+- **App names:** apps that wouldn't share their name (protected games) are now named after their
+  program file instead of "App 24720".
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.5.1). Otherwise download
-`Encore_0.5.1_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
+Update from inside Encore (≡ → Help → Update to 0.5.2). Otherwise download
+`Encore_0.5.2_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
 **More info**, then **Run anyway**.
 
 ### Test checklist
-1. **Follow.** Start recording with a window focused on one monitor. After about 5 seconds click
-   a window on the other monitor, then after 5 more click back. Stop. In the file, the picture
-   should switch at each click, with no freeze, no black frames and no jump in the sound. Send
-   the file if you can: I'll measure the switch points.
-2. **Not following.** While recording, move the mouse to the other monitor without clicking,
-   and click Encore's own window. Neither should move the recording.
-3. **Always one monitor.** Click a monitor in the picker so it says ALWAYS, record, click
-   around on the other monitor: the recording stays put. Click it again to unpin.
-4. **One app.** Pick an app, record, alt-tab away: only that window is recorded.
-5. **Layout.** Quick settings change the same settings as the Settings window. Recordings appear
-   under "Saved this session". Collapse the panel (Ctrl+B).
-6. **Still outstanding:** game FPS with and without recording; closing Encore mid-recording.
+1. **Game stutter.** Record 20 seconds of Warframe gameplay, uncapped, the normal way. Then run
+   Encore as administrator and record 20 seconds again. Send both: I'll count the real frames.
+2. **Encore folder.** In Settings → Saving, choose another folder (e.g. `D:\Clips`). Record: the
+   file should land in `D:\Clips\Encore\Desktop\`. Try a folder like `C:\Program Files`: Encore
+   should refuse it with a message.
+3. **Monitor follow** (from 0.5, if not tested yet): record, click a window on the other monitor
+   after 5 seconds, click back after 5 more, stop. Send the file.
 
 ### What to send back
 Worked / didn't work for each step, any message Encore showed, and if something failed,
 `%LOCALAPPDATA%\Encore\logs\engine.log` (paste that path into File Explorer's address bar).
+The log now also says which graphics priority Encore got ("GPU priority realtime" or "high").

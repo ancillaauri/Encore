@@ -265,6 +265,19 @@
   }
   function fileName(path) { return path.split(/[\\/]/).pop(); }
 
+  // ---------- where recordings go ----------
+  // The Encore folder inside the chosen folder (the engine does the same: paths::encore_root).
+  function encoreRoot(dir) {
+    const d = (dir ?? (state.settings ? state.settings.output_dir : '')).replace(/[\\/]+$/, '');
+    if (!d) return '';
+    const last = d.split(/[\\/]/).pop();
+    return last.toLowerCase() === 'encore' ? d : `${d}\\Encore`;
+  }
+  function renderOutputNote() {
+    const root = encoreRoot();
+    if (root) $('output-note').textContent = `Encore makes a folder called Encore here, with a folder inside for Desktop and each game or app: ${root}\\Desktop, ${root}\\Warframe…`;
+  }
+
   // ---------- what will be / is being recorded ----------
   const following = () => !state.settings || state.settings.monitor === 'follow';
   const pinnedId = () => (state.settings && state.settings.monitor.startsWith('id:') ? state.settings.monitor.slice(3) : null);
@@ -411,7 +424,7 @@
       $('detail').textContent = 'Joining the pieces into one file.';
     } else {
       $('what').textContent = describeTarget();
-      $('detail').textContent = state.settings ? `Saved to ${state.settings.output_dir}` : '';
+      $('detail').textContent = state.settings ? `Saved to ${encoreRoot()}` : '';
       $('timer').textContent = '0:00';
       $('ring-sweep').style.strokeDashoffset = RING;
     }
@@ -448,6 +461,7 @@
     });
     renderInputs();
     renderCodecs();
+    renderOutputNote();
   }
 
   function renderInputs() {
@@ -634,7 +648,7 @@
     if (!m.hidden && m.dataset.for === 'pick-app') { hideMenu(); return; }
     pickApp();
   });
-  const openOutput = () => { if (state.settings) bridge.openFolder(state.settings.output_dir).catch((e) => toast(String(e), 'error')); };
+  const openOutput = () => { if (state.settings) bridge.openFolder(encoreRoot()).catch((e) => toast(String(e), 'error')); };
   $('open-folder').addEventListener('click', openOutput);
   $('rail-folder').addEventListener('click', openOutput);
   $('mic-device').addEventListener('change', (e) => saveSetting('mic_device', e.target.value));
@@ -650,7 +664,7 @@
     }
   });
   $('open-output').addEventListener('click', () => {
-    if (state.settings) bridge.openFolder(state.settings.output_dir).catch((e) => toast(String(e), 'error'));
+    if (state.settings) bridge.openFolder(encoreRoot()).catch((e) => toast(String(e), 'error'));
   });
   window.addEventListener('focus', () => { if (state.phase === 'idle') { refreshMonitors(); refreshInputs(); } });
 
@@ -721,7 +735,7 @@
     return [
       { text: 'File', sub: [
         { text: 'Settings', hint: 'Ctrl+Comma', run: () => openDialog('settings') },
-        { text: 'Open Recordings Folder', run: () => { if (state.settings) bridge.openFolder(state.settings.output_dir).catch((e) => toast(String(e), 'error')); } },
+        { text: 'Open Recordings Folder', run: () => { if (state.settings) bridge.openFolder(encoreRoot()).catch((e) => toast(String(e), 'error')); } },
         '-',
         { text: 'Exit', hint: 'Alt+F4', run: () => bridge.win.close() },
       ] },

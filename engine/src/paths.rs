@@ -37,6 +37,33 @@ pub fn log_dir() -> PathBuf {
     local_dir().join("logs")
 }
 
+/// Where recordings go by default: the Videos folder (Encore adds its own folder inside, see
+/// `encore_root`).
 pub fn default_output_dir() -> PathBuf {
-    home().join("Videos").join("Encore")
+    home().join("Videos")
+}
+
+/// The Encore folder inside the chosen save folder: `D:\Clips` -> `D:\Clips\Encore`. A folder
+/// that is already called Encore is used as it is (no `Encore\Encore`), which also keeps the old
+/// default (`Videos\Encore`) working unchanged.
+pub fn encore_root(chosen: &std::path::Path) -> PathBuf {
+    let named_encore = chosen
+        .file_name()
+        .map(|n| n.to_string_lossy().eq_ignore_ascii_case("encore"))
+        .unwrap_or(false);
+    if named_encore { chosen.to_path_buf() } else { chosen.join("Encore") }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn encore_folder_is_made_inside_the_chosen_folder() {
+        assert_eq!(encore_root(Path::new("/d/Program Files")), Path::new("/d/Program Files/Encore"));
+        assert_eq!(encore_root(Path::new("/home/a/Videos/Encore")), Path::new("/home/a/Videos/Encore"));
+        assert_eq!(encore_root(Path::new("/home/a/Videos/encore")), Path::new("/home/a/Videos/encore"));
+        assert_eq!(encore_root(Path::new("/clips/Encores")), Path::new("/clips/Encores/Encore"));
+    }
 }

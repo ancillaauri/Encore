@@ -95,9 +95,10 @@ pub fn file_name(label: &str, t: LocalTime) -> String {
     )
 }
 
-/// `<out_dir>/<Label>/<file name>`, adding " (2)", " (3)"... if that file already exists.
+/// `<chosen folder>/Encore/<Label>/<file name>`, adding " (2)", " (3)"... if that file already
+/// exists.
 pub fn output_path(out_dir: &Path, label: &str, t: LocalTime) -> PathBuf {
-    let folder = out_dir.join(sanitise(label));
+    let folder = crate::paths::encore_root(out_dir).join(sanitise(label));
     let first = folder.join(file_name(label, t));
     if !first.exists() {
         return first;
@@ -156,6 +157,7 @@ fn spawn_part(
         .stderr(Stdio::from(log_file))
         .spawn()
         .map_err(|e| format!("Could not start FFmpeg ({}): {e}", ffmpeg_path.display()))?;
+    log(&format!("capture part {index}: {}", platform::boost_capture_priority(child.id())));
     let clock = Arc::new(Mutex::new(VideoClock::default()));
     if let Some(stdout) = child.stdout.take() {
         watch_progress(stdout, clock.clone(), manifest.clone(), seg_dir.to_path_buf(), index);
@@ -582,7 +584,7 @@ mod tests {
     fn output_path_avoids_overwriting() {
         let dir = std::env::temp_dir().join(format!("encore-test-{}", unix_ms()));
         let first = output_path(&dir, "Game", t());
-        assert_eq!(first, dir.join("Game").join("Game 2026.10.31 - 09.05.07.mp4"));
+        assert_eq!(first, dir.join("Encore").join("Game").join("Game 2026.10.31 - 09.05.07.mp4"));
         std::fs::create_dir_all(first.parent().unwrap()).unwrap();
         std::fs::write(&first, b"x").unwrap();
         let second = output_path(&dir, "Game", t());

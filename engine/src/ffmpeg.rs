@@ -333,8 +333,11 @@ pub fn finalise_args(list_file: &Path, audio: &[AudioOut], audio_skip: f64, out:
     }
     a.extend(["-c:v".into(), "copy".into()]);
     if !audio.is_empty() {
-        a.extend(["-c:a".into(), "aac".into(), "-b:a".into(), "192k".into()]);
+        a.extend(["-c:a".into(), "aac".into()]);
         for (i, t) in audio.iter().enumerate() {
+            // The first track (Full mix) is what people play and share: full quality. The others
+            // are for editing; 128k AAC is still clean and keeps files smaller.
+            a.extend([format!("-b:a:{i}"), if i == 0 { "192k".into() } else { "128k".into() }]);
             a.extend([
                 format!("-metadata:s:a:{i}"),
                 format!("title={}", t.title),
@@ -548,6 +551,7 @@ mod tests {
         assert!(j.contains("-disposition:a:0 default"));
         assert!(j.contains("-disposition:a:1 0"));
         assert!(j.contains("-shortest"));
+        assert!(j.contains("-b:a:0 192k") && j.contains("-b:a:1 128k") && j.contains("-b:a:3 128k"));
     }
 
     #[test]

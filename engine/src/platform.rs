@@ -123,6 +123,9 @@ mod other {
     pub fn focused_monitor() -> Option<u64> {
         None
     }
+    pub fn boost_capture_priority(_pid: u32) -> String {
+        "not on Windows".into()
+    }
     pub fn window_exists(_handle: u64) -> bool {
         false
     }
@@ -202,7 +205,10 @@ mod win {
     };
     use windows_sys::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
     use windows_sys::Win32::System::SystemInformation::GetLocalTime;
-    use windows_sys::Win32::System::Threading::{GetCurrentProcessId, OpenProcess, QueryFullProcessImageNameW};
+    use windows_sys::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
+    use windows_sys::Win32::System::Threading::{
+        GetCurrentProcessId, OpenProcess, QueryFullProcessImageNameW, SetPriorityClass,
+    };
     use windows_sys::Win32::UI::HiDpi::SetProcessDpiAwarenessContext;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetClassNameW, GetClientRect, GetCursorPos, GetForegroundWindow, GetWindow, GetWindowLongPtrW,
@@ -487,8 +493,47 @@ mod win {
         if let Some(d) = file_description(&path).filter(|d| d.chars().count() <= 48) {
             return d;
         }
-        let stem = exe_stem(&path);
+        let mut stem = exe_stem(&path);
+        if stem.is_empty() {
+            // Protected processes (some games, anti-cheat) don't let us read their details, but
+            // their program file name is always listed.
+            stem = processes().get(&pid).map(|p| exe_stem(&p.exe)).unwrap_or_default();
+        }
         if stem.is_empty() { format!("App {pid}") } else { stem }
+    }
+
+    /// Gives a capture process (FFmpeg) priority on the graphics card and the processor, so a
+    /// game using the whole GPU can't starve the capture (which shows up as a choppy recording).
+    /// The highest GPU level needs administrator rights; otherwise "high" is used.
+    pub fn boost_capture_priority(pid: u32) -> String {
+        type SetGpuPriority = unsafe extern "system" fn(*mut c_void, i32) -> i32;
+        const ABOVE_NORMAL_PRIORITY_CLASS: u32 = 0x8000;
+        const PROCESS_SET_INFORMATION: u32 = 0x0200;
+        const GPU_HIGH: i32 = 4;
+        const GPU_REALTIME: i32 = 5;
+        unsafe {
+            let hp = OpenProcess(PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+            if hp.is_null() {
+                return "could not open process".into();
+            }
+            SetPriorityClass(hp, ABOVE_NORMAL_PRIORITY_CLASS);
+            let gdi = LoadLibraryW(to_wide("gdi32.dll").as_ptr());
+            let mut result = "GPU priority unavailable".to_string();
+            if !gdi.is_null() {
+                if let Some(f) = GetProcAddress(gdi, b"D3DKMTSetProcessSchedulingPriorityClass\0".as_ptr()) {
+                    let set: SetGpuPriority = std::mem::transmute(f);
+                    result = if set(hp as *mut c_void, GPU_REALTIME) >= 0 {
+                        "GPU priority realtime".into()
+                    } else if set(hp as *mut c_void, GPU_HIGH) >= 0 {
+                        "GPU priority high".into()
+                    } else {
+                        "GPU priority refused".into()
+                    };
+                }
+            }
+            CloseHandle(hp);
+            result
+        }
     }
 
     fn process_exe(pid: u32) -> String {
