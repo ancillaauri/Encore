@@ -148,6 +148,13 @@ buttons, sized and coloured like the editor's (46×40, Windows' own glyph font, 
 colours). Side-by-side audit fixed every difference found (FEATURES.md "Match the editor
 exactly"). Known gap: snap layouts on the Maximise button.
 
+## 2026-10-31: Desktop recording follows the screen you click on
+"Monitor with the mouse" only picked a monitor when recording started; switching mid-recording
+was never built. Decided: Desktop recording switches to the monitor of the window you click on
+(the focused window), not where the mouse is, so glancing at a second screen doesn't move the
+recording. One behaviour, no setting. Built with the layout redesign (monitor picker under the
+record button, settings and this session's recordings in the left panel).
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.
