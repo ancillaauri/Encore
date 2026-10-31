@@ -65,6 +65,11 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Full-session recording: auto-record whole match/session from game launch | Pairs with bookmarks | [ ] |
 | Microphone noise suppression (optional) | Raw mic track kept untouched | [ ] |
 | Custom bitrate option + expected size per minute beside Quality | Presets stay as the default | [ ] |
+| Apps on a non-default sound device (e.g. Discord on a headset) get their own track | Today only apps on the default output are found | [ ] |
+| Discord: your user ID via Discord's local connection (hello message only; no login, nothing private) | Purpose to confirm with the companion editor side; needs a free Discord developer app | [ ] |
+| Discord: a track per person in voice chat, split by Discord's who's-talking signal; overlaps go to a "Several people" track | Needs Discord voice-read permission (testers only until Discord approves the app); alternative: recording bot | [ ] |
+| Lower suggested frame rate in setup for weaker graphics cards | Uses the PC specs collected for the performance log | [ ] |
+| Name for the per-app audio feature ("Split Tracks" proposed) | Waiting on the owner | [ ] |
 
 ## Out of scope (decided, with reasons)
 
