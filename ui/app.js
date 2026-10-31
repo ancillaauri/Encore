@@ -10,6 +10,7 @@
     caps: null,
     monitors: [],
     windows: [],
+    inputs: [],
     source: localStore('encore.source') === 'window' ? 'window' : 'desktop',
     phase: 'idle', // idle | starting | recording | saving
     recording: null,
@@ -82,6 +83,10 @@
     const label = { idle: 'Start recording', starting: 'Starting…', recording: 'Stop and save', saving: 'Saving…' }[state.phase];
     $('record-label').textContent = label;
     rec.setAttribute('aria-label', label);
+
+    const tracks = state.phase === 'recording' && state.recording ? state.recording.audio_tracks || [] : [];
+    $('tracks').hidden = !tracks.length;
+    $('tracks').textContent = tracks.length ? `Audio tracks: ${tracks.join(', ')}` : '';
 
     if (state.phase === 'recording' && state.recording) {
       const r = state.recording;
@@ -168,8 +173,30 @@
     $('quality').value = s.quality;
     $('cursor').checked = !!s.capture_cursor;
     $('output').value = s.output_dir;
+    $('audio-full').checked = !!s.audio_full_mix;
+    $('audio-mic').checked = !!s.audio_mic;
+    $('audio-apps').checked = !!s.audio_app_tracks;
+    renderInputs();
     renderMonitors();
     renderCodecs();
+  }
+
+  function renderInputs() {
+    const sel = $('mic-device');
+    sel.textContent = '';
+    const add = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o); };
+    const def = state.inputs.find((d) => d.default);
+    add('default', def ? `Windows default (${def.name})` : 'Windows default');
+    for (const d of state.inputs) add(d.id, d.name);
+    const want = state.settings ? state.settings.mic_device : 'default';
+    if (want !== 'default' && !state.inputs.some((d) => d.id === want)) add(want, 'Saved microphone (not connected)');
+    sel.value = want;
+    $('mic-row').hidden = !(state.settings && state.settings.audio_mic);
+  }
+
+  async function refreshInputs() {
+    try { state.inputs = await bridge.listAudioInputs(); } catch (e) { state.inputs = []; }
+    renderInputs();
   }
 
   function renderCodecs() {
@@ -201,6 +228,7 @@
   async function saveSetting(key, value) {
     try {
       state.settings = await bridge.setSettings({ [key]: value });
+      if (key === 'audio_mic') renderInputs();
       renderStage();
     } catch (e) {
       toast(String(e), 'error');
@@ -307,6 +335,13 @@
         if (data.state === 'idle' && state.phase === 'saving') state.phase = 'idle';
         renderStage();
         break;
+      case 'audio_app_added':
+        if (state.recording) {
+          const list = state.recording.audio_tracks || (state.recording.audio_tracks = []);
+          if (!list.includes(data.title)) list.push(data.title);
+          renderStage();
+        }
+        break;
       case 'warning':
         toast(data.message, 'warning', 12000);
         break;
@@ -338,6 +373,7 @@
   $('refresh-windows').addEventListener('click', refreshWindows);
   $('window').addEventListener('change', renderStage);
   $('monitor').addEventListener('change', (e) => saveSetting('monitor', e.target.value));
+  $('mic-device').addEventListener('change', (e) => saveSetting('mic_device', e.target.value));
   document.querySelectorAll('[data-setting]').forEach((el) => {
     if (el.id === 'output') {
       el.addEventListener('change', () => saveSetting('output_dir', el.value.trim()));
@@ -352,7 +388,7 @@
   $('open-output').addEventListener('click', () => {
     if (state.settings) bridge.openFolder(state.settings.output_dir).catch((e) => toast(String(e), 'error'));
   });
-  window.addEventListener('focus', () => { if (state.phase === 'idle') refreshMonitors(); });
+  window.addEventListener('focus', () => { if (state.phase === 'idle') { refreshMonitors(); refreshInputs(); } });
 
   // ---------- start-up ----------
   async function init() {
@@ -370,6 +406,7 @@
       toast(`Could not reach the recorder: ${e}`, 'error', 0);
     }
     await refreshMonitors();
+    await refreshInputs();
     if (state.source === 'window') await refreshWindows();
     // Capabilities arrive as an event, but may have been sent before we were listening.
     for (let i = 0; i < 40 && !(state.caps && state.caps.probed); i++) {

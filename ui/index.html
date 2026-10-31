@@ -33,6 +33,7 @@
       </button>
       <p id="what" class="what">Records your primary monitor</p>
       <p id="detail" class="detail"></p>
+      <p id="tracks" class="tracks" hidden></p>
 
       <div class="recent" id="recent-wrap" hidden>
         <h2>Saved this session</h2>
@@ -98,6 +99,22 @@
       <label class="row toggle-row"><span>Show mouse cursor</span>
         <input type="checkbox" id="cursor" data-setting="capture_cursor" class="toggle">
       </label>
+
+      <h2>Audio</h2>
+      <label class="row toggle-row"><span>Everything you hear (Full mix)</span>
+        <input type="checkbox" id="audio-full" data-setting="audio_full_mix" class="toggle">
+      </label>
+      <label class="row toggle-row"><span>Microphone</span>
+        <input type="checkbox" id="audio-mic" data-setting="audio_mic" class="toggle">
+      </label>
+      <label class="row" id="mic-row">
+        <span class="sr-only">Which microphone</span>
+        <select id="mic-device" aria-label="Which microphone"></select>
+      </label>
+      <label class="row toggle-row"><span>Separate track for each app</span>
+        <input type="checkbox" id="audio-apps" data-setting="audio_app_tracks" class="toggle">
+      </label>
+      <p class="hint">Your game, music, browser and voice chat each get their own track, so you can turn them up or down when editing.</p>
 
       <h2>Saving</h2>
       <div class="row">

@@ -109,6 +109,8 @@ fn selftest(ffmpeg_path: &std::path::Path, capture: Option<PathBuf>) -> i32 {
         "engine_version": env!("CARGO_PKG_VERSION"),
         "capabilities": caps,
         "monitors": monitors,
+        "audio_inputs": audio::list_inputs(),
+        "audio_apps": audio::list_apps(),
         "window_count": windows.len(),
         "window_titles": windows.iter().take(8).map(|w| format!("{} ({})", w.title, w.exe)).collect::<Vec<_>>(),
     });
