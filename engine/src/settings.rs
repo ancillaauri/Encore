@@ -43,7 +43,8 @@ pub struct Settings {
     pub resolution: Resolution,
     pub quality: Quality,
     pub capture_cursor: bool,
-    /// Desktop mode monitor: "primary", "mouse", or "id:<stable monitor id>".
+    /// Desktop mode monitor: "follow" (the monitor of the window you click on, switching during a
+    /// recording) or "id:<stable monitor id>" (always that monitor).
     pub monitor: String,
     /// Record everything you hear as the "Full mix" track.
     pub audio_full_mix: bool,
@@ -70,7 +71,7 @@ impl Default for Settings {
             resolution: Resolution::Native,
             quality: Quality::High,
             capture_cursor: true,
-            monitor: "primary".into(),
+            monitor: "follow".into(),
             audio_full_mix: true,
             audio_mic: true,
             mic_device: "default".into(),
@@ -135,8 +136,8 @@ impl Settings {
             return Err("Microphone cannot be empty".into());
         }
         let m = updated.monitor.as_str();
-        if !(m == "primary" || m == "mouse" || (m.starts_with("id:") && m.len() > 3)) {
-            return Err("Monitor must be primary, mouse, or a monitor id".into());
+        if !(m == "follow" || (m.starts_with("id:") && m.len() > 3)) {
+            return Err("Monitor must be follow or a monitor id".into());
         }
         Ok(updated)
     }
@@ -150,6 +151,10 @@ impl Settings {
         }
         if !["manual", "auto_download", "never"].contains(&self.update_mode.as_str()) {
             self.update_mode = "manual".into();
+        }
+        // Before 0.5: "primary" (the old default) and "mouse" (chosen at start only).
+        if !(self.monitor == "follow" || (self.monitor.starts_with("id:") && self.monitor.len() > 3)) {
+            self.monitor = "follow".into();
         }
         self
     }
@@ -176,6 +181,8 @@ mod tests {
         assert!(s.apply_patch(&json!({"codec": "vp9"})).is_err());
         assert!(s.apply_patch(&json!({"nonsense": 1})).is_err());
         assert!(s.apply_patch(&json!({"monitor": "left"})).is_err());
+        assert!(s.apply_patch(&json!({"monitor": "mouse"})).is_err());
+        assert!(s.apply_patch(&json!({"monitor": "follow"})).is_ok());
         assert!(s.apply_patch(&json!({"output_dir": "  "})).is_err());
         assert!(s.apply_patch(&json!([1, 2])).is_err());
         assert!(s.apply_patch(&json!({"audio_offset_ms": 5000})).is_err());
@@ -197,7 +204,13 @@ mod tests {
         let s: Settings = serde_json::from_str(r#"{"fps":30}"#).unwrap();
         assert_eq!(s.fps, 30);
         assert_eq!(s.codec, Codec::H264);
-        assert_eq!(s.monitor, "primary");
+        assert_eq!(s.monitor, "follow");
+        for old in ["primary", "mouse", ""] {
+            let o: Settings = serde_json::from_value(serde_json::json!({ "monitor": old })).unwrap();
+            assert_eq!(o.normalised().monitor, "follow");
+        }
+        let o: Settings = serde_json::from_value(serde_json::json!({ "monitor": "id:abc" })).unwrap();
+        assert_eq!(o.normalised().monitor, "id:abc");
         assert!(s.audio_full_mix && s.audio_mic && s.audio_app_tracks);
         assert_eq!(s.mic_device, "default");
         assert_eq!(s.update_mode, "manual"); // no background downloads unless chosen

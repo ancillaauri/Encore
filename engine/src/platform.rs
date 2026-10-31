@@ -77,6 +77,33 @@ pub struct LocalTime {
 #[cfg(windows)]
 pub use win::*;
 
+/// What the focused window says about which monitor the person is using.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FocusRule {
+    /// Not a signal (Encore itself, Alt+Tab, Start menu): keep whatever was being recorded.
+    Ignore,
+    /// The desktop or a taskbar: they clicked there, so use the monitor under the mouse.
+    UseCursor,
+    /// An ordinary window: use the monitor it's on.
+    UseWindow,
+}
+
+/// Decides from the focused window's class name and its program's file name (e.g. "Discord.exe").
+pub fn focus_rule(class: &str, exe: &str) -> FocusRule {
+    let stem = exe_stem(exe).to_ascii_lowercase();
+    if stem == "encore" || stem == "encore-engine" {
+        return FocusRule::Ignore;
+    }
+    match class {
+        "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd" => FocusRule::UseCursor,
+        "" | "MultitaskingViewFrame" | "XamlExplorerHostIslandWindow" | "ForegroundStaging"
+        | "Windows.UI.Core.CoreWindow" | "TopLevelWindowForOverflowXamlIsland" | "NotifyIconOverflowWindow" => {
+            FocusRule::Ignore
+        }
+        _ => FocusRule::UseWindow,
+    }
+}
+
 #[cfg(not(windows))]
 pub use other::*;
 
@@ -91,6 +118,9 @@ mod other {
         Vec::new()
     }
     pub fn monitor_under_cursor() -> Option<u64> {
+        None
+    }
+    pub fn focused_monitor() -> Option<u64> {
         None
     }
     pub fn window_exists(_handle: u64) -> bool {
@@ -163,7 +193,8 @@ mod win {
     use windows_sys::Win32::Foundation::{CloseHandle, BOOL, HWND, LPARAM, POINT, RECT, SYSTEMTIME};
     use windows_sys::Win32::Graphics::Dwm::DwmGetWindowAttribute;
     use windows_sys::Win32::Graphics::Gdi::{
-        EnumDisplayMonitors, GetMonitorInfoW, MonitorFromPoint, HDC, HMONITOR, MONITORINFO, MONITORINFOEXW,
+        EnumDisplayMonitors, GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, HDC, HMONITOR, MONITORINFO,
+        MONITORINFOEXW,
     };
     use windows_sys::Win32::Storage::FileSystem::{GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW};
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
@@ -174,7 +205,8 @@ mod win {
     use windows_sys::Win32::System::Threading::{GetCurrentProcessId, OpenProcess, QueryFullProcessImageNameW};
     use windows_sys::Win32::UI::HiDpi::SetProcessDpiAwarenessContext;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        EnumWindows, GetClientRect, GetCursorPos, GetWindow, GetWindowLongPtrW, GetWindowTextLengthW,
+        EnumWindows, GetClassNameW, GetClientRect, GetCursorPos, GetForegroundWindow, GetWindow, GetWindowLongPtrW,
+        GetWindowTextLengthW,
         GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindow, IsWindowVisible,
     };
 
@@ -310,6 +342,30 @@ mod win {
                 None
             } else {
                 Some(h2u(hm as *mut c_void))
+            }
+        }
+    }
+
+    /// The monitor the person is using: the one holding the window they last clicked on (the
+    /// focused window). None when the focused window says nothing about it (see `focus_rule`).
+    pub fn focused_monitor() -> Option<u64> {
+        unsafe {
+            let h = GetForegroundWindow();
+            if h.is_null() {
+                return None;
+            }
+            let mut buf = [0u16; 128];
+            let n = GetClassNameW(h, buf.as_mut_ptr(), buf.len() as i32);
+            let class = String::from_utf16_lossy(&buf[..n.max(0) as usize]);
+            let mut pid: u32 = 0;
+            GetWindowThreadProcessId(h, &mut pid);
+            match focus_rule(&class, &process_exe(pid)) {
+                FocusRule::Ignore => None,
+                FocusRule::UseCursor => monitor_under_cursor(),
+                FocusRule::UseWindow => {
+                    let hm = MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST as _);
+                    if hm.is_null() { None } else { Some(h2u(hm as *mut c_void)) }
+                }
             }
         }
     }
@@ -557,6 +613,17 @@ mod tests {
         let cyc: HashMap<u32, ProcInfo> = HashMap::from([(5, p(6, "a.exe")), (6, p(5, "a.exe"))]);
         let r = app_root(5, &cyc);
         assert!(r == 5 || r == 6); // parent loops don't hang
+    }
+
+    #[test]
+    fn focus_rules() {
+        assert_eq!(focus_rule("Chrome_WidgetWin_1", "Discord.exe"), FocusRule::UseWindow);
+        assert_eq!(focus_rule("UnrealWindow", "Game-Win64-Shipping.exe"), FocusRule::UseWindow);
+        assert_eq!(focus_rule("Chrome_WidgetWin_1", "Encore.exe"), FocusRule::Ignore);
+        assert_eq!(focus_rule("Progman", "explorer.exe"), FocusRule::UseCursor);
+        assert_eq!(focus_rule("Shell_SecondaryTrayWnd", "explorer.exe"), FocusRule::UseCursor);
+        assert_eq!(focus_rule("XamlExplorerHostIslandWindow", "explorer.exe"), FocusRule::Ignore);
+        assert_eq!(focus_rule("CabinetWClass", "explorer.exe"), FocusRule::UseWindow);
     }
 
     #[test]

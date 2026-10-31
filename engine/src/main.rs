@@ -75,8 +75,14 @@ fn main() {
     send_event("hello", json!({ "protocol": PROTOCOL_VERSION, "version": env!("CARGO_PKG_VERSION") }));
     eng.recover_leftovers();
 
+    // tick() runs at least every 200 ms, even while commands keep arriving.
+    let mut last_tick = std::time::Instant::now();
     loop {
-        match rx.recv_timeout(Duration::from_millis(400)) {
+        if last_tick.elapsed() >= Duration::from_millis(200) {
+            eng.tick();
+            last_tick = std::time::Instant::now();
+        }
+        match rx.recv_timeout(Duration::from_millis(200)) {
             Ok(Some(line)) => {
                 if line.trim().is_empty() {
                     continue;
@@ -95,7 +101,7 @@ fn main() {
                 eng.shutdown();
                 break;
             }
-            Err(mpsc::RecvTimeoutError::Timeout) => eng.tick(),
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
         }
     }
     log::log("engine exiting");

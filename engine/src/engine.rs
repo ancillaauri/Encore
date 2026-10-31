@@ -74,6 +74,20 @@ pub struct Engine {
     active: Option<Active>,
     /// Pipeline that worked for each encoder this session (skip a failing zero-copy attempt next time).
     known_pipeline: HashMap<&'static str, Pipeline>,
+    /// The monitor of the window last clicked on (Encore's own window doesn't count).
+    focus: Option<u64>,
+    /// A monitor the focus moved to, and since when (a switch waits for it to settle).
+    focus_candidate: Option<(u64, Instant)>,
+    /// Whether the current recording follows the focus (desktop, "follow" setting).
+    following: bool,
+}
+
+/// How long the focus must stay on another monitor before the recording moves there.
+const SWITCH_SETTLE: Duration = Duration::from_millis(300);
+
+/// The stable id of the monitor with this handle (what the interface knows monitors by).
+fn monitor_id(handle: u64) -> Option<String> {
+    platform::list_monitors().into_iter().find(|m| m.handle == handle).map(|m| m.id)
 }
 
 impl Engine {
@@ -93,7 +107,16 @@ impl Engine {
             *probe_caps.lock().unwrap() = result;
             send_event("capabilities", value);
         });
-        Engine { ffmpeg, settings: Settings::load(), caps, active: None, known_pipeline: HashMap::new() }
+        Engine {
+            ffmpeg,
+            settings: Settings::load(),
+            caps,
+            active: None,
+            known_pipeline: HashMap::new(),
+            focus: None,
+            focus_candidate: None,
+            following: false,
+        }
     }
 
     fn caps(&self) -> Capabilities {
@@ -152,9 +175,11 @@ impl Engine {
     }
 
     fn status(&mut self) -> Value {
+        let focus = self.focus.and_then(monitor_id);
         match &self.active {
-            None => json!({ "state": "idle", "recording": null }),
+            None => json!({ "state": "idle", "recording": null, "focus_monitor": focus }),
             Some(a) => json!({
+                "focus_monitor": focus,
                 "state": "recording",
                 "recording": {
                     "label": a.label,
@@ -166,6 +191,8 @@ impl Engine {
                     "elapsed_ms": a.elapsed_ms(),
                     "out_path": a.out_path.display().to_string(),
                     "audio_tracks": a.track_titles(),
+                    "monitor": match a.target() { Target::Monitor { handle } => monitor_id(handle), _ => None },
+                    "following": self.following,
                 }
             }),
         }
@@ -200,6 +227,7 @@ impl Engine {
         })?;
 
         let source = args.get("source").and_then(|v| v.as_str()).unwrap_or("desktop");
+        let following = source == "desktop" && self.settings.monitor == "follow";
         let (target, label, src_w, src_h, describe) = match source {
             "desktop" => self.pick_monitor()?,
             "window" => {
@@ -262,11 +290,15 @@ impl Engine {
             "bitrate_kbps": kbps,
             "started_unix_ms": active.started_unix_ms,
             "audio_tracks": active.track_titles(),
+            "monitor": match active.target() { Target::Monitor { handle } => monitor_id(handle), _ => None },
+            "following": following,
         });
         if active.pipeline == Pipeline::Download {
             send_event("warning", json!({ "message": "Recording is using the slower copy path on this PC (zero-copy was not accepted by the driver). It works, but uses more CPU." }));
         }
         self.active = Some(active);
+        self.following = following;
+        self.focus_candidate = None;
         send_event("recording_started", info.clone());
         Ok(info)
     }
@@ -279,8 +311,11 @@ impl Engine {
         }
         let primary = monitors.iter().find(|m| m.primary).unwrap_or(&monitors[0]);
         let wanted = self.settings.monitor.as_str();
-        let chosen = if wanted == "mouse" {
-            platform::monitor_under_cursor()
+        let chosen = if wanted == "follow" {
+            // The monitor last clicked on before Encore (pressing record focuses Encore itself).
+            self.focus
+                .or_else(platform::focused_monitor)
+                .or_else(platform::monitor_under_cursor)
                 .and_then(|h| monitors.iter().find(|m| m.handle == h))
                 .unwrap_or(primary)
         } else if let Some(id) = wanted.strip_prefix("id:") {
@@ -331,12 +366,59 @@ impl Engine {
         send_event("status", json!({ "state": "idle" }));
     }
 
-    /// Called regularly from the main loop: notices if FFmpeg stopped on its own.
+    /// Keeps track of the monitor being used, and moves a following recording there once the
+    /// focus has settled on it.
+    fn follow_focus(&mut self) {
+        if let Some(m) = platform::focused_monitor() {
+            if self.focus != Some(m) {
+                self.focus = Some(m);
+                send_event("focus_monitor", json!({ "id": monitor_id(m) }));
+            }
+        }
+        let Some(active) = self.active.as_mut() else { return };
+        if !self.following {
+            return;
+        }
+        let Some(want) = self.focus else { return };
+        let current = match active.switching_to().unwrap_or(active.target()) {
+            Target::Monitor { handle } => handle,
+            Target::Window { .. } => return,
+        };
+        if want == current {
+            self.focus_candidate = None;
+            return;
+        }
+        match self.focus_candidate {
+            Some((m, since)) if m == want => {
+                if since.elapsed() >= SWITCH_SETTLE {
+                    self.focus_candidate = None;
+                    log(&format!("focus moved to monitor {want}: switching"));
+                    active.switch_to(&self.ffmpeg, Target::Monitor { handle: want });
+                }
+            }
+            _ => self.focus_candidate = Some((want, Instant::now())),
+        }
+    }
+
+    /// Called regularly from the main loop: follows the focus, notices if FFmpeg stopped on its own.
     pub fn tick(&mut self) {
+        self.follow_focus();
+        if let Some(event) = self.active.as_mut().and_then(|a| a.poll()) {
+            match event {
+                recorder::SwitchEvent::Switched(Target::Monitor { handle }) => {
+                    send_event("monitor_switched", json!({ "monitor": monitor_id(handle) }))
+                }
+                recorder::SwitchEvent::Switched(_) => {}
+                recorder::SwitchEvent::Failed(detail) => send_event(
+                    "warning",
+                    json!({ "message": format!("Couldn't move the recording to the other monitor, so it carries on where it was. FFmpeg said: {detail}") }),
+                ),
+            }
+        }
         let stopped = matches!(self.active.as_mut().map(|a| a.has_exited()), Some(true));
         if stopped {
             let active = self.active.take().unwrap();
-            let detail = tail(&active.log_path, 4);
+            let detail = tail(&active.log_path(), 4);
             log(&format!("capture ended unexpectedly: {detail}"));
             let reason = if detail.is_empty() { String::new() } else { format!(" FFmpeg said: {detail}") };
             send_event("warning", json!({ "message": format!("Recording stopped unexpectedly (for example the window closed). Saving what was captured.{reason}") }));

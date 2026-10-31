@@ -59,7 +59,7 @@ pub enum Target {
     Window { handle: u64 },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CaptureSpec {
     pub target: Target,
     pub fps: u32,
@@ -161,6 +161,7 @@ pub fn record_args(
     pipeline: Pipeline,
     kbps: u32,
     seg_dir: &Path,
+    prefix: &str,
 ) -> Vec<String> {
     let gop = spec.fps * SEGMENT_SECONDS;
     let mut a: Vec<String> = vec![
@@ -199,17 +200,41 @@ pub fn record_args(
         "-reset_timestamps".into(),
         "1".into(),
         "-y".into(),
-        seg_dir.join("seg_%06d.mkv").to_string_lossy().into_owned(),
+        seg_dir.join(format!("{prefix}%06d.mkv")).to_string_lossy().into_owned(),
     ]);
     a
 }
 
-/// Contents of an FFmpeg concat list for the given segment files.
-pub fn concat_list(files: &[PathBuf]) -> String {
+/// One part's segments for the join, and how long to keep of it (None: all of it).
+#[derive(Debug, Clone)]
+pub struct PartFiles {
+    pub files: Vec<PathBuf>,
+    pub keep_secs: Option<f64>,
+}
+
+/// A concat list that plays the parts end to end, each cut at `keep_secs`. Every segment but a
+/// part's last is exactly SEGMENT_SECONDS long (keyframes are forced on that grid and the frame
+/// rate is constant), so the cut lands in a known segment; frames after it are dropped with
+/// `outpoint`, which needs no re-encoding because nothing refers back to later frames (no B-frames).
+pub fn concat_list_parts(parts: &[PartFiles]) -> String {
+    let seg = SEGMENT_SECONDS as f64;
     let mut s = String::from("ffconcat version 1.0\n");
-    for f in files {
-        let p = f.to_string_lossy().replace('\\', "/").replace('\'', "'\\''");
-        s.push_str(&format!("file '{p}'\n"));
+    for part in parts {
+        for (k, f) in part.files.iter().enumerate() {
+            let begins = k as f64 * seg;
+            if let Some(keep) = part.keep_secs {
+                if begins >= keep - 0.0005 {
+                    break;
+                }
+            }
+            let p = f.to_string_lossy().replace('\\', "/").replace('\'', "'\\''");
+            s.push_str(&format!("file '{p}'\n"));
+            if let Some(keep) = part.keep_secs {
+                if keep < begins + seg - 0.0005 {
+                    s.push_str(&format!("outpoint {:.6}\n", keep - begins));
+                }
+            }
+        }
     }
     s
 }
@@ -452,7 +477,7 @@ mod tests {
     #[test]
     fn record_args_shape() {
         let enc = Encoder { codec: Codec::H264, vendor: Vendor::Nvidia };
-        let a = record_args(&spec(), enc, Pipeline::ZeroCopy, 37_000, Path::new("/tmp/seg"));
+        let a = record_args(&spec(), enc, Pipeline::ZeroCopy, 37_000, Path::new("/tmp/seg"), "seg_");
         let joined = a.join(" ");
         assert!(joined.contains("-c:v h264_nvenc"));
         assert!(joined.contains("-b:v 37000k -maxrate 55500k -bufsize 74000k"));
@@ -461,14 +486,14 @@ mod tests {
         assert!(joined.contains("-bf 0"));
         for v in VENDOR_ORDER {
             let e = Encoder { codec: Codec::Hevc, vendor: v };
-            assert!(record_args(&spec(), e, Pipeline::ZeroCopy, 1, Path::new("x")).join(" ").contains("-bf 0"));
+            assert!(record_args(&spec(), e, Pipeline::ZeroCopy, 1, Path::new("x"), "seg_").join(" ").contains("-bf 0"));
         }
         assert!(joined.contains("-f segment -segment_time 2 -segment_format matroska -reset_timestamps 1"));
         assert!(!a.contains(&"-nostdin".to_string()));
         assert!(joined.contains("-progress pipe:1 -stats_period 0.05"));
         assert!(a.last().unwrap().ends_with("seg_%06d.mkv"));
         let av1 = Encoder { codec: Codec::Av1, vendor: Vendor::Nvidia };
-        assert!(!record_args(&spec(), av1, Pipeline::ZeroCopy, 1, Path::new("x")).contains(&"-forced-idr".to_string()));
+        assert!(!record_args(&spec(), av1, Pipeline::ZeroCopy, 1, Path::new("x"), "seg_").contains(&"-forced-idr".to_string()));
     }
 
     #[test]
@@ -484,7 +509,7 @@ mod tests {
 
     #[test]
     fn concat_list_escapes_paths() {
-        let l = concat_list(&[PathBuf::from(r"C:\Temp\it's\seg_000001.mkv")]);
+        let l = concat_list_parts(&[PartFiles { files: vec![PathBuf::from(r"C:\Temp\it's\seg_000001.mkv")], keep_secs: None }]);
         assert!(l.starts_with("ffconcat version 1.0\n"));
         assert!(l.contains("file 'C:/Temp/it'\\''s/seg_000001.mkv'"));
     }
@@ -523,6 +548,24 @@ mod tests {
         assert!(j.contains("-disposition:a:0 default"));
         assert!(j.contains("-disposition:a:1 0"));
         assert!(j.contains("-shortest"));
+    }
+
+    #[test]
+    fn concat_parts_cut_where_the_next_part_takes_over() {
+        let f = |n: &str| PathBuf::from(n);
+        let parts = vec![
+            PartFiles { files: vec![f("seg_000000.mkv"), f("seg_000001.mkv"), f("seg_000002.mkv"), f("seg_000003.mkv")], keep_secs: Some(5.25) },
+            PartFiles { files: vec![f("p001_000000.mkv"), f("p001_000001.mkv")], keep_secs: Some(4.0) },
+            PartFiles { files: vec![f("p002_000000.mkv")], keep_secs: None },
+        ];
+        let l = concat_list_parts(&parts);
+        assert_eq!(
+            l,
+            "ffconcat version 1.0\n\
+file 'seg_000000.mkv'\nfile 'seg_000001.mkv'\nfile 'seg_000002.mkv'\noutpoint 1.250000\n\
+file 'p001_000000.mkv'\nfile 'p001_000001.mkv'\n\
+file 'p002_000000.mkv'\n"
+        );
     }
 
     #[test]
