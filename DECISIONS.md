@@ -74,6 +74,11 @@ Hitch at the swap point to be measured in batch 3.
 - The source picker offers Desktop or One window for now. The Auto / Game / Desktop toggle needs
   game detection and arrives in batch 3.
 
+## 2026-10-31: Bitrate kept as is
+First real test (2560x1440, 120 fps, H.264, High) looked excellent. The High preset targets about
+133 Mbps at those settings (about 1 GB per minute of fast gameplay); file size is acceptable for now.
+Later: a Custom bitrate option and an expected-size-per-minute readout beside Quality.
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.

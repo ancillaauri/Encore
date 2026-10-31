@@ -36,6 +36,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Bookmarks: hotkey marks a moment, stored as MP4 chapters | Needs the companion editor to display them; agree format together (step 9+) | [ ] |
 | Full-session recording: auto-record whole match/session from game launch | Pairs with bookmarks | [ ] |
 | Microphone noise suppression (optional) | Raw mic track kept untouched | [ ] |
+| Custom bitrate option + expected size per minute beside Quality | Presets stay as the default | [ ] |
 
 ## Out of scope (decided, with reasons)
 
