@@ -55,6 +55,20 @@ fn open_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Opens a web link in the default browser. Only the project's own GitHub pages are allowed.
+#[tauri::command]
+fn open_link(url: String) -> Result<(), String> {
+    const ALLOWED: &str = "https://github.com/ancillaauri/Encore";
+    if !(url == ALLOWED || url.starts_with(&format!("{ALLOWED}/"))) {
+        return Err("That link isn't allowed.".into());
+    }
+    #[cfg(windows)]
+    {
+        std::process::Command::new("explorer").arg(&url).spawn().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -69,7 +83,9 @@ fn main() {
             engine_call,
             reveal_in_folder,
             open_folder,
+            open_link,
             updater::get_update,
+            updater::check_for_updates,
             updater::install_update
         ])
         .build(tauri::generate_context!())

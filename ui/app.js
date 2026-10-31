@@ -16,6 +16,8 @@
     recording: null,
     recent: [],
     engineGone: false,
+    update: { status: 'none' },
+    version: '',
   };
 
   function localStore(key, value) {
@@ -103,8 +105,20 @@
     }
     // Source and settings are locked while recording or saving.
     const locked = state.phase !== 'idle';
-    document.querySelectorAll('.seg button').forEach((b) => (b.disabled = locked));
+    document.querySelectorAll('.seg button, .railbtn').forEach((b) => (b.disabled = locked));
     $('refresh-windows').disabled = locked;
+    renderSummary();
+  }
+
+  // One line under the source picker saying how recordings are made, with a link to Settings.
+  function renderSummary() {
+    const s = state.settings;
+    if (!s) return;
+    const res = { native: 'Full resolution', '1440p': '1440p', '1080p': '1080p', '720p': '720p' }[s.resolution];
+    const audio = [s.audio_full_mix && 'full mix', s.audio_mic && 'mic', s.audio_app_tracks && 'each app'].filter(Boolean);
+    $('summary').textContent =
+      `${res}, ${s.fps} fps, ${CODEC[s.codec]}, ${s.quality} quality. ` +
+      (audio.length ? `Audio: ${audio.join(', ')}.` : 'No audio.');
   }
 
   function encoderLabel(name) {
@@ -127,6 +141,7 @@
     document.querySelectorAll('.seg button').forEach((b) => {
       b.setAttribute('aria-checked', String(b.dataset.source === state.source));
     });
+    document.querySelectorAll('.railbtn').forEach((b) => b.classList.toggle('on', b.dataset.source === state.source));
     $('monitor-row').hidden = state.source !== 'desktop';
     $('window-row').hidden = state.source !== 'window';
     $('window-hint').hidden = state.source !== 'window';
@@ -230,6 +245,7 @@
       state.settings = await bridge.setSettings({ [key]: value });
       if (key === 'audio_mic') renderInputs();
       renderStage();
+      renderUpdate();
     } catch (e) {
       toast(String(e), 'error');
       renderSettings();
@@ -361,7 +377,7 @@
 
   // ---------- wiring ----------
   $('record').addEventListener('click', toggleRecording);
-  document.querySelectorAll('.seg button').forEach((b) =>
+  document.querySelectorAll('.seg button, .railbtn').forEach((b) =>
     b.addEventListener('click', () => {
       state.source = b.dataset.source;
       localStore('encore.source', state.source);
@@ -391,31 +407,156 @@
   window.addEventListener('focus', () => { if (state.phase === 'idle') { refreshMonitors(); refreshInputs(); } });
 
   // ---------- updates ----------
-  function showUpdate(info) {
-    if (!info) return;
+  function renderUpdate() {
+    const u = state.update || { status: 'none' };
     const b = $('update');
-    b.hidden = false;
-    b.disabled = false;
-    b.textContent = 'Update ready';
-    b.title = `Install Encore ${info.version} and restart`;
+    b.hidden = u.status === 'none';
+    if (!b.disabled) $('update-text').textContent = u.status === 'ready' ? 'Update ready' : 'Update available';
+    b.title = u.version ? `Install Encore ${u.version} and restart` : '';
+    const note = state.version ? `You're on Encore ${state.version} (beta).` : "You're on Encore (beta).";
+    $('version-note').textContent = u.status === 'none' ? note : `${note} Version ${u.version} is available.`;
+    const mode = state.settings ? state.settings.update_mode : 'manual';
+    document.querySelectorAll('[data-update-mode]').forEach((o) =>
+      o.setAttribute('aria-checked', String(o.dataset.updateMode === mode)));
   }
-  bridge.onUpdateReady(showUpdate);
-  $('update').addEventListener('click', async () => {
+
+  async function checkForUpdates() {
+    const btn = $('check-updates');
+    btn.disabled = true;
+    $('update-status').textContent = 'Checking…';
+    try {
+      state.update = await bridge.checkForUpdates();
+      $('update-status').textContent = state.update.status === 'none'
+        ? `You're up to date.`
+        : `Encore ${state.update.version} is available. Use the button at the top to install it.`;
+      if (state.update.status !== 'none') toast(`Encore ${state.update.version} is available.`, 'ok');
+      else if (!$('settings').hidden) { /* status line is enough */ } else toast("You're up to date.", 'ok', 4000);
+    } catch (e) {
+      $('update-status').textContent = 'Could not check for updates.';
+      toast(`Could not check for updates: ${e}`, 'error', 10000);
+    }
+    btn.disabled = false;
+    renderUpdate();
+  }
+
+  async function installUpdate() {
     if (state.phase !== 'idle') {
       toast('Stop the recording first, then install the update.', 'warning');
       return;
     }
     const b = $('update');
     b.disabled = true;
-    b.textContent = 'Installing…';
+    $('update-text').textContent = state.update.status === 'ready' ? 'Installing…' : 'Downloading…';
     try {
       await bridge.installUpdate(); // Encore closes and reopens on the new version
     } catch (e) {
-      b.disabled = false;
-      b.textContent = 'Update ready';
       toast(String(e), 'error', 15000);
     }
+    b.disabled = false;
+    renderUpdate();
+  }
+
+  bridge.onUpdateStatus((u) => { state.update = u; renderUpdate(); });
+  bridge.onUpdateProgress(({ done, total }) => {
+    if (total) $('update-text').textContent = `Downloading ${Math.round((done / total) * 100)}%`;
+    if (total && done >= total) $('update-text').textContent = 'Installing…';
   });
+  $('update').addEventListener('click', installUpdate);
+  $('check-updates').addEventListener('click', checkForUpdates);
+  document.querySelectorAll('[data-update-mode]').forEach((o) =>
+    o.addEventListener('click', async () => { await saveSetting('update_mode', o.dataset.updateMode); renderUpdate(); }));
+
+  // ---------- menu, dialogs, side panel ----------
+  const menu = $('menu');
+  function closeMenu() {
+    menu.hidden = true;
+    $('menu-btn').setAttribute('aria-expanded', 'false');
+  }
+  function openMenu() {
+    menu.hidden = false;
+    $('menu-btn').setAttribute('aria-expanded', 'true');
+    menu.querySelector('button').focus();
+  }
+  $('menu-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (menu.hidden) openMenu(); else closeMenu();
+  });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) closeMenu(); });
+  menu.addEventListener('keydown', (e) => {
+    const items = [...menu.querySelectorAll('button')];
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  });
+  $('menu-check').addEventListener('click', () => { closeMenu(); checkForUpdates(); });
+
+  let lastFocus = null;
+  function openDialog(id) {
+    closeMenu();
+    document.querySelectorAll('.overlay').forEach((o) => (o.hidden = true));
+    lastFocus = document.activeElement;
+    const ov = $(id);
+    ov.hidden = false;
+    if (id === 'settings') { renderSettings(); renderUpdate(); refreshInputs(); }
+    if (id === 'changelog') renderChangelog();
+    ov.querySelector('[data-close]').focus();
+  }
+  function closeDialogs() {
+    let closed = false;
+    document.querySelectorAll('.overlay').forEach((o) => { if (!o.hidden) { o.hidden = true; closed = true; } });
+    if (closed && lastFocus) lastFocus.focus();
+  }
+  document.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openDialog(b.dataset.open)));
+  document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeDialogs));
+  document.querySelectorAll('.overlay').forEach((ov) => ov.addEventListener('mousedown', (e) => { if (e.target === ov) closeDialogs(); }));
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!menu.hidden) { closeMenu(); $('menu-btn').focus(); } else closeDialogs();
+  });
+
+  function setSideCollapsed(collapsed) {
+    document.body.classList.toggle('side-collapsed', collapsed);
+    $('side-toggle').setAttribute('aria-expanded', String(!collapsed));
+    $('side-toggle').title = collapsed ? 'Expand panel' : 'Collapse panel';
+    localStore('encore.side', collapsed ? 'collapsed' : 'open');
+  }
+  $('side-toggle').addEventListener('click', () => setSideCollapsed(!document.body.classList.contains('side-collapsed')));
+  setSideCollapsed(localStore('encore.side') === 'collapsed');
+
+  function renderChangelog() {
+    const body = $('changelog-body');
+    body.textContent = '';
+    const releases = window.ENCORE_CHANGELOG || [];
+    if (!releases.length) {
+      const d = document.createElement('div');
+      d.className = 'empty';
+      d.innerHTML = '<p class="big">The changelog starts at version 1.0</p><p>Encore is in beta. Until 1.0, what changed in each test build is listed in its release notes.</p>';
+      body.appendChild(d);
+      return;
+    }
+    for (const r of releases) {
+      const sec = document.createElement('section');
+      sec.className = 'release';
+      const h = document.createElement('h3');
+      h.textContent = `Encore ${r.version}`;
+      const when = document.createElement('div');
+      when.className = 'when';
+      when.textContent = r.date || '';
+      sec.append(h, when);
+      for (const [title, items] of Object.entries(r.sections || {})) {
+        if (!items.length) continue;
+        const h4 = document.createElement('h4');
+        h4.textContent = title;
+        const ul = document.createElement('ul');
+        for (const it of items) { const li = document.createElement('li'); li.textContent = it; ul.appendChild(li); }
+        sec.append(h4, ul);
+      }
+      body.appendChild(sec);
+    }
+  }
+
+  $('about-source').addEventListener('click', () =>
+    bridge.openLink('https://github.com/ancillaauri/Encore').catch((e) => toast(String(e), 'error')));
 
   // ---------- start-up ----------
   async function init() {
@@ -444,7 +585,10 @@
     }
     renderCodecs();
     renderStage();
-    try { showUpdate(await bridge.getUpdate()); } catch (e) { /* no update info yet */ }
+    try { state.version = await bridge.appVersion(); } catch (e) { state.version = ''; }
+    $('about-version').textContent = state.version ? `Version ${state.version} (beta)` : 'Beta';
+    try { state.update = await bridge.getUpdate(); } catch (e) { /* no update info yet */ }
+    renderUpdate();
   }
   init();
 })();

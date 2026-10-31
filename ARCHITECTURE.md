@@ -153,6 +153,13 @@ together (everything doubled). The change needed mirrors how it already handles 
   stream title (Microphone gets the mic icon).
 - When no slider has been touched, export using the `Full mix` stream only.
 
+## Updates (shell)
+
+`src-tauri/src/updater.rs`. Checks `releases/latest/download/latest.json` on GitHub according to
+the `update_mode` setting (manual / auto_download / never), 10 seconds after start and every 4 hours.
+States sent to the interface as `update-status`: none / available / ready. Installing is refused
+while recording; the engine is shut down (saving any recording) just before the installer runs.
+
 ## Linking the two apps
 
 First: the companion editor adds our output folder to the folders it scans. No API needed.

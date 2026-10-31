@@ -106,6 +106,20 @@ the TAURI_SIGNING_PRIVATE_KEY repository secret (never committed). Builds withou
 work but can't be delivered as updates. Test releases are now published as normal "latest" releases,
 because GitHub's "latest" link skips pre-releases.
 
+## 2026-10-31: Updates are the person's choice (supersedes "Automatic updates" above)
+No background downloads unless chosen. Settings → Updates offers: "Tell me when there's an update"
+(default: a quiet check, nothing downloads until they click), "Download updates automatically"
+(they still choose when to install), and "Never check for updates (not recommended)".
+"Check for updates" (≡ menu and Settings) works in every mode. Stored as `update_mode` in the
+engine's settings file; the shell reads it before each check.
+
+## 2026-10-31: Layout matched to the companion editor
+≡ menu top-left (Settings, Check for updates, Changelog, About Encore); "What to record" panel on the
+left, collapsible to an icon rail; Settings, Changelog and About open as dialogs. Measurements and
+colours follow the editor's (title bar, menu, dialog, radio options, tinted "Update" button); the
+code is Encore's own. Versions stay 0.x and the app is labelled Beta until 1.0; the changelog
+(CHANGELOG.md and ui/changelog.js) starts at 1.0 and is empty until then.
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.

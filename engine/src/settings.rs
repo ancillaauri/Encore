@@ -55,6 +55,10 @@ pub struct Settings {
     pub audio_app_tracks: bool,
     /// Fine-tunes audio/video sync in milliseconds (positive = audio later). Normally 0.
     pub audio_offset_ms: i32,
+    /// App updates: "manual" (check and tell me; I download and install), "auto_download"
+    /// (download in the background; I choose when to install), or "never" (no checks).
+    /// Read by the app shell, which owns updating.
+    pub update_mode: String,
 }
 
 impl Default for Settings {
@@ -72,6 +76,7 @@ impl Default for Settings {
             mic_device: "default".into(),
             audio_app_tracks: true,
             audio_offset_ms: 0,
+            update_mode: "manual".into(),
         }
     }
 }
@@ -123,6 +128,9 @@ impl Settings {
         if !(-1000..=1000).contains(&updated.audio_offset_ms) {
             return Err("Audio offset must be between -1000 and 1000 ms".into());
         }
+        if !["manual", "auto_download", "never"].contains(&updated.update_mode.as_str()) {
+            return Err("Update mode must be manual, auto_download or never".into());
+        }
         if updated.mic_device.trim().is_empty() {
             return Err("Microphone cannot be empty".into());
         }
@@ -139,6 +147,9 @@ impl Settings {
         }
         if self.output_dir.trim().is_empty() {
             self.output_dir = Settings::default().output_dir;
+        }
+        if !["manual", "auto_download", "never"].contains(&self.update_mode.as_str()) {
+            self.update_mode = "manual".into();
         }
         self
     }
@@ -170,6 +181,8 @@ mod tests {
         assert!(s.apply_patch(&json!({"audio_offset_ms": 5000})).is_err());
         assert!(s.apply_patch(&json!({"audio_mic": "yes"})).is_err());
         assert!(s.apply_patch(&json!({"audio_mic": false, "audio_offset_ms": -40})).is_ok());
+        assert!(s.apply_patch(&json!({"update_mode": "sometimes"})).is_err());
+        assert_eq!(s.apply_patch(&json!({"update_mode": "never"})).unwrap().update_mode, "never");
     }
 
     #[test]
@@ -187,5 +200,6 @@ mod tests {
         assert_eq!(s.monitor, "primary");
         assert!(s.audio_full_mix && s.audio_mic && s.audio_app_tracks);
         assert_eq!(s.mic_device, "default");
+        assert_eq!(s.update_mode, "manual"); // no background downloads unless chosen
     }
 }

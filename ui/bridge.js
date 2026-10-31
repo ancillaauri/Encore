@@ -20,9 +20,14 @@
     listWindows: () => call('list_windows'),
     openFolder: (path) => T.core.invoke('open_folder', { path }),
     revealFile: (path) => T.core.invoke('reveal_in_folder', { path }),
+    openLink: (url) => T.core.invoke('open_link', { url }),
+    appVersion: () => T.app.getVersion(),
+    // Updates: { status: 'none' | 'available' | 'ready', version, current }
     getUpdate: () => T.core.invoke('get_update'),
+    checkForUpdates: () => T.core.invoke('check_for_updates'),
     installUpdate: () => T.core.invoke('install_update'),
-    onUpdateReady: (callback) => T.event.listen('update-ready', (e) => callback(e.payload || {})),
+    onUpdateStatus: (callback) => T.event.listen('update-status', (e) => callback(e.payload || {})),
+    onUpdateProgress: (callback) => T.event.listen('update-progress', (e) => callback(e.payload || {})),
     onEvent: (callback) =>
       T.event.listen('engine-event', (e) => callback(e.payload.event, e.payload.data || {})),
   };
