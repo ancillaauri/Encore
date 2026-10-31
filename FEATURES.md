@@ -30,6 +30,13 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Settings dialog, ≡ menu, collapsible "What to record" panel, About, changelog skeleton | 6 | [~] |
 | Companion editor reads our per-app tracks (change on the editor side) | 9 | [ ] |
 
+## Match the editor exactly (design rule; next UI pass)
+
+| Difference | Status |
+|---|---|
+| Custom title bar merged into the dark interface (own minimise/maximise/close, drag area), like the editor's | [ ] |
+| Audit every screen side by side with the editor and list any remaining differences | [ ] |
+
 ## Later (agreed, after core works)
 
 | Feature | Notes | Status |

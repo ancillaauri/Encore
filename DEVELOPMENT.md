@@ -40,8 +40,14 @@ Every recording carries separate audio tracks: full mix, microphone, and one tra
 
 ## Design
 
-Dark theme in the style of Discord's "Midnight" palette, to sit naturally beside the companion editor.
-Our own stylesheet; colour tokens:
+**Hard rule: Encore and the companion clip editor are a pair and must look identical.** Same title bar,
+menu, panels, dialogs, controls, colours, type, spacing, icons and motion. When the editor's look and
+Encore's differ, Encore changes to match. Before adding any new UI, check how the editor does the
+equivalent thing and follow it exactly; only invent where the editor has no equivalent, and then in
+its style. (Match by recreating its values, not by copying its code, unless its MIT notice is added
+to THIRD_PARTY_NOTICES.md.)
+
+Colour tokens (the editor's Discord "Midnight" palette):
 
 ```css
 :root{
@@ -50,6 +56,8 @@ Our own stylesheet; colour tokens:
 }
 body{font:14px/1.4 system-ui,"Segoe UI",sans-serif}
 ```
+
+Known differences still to fix: see FEATURES.md ("Match the editor exactly").
 
 ## Stack
 

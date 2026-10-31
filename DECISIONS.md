@@ -120,6 +120,11 @@ colours follow the editor's (title bar, menu, dialog, radio options, tinted "Upd
 code is Encore's own. Versions stay 0.x and the app is labelled Beta until 1.0; the changelog
 (CHANGELOG.md and ui/changelog.js) starts at 1.0 and is empty until then.
 
+## 2026-10-31: Design rule, identical to the editor
+Encore and the companion clip editor are made as a pair, so Encore must look exactly like it,
+not just similar. Recorded as a hard rule in DEVELOPMENT.md. First known gap: the editor's custom
+merged title bar (backlogged, not started yet at the owner's request).
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.
