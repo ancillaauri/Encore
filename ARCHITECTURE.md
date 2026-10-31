@@ -81,20 +81,29 @@ Video (step 3):
   behaviour with exclusive-fullscreen games (fallback to Desktop mode if a game records black).
 - No injection/hooking into game processes, ever (anti-cheat safety).
 
-Monitor selection (step 3):
+Monitor selection (built in 0.5):
 - Game mode: not needed; capture follows the game window across monitors.
-- Desktop mode setting: Follow the game (default) / Follow the mouse / Primary / Named monitor.
+- Desktop setting `monitor`: `follow` (default) records the monitor of the window last clicked on
+  (the focused window) and moves with it; `id:<monitor>` always records that monitor. Chosen in the
+  hologram row under the record button (click a monitor to pin it, again to unpin).
+- Focus rules (`platform::focus_rule`): Encore's own windows, Alt+Tab and Start are ignored; the
+  desktop and taskbars use the monitor under the mouse; anything else uses its window's monitor.
+  The focus must stay on the new monitor for 0.3 s before the recording moves.
 - Monitors are identified by a stable device ID and shown by name, never by index
   (indexes change when monitors are plugged/unplugged).
 - Tray and window always show what is being captured (mode + game or monitor name).
 
-Swapping source mid-recording (step 6, PROVISIONAL):
-- Applies to monitor swaps, Game <-> Desktop, and Auto mode falling back when the game closes.
-- Engine starts the new capture first, cuts over at the next segment boundary, then stops the old one.
-- All segments share one fixed output size and frame rate (scale_aspect; black bars if aspect differs),
-  so they join cleanly. Audio is unaffected.
-- Must measure the hitch at the swap point; if visible, lengthen the overlap before cut-over.
-- Replay buffer uses the same mechanism.
+Switching monitor mid-recording (built in 0.5; Game <-> Desktop and replay will reuse it):
+- A recording is made of video parts. A switch starts a second FFmpeg run on the new monitor
+  (segments `p001_*.mkv`, `p002_*`...) while the first keeps recording. Once the new run has
+  reported half a second of progress, it takes over and the old one finishes its segment.
+- Each part's start is measured on the shared clock (VideoClock per run) and stored in
+  `audio.json` (`parts`). When saving, each part is cut exactly where the next one started, using
+  the concat list's `outpoint` (no re-encoding: segments are exactly 2 s and there are no
+  B-frames). So there is no gap, no repeated footage, and audio stays in sync.
+- A switch that never took over is marked `dropped` and left out.
+- All parts share one output size and frame rate (scale_aspect; black bars if aspect differs).
+- Two encoder sessions run at once for about a second during a switch.
 
 Game detection (step 6):
 - Candidate = foreground window that is fullscreen or borderless and using the GPU for 3D.

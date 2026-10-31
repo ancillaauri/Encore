@@ -154,6 +154,14 @@ was never built. Decided: Desktop recording switches to the monitor of the windo
 (the focused window), not where the mouse is, so glancing at a second screen doesn't move the
 recording. One behaviour, no setting. Built with the layout redesign (monitor picker under the
 record button, settings and this session's recordings in the left panel).
+Built in 0.5: overlapping FFmpeg runs, joined at the measured takeover time (ARCHITECTURE.md).
+End-to-end test: cut lands at exactly 3.500 s, flashes and a mic beep stay on their frames.
+Clicking a monitor in the picker pins it ("Always"); clicking it again goes back to following.
+
+## 2026-10-31: Layout A chosen
+From three mock-ups: settings and "Saved this session" in the left panel; under the record button,
+the monitors as holograms laid out as in Windows, then "One app" and "Game" tiles. The monitor
+being recorded glows red. "Game" shows "Coming soon" until game detection is built.
 
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).

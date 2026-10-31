@@ -1,49 +1,42 @@
-## Encore 0.4.1 (beta), test build 4: mic in the main track, new title bar, matched design
+## Encore 0.5.0 (beta), test build 5: new layout, and recording follows the screen you click on
 
-**0.4.1:** recordings are now marked as the new track layout (`rec-format:2`), so the companion
-clip editor can tell them apart from 0.3 recordings, whose first track has no mic. Nothing else
-changed from 0.4.0.
-
-### Changes since 0.3.1
-
-- **The first audio track now includes your microphone.** "Full mix" is everything: the PC's
-  sound plus your voice. That's the track players, Discord and VLC use, so a recording sounds
-  right anywhere without editing.
-- **New "Desktop audio" track**: everything the PC played, without your mic. Present when the mic
-  is recorded.
-- Track order in a file: Full mix, Microphone, Desktop audio, then one per app.
-- **Encore's own title bar.** The Windows frame is gone; the menu, name and window buttons sit in
-  one dark bar, like the companion clip editor. Drag it to move the window, double-click to
-  maximise.
-- **Matched to the companion clip editor**, piece by piece:
-  - ≡ menu now has File, View and Help, with shortcuts: **Ctrl+,** opens Settings, **Ctrl+B**
-    shows or hides the What to record panel.
-  - Dropdowns, buttons, tooltips, messages, scrollbars, dialogs and their fade-ins all look and
-    behave like the editor's.
-  - The What to record panel is the editor's width; collapsed, its icons sit where the editor's do.
-  - About and Changelog open as the editor's smaller dialogs.
-- Settings → Audio: "Everything you hear" is now called **Desktop audio**.
+### What's new
+- **Recording follows the screen you're using.** In Desktop mode, Encore records the monitor of
+  the window you last clicked on. Click a window on your other monitor while recording and the
+  recording moves there within about half a second, with no gap and the audio still in sync.
+  Moving the mouse across without clicking doesn't move it, and clicking Encore itself doesn't
+  count.
+- **New layout:**
+  - **Under the record button:** your monitors, drawn as holograms and laid out the way Windows
+    has them. The one that will be recorded glows blue; while recording it glows red.
+    - Click a monitor to **always** record that one (it shows "ALWAYS"). Click it again to go
+      back to following the screen you use.
+    - **One app:** pick a window from the list to record only that window.
+    - **Game:** automatic game detection, coming in the next update.
+  - **Left panel:** quick settings (quality, frame rate, resolution, desktop audio, mic, a
+    track for each app) and **Saved this session**. Click a recording there to show it in its
+    folder. All other settings are still under "All settings" or ≡ → File → Settings.
+- The old "Monitor with the mouse" and "Primary monitor" choices are replaced by following the
+  screen you use. If you had picked a specific monitor, it's still picked.
 
 ### Install
-Already on 0.3.1 or 0.4.0? Update from inside Encore (≡ → Help → Update to 0.4.1). Otherwise download
-`Encore_0.4.1_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
+Update from inside Encore (≡ → Help → Update to 0.5.0). Otherwise download
+`Encore_0.5.0_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
 **More info**, then **Run anyway**.
 
-**Taskbar still showing the old icon?** That's Windows' icon cache, not Encore. Press Win+R, type
-`ie4uinit.exe -show` and press Enter. If it's still old, unpin Encore from the taskbar and pin it
-again, or restart your PC.
-
 ### Test checklist
-1. **Update from inside the app.** Does it close, install and reopen on 0.4.1 by itself?
-2. **Title bar.** Drag the window by the bar, double-click it, use minimise / maximise / close.
-   Resize from the edges. Snap it with Win+Left/Right.
-3. **Audio.** Record about 30 seconds with music playing and you talking.
-   - Play the file in VLC: your voice and the music should both be there.
-   - In VLC (Audio → Audio Track) check Microphone, Desktop audio and the app tracks.
-4. **Look.** Open everything (menu, each submenu, Settings, About, Changelog, the dropdowns,
-   collapse the panel) and compare with the clip editor. Anything that doesn't match, screenshot it.
-5. **Still outstanding:** a game window with an alt-tab; game FPS with and without recording;
-   closing Encore mid-recording and checking it saved.
+1. **Follow.** Start recording with a window focused on one monitor. After about 5 seconds click
+   a window on the other monitor, then after 5 more click back. Stop. In the file, the picture
+   should switch at each click, with no freeze, no black frames and no jump in the sound. Send
+   the file if you can: I'll measure the switch points.
+2. **Not following.** While recording, move the mouse to the other monitor without clicking,
+   and click Encore's own window. Neither should move the recording.
+3. **Always one monitor.** Click a monitor in the picker so it says ALWAYS, record, click
+   around on the other monitor: the recording stays put. Click it again to unpin.
+4. **One app.** Pick an app, record, alt-tab away: only that window is recorded.
+5. **Layout.** Quick settings change the same settings as the Settings window. Recordings appear
+   under "Saved this session". Collapse the panel (Ctrl+B).
+6. **Still outstanding:** game FPS with and without recording; closing Encore mid-recording.
 
 ### What to send back
 Worked / didn't work for each step, any message Encore showed, and if something failed,

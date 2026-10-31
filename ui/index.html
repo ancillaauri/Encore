@@ -33,50 +33,65 @@
   <div id="tip" hidden></div>
 
   <main class="layout">
-    <nav id="side" class="side" aria-label="What to record">
+    <nav id="side" class="side" aria-label="Settings and recordings">
       <div class="sidehead">
-        <button type="button" id="side-toggle" class="sidetoggle" aria-expanded="true" title="Collapse panel">
+        <button type="button" id="side-toggle" class="sidetoggle" aria-expanded="true">
           <svg class="tg-collapse" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 4.5v15M15.5 9.5 13 12l2.5 2.5"/></svg>
           <svg class="tg-lib" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>
           <svg class="tg-open" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 4.5v15M13 9.5l2.5 2.5-2.5 2.5"/></svg>
-          <span class="sidename">What to record</span>
+          <span class="sidename">Encore</span>
         </button>
       </div>
 
       <div class="side-body">
-        <div class="seg" role="radiogroup" aria-label="Source">
-          <button type="button" role="radio" data-source="desktop" aria-checked="true">Desktop</button>
-          <button type="button" role="radio" data-source="window" aria-checked="false">One window</button>
-        </div>
-
-        <label class="row" id="monitor-row">
-          <span>Monitor</span>
-          <select class="dd" id="monitor"></select>
-        </label>
-
-        <div class="row" id="window-row" hidden>
-          <label for="window">Window</label>
-          <div class="with-button">
-            <select class="dd" id="window"></select>
-            <button type="button" class="ibtn sm" id="refresh-windows" aria-label="Refresh window list" title="Refresh window list">
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 6.5A6.5 6.5 0 1 0 16.4 12"/><path d="M16.5 2.5v4.5H12"/></svg>
-            </button>
-          </div>
-        </div>
-        <p class="hint" id="window-hint" hidden>Only the window is recorded, so alt-tabbing never shows your desktop. Automatic game detection comes in a later update.</p>
-
-        <div class="side-summary">
-          <p id="summary" class="summary"></p>
-          <button type="button" class="linkbtn" data-open="settings">Recording settings</button>
-        </div>
+        <section class="sec" id="quick">
+          <h2 class="lab">Video</h2>
+          <label class="srow"><span>Quality</span>
+            <select class="dd" id="q-quality" data-setting="quality">
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low (smaller files)</option>
+            </select>
+          </label>
+          <label class="srow"><span>Frame rate</span>
+            <select class="dd" id="q-fps" data-setting="fps" data-number>
+              <option value="30">30 fps</option>
+              <option value="60">60 fps</option>
+              <option value="120">120 fps</option>
+              <option value="144">144 fps</option>
+              <option value="240">240 fps</option>
+            </select>
+          </label>
+          <label class="srow"><span>Resolution</span>
+            <select class="dd" id="q-resolution" data-setting="resolution">
+              <option value="native">Same as source</option>
+              <option value="1440p">1440p</option>
+              <option value="1080p">1080p</option>
+              <option value="720p">720p</option>
+            </select>
+          </label>
+          <h2 class="lab">Audio</h2>
+          <label class="srow"><span>Desktop audio</span><input type="checkbox" class="toggle sm" data-setting="audio_full_mix"></label>
+          <label class="srow"><span>Microphone</span><input type="checkbox" class="toggle sm" data-setting="audio_mic"></label>
+          <label class="srow"><span>Track for each app</span><input type="checkbox" class="toggle sm" data-setting="audio_app_tracks"></label>
+          <p class="lock" id="lock-note" hidden>Locked while recording</p>
+          <button type="button" class="linkbtn" data-open="settings">All settings</button>
+        </section>
+        <div class="sdiv"></div>
+        <section class="sec">
+          <h2 class="lab">Saved this session</h2>
+          <ul id="recent" class="recent"></ul>
+          <p class="recent-empty" id="recent-empty">Nothing yet. Recordings you make show up here.</p>
+          <button type="button" class="linkbtn" id="open-folder">Open recordings folder</button>
+        </section>
       </div>
 
-      <div class="rail" aria-hidden="true">
-        <button type="button" class="railbtn" data-source="desktop" tabindex="-1" data-rail-tip="Desktop">
-          <span class="gav"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="11.5" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg></span>
+      <div class="rail">
+        <button type="button" class="railbtn" data-open="settings" tabindex="-1" data-rail-tip="Settings">
+          <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span>
         </button>
-        <button type="button" class="railbtn" data-source="window" tabindex="-1" data-rail-tip="One window">
-          <span class="gav"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M3.5 9h17"/></svg></span>
+        <button type="button" class="railbtn" id="rail-folder" tabindex="-1" data-rail-tip="Open recordings folder">
+          <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg></span>
         </button>
       </div>
     </nav>
@@ -91,14 +106,26 @@
         <span id="timer" class="timer">0:00</span>
         <span id="record-label" class="record-label">Start recording</span>
       </button>
-      <p id="what" class="what">Records your primary monitor</p>
+      <p id="what" class="what">Records the screen you're using</p>
       <p id="detail" class="detail"></p>
       <p id="tracks" class="tracks" hidden></p>
 
-      <div class="recent" id="recent-wrap" hidden>
-        <h2>Saved this session</h2>
-        <ul id="recent" class="recent-list"></ul>
+      <h2 class="pickhead">What to record</h2>
+      <div class="picks" id="picks" role="radiogroup" aria-label="What to record">
+        <div class="mons" id="mons"></div>
+        <span class="vsep" aria-hidden="true"></span>
+        <button type="button" class="pick" id="pick-app" role="radio" aria-checked="false" aria-haspopup="menu">
+          <span class="app"><span class="bar"></span><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 9h16"/></svg></span></span>
+          <span class="neck"></span><span class="beam"></span>
+          <span class="pn">One app</span><span class="ps" id="pick-app-sub">Choose</span>
+        </button>
+        <button type="button" class="pick" id="pick-game" role="radio" aria-checked="false" disabled title="Automatic game detection comes in the next update">
+          <span class="app"><span class="bar"></span><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/><path d="M8 11.5v2M7 12.5h2M15.5 12h.01M17.5 13h.01"/></svg></span></span>
+          <span class="neck"></span><span class="beam"></span>
+          <span class="pn">Game</span><span class="ps">Coming soon</span>
+        </button>
       </div>
+      <p class="pnote" id="pick-note"></p>
     </section>
   </main>
 

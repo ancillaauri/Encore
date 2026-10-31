@@ -11,7 +11,10 @@
     monitors: [],
     windows: [],
     inputs: [],
-    source: localStore('encore.source') === 'window' ? 'window' : 'desktop',
+    source: 'desktop', // 'desktop' or 'window' (one app)
+    windowHandle: 0,
+    windowTitle: '',
+    focusMonitor: null, // id of the monitor last clicked on (what "follow" records)
     phase: 'idle', // idle | starting | recording | saving
     recording: null,
     recent: [],
@@ -164,7 +167,8 @@
     btn.setAttribute('aria-haspopup', 'menu');
     const text = h('span', 'ddtext');
     btn.append(text, icoSpan('chev', 'chev'));
-    if (!sel.closest('.setrow')) btn.classList.add('full');
+    const inRow = !!sel.closest('.setrow, .srow');
+    if (!inRow) btn.classList.add('full');
     sel.after(btn);
     const sync = () => {
       const o = sel.options[sel.selectedIndex];
@@ -179,7 +183,7 @@
       check: o.selected,
       disabled: o.disabled,
       run: () => { if (sel.value === o.value) return; sel.value = o.value; sel.dispatchEvent(new Event('change')); },
-    })), !!sel.closest('.setrow'));
+    })), inRow);
     // the label still points at the button
     const lab = sel.closest('label');
     if (lab) lab.addEventListener('click', (e) => { if (e.target === lab || !btn.contains(e.target)) e.preventDefault(); });
@@ -262,21 +266,105 @@
   function fileName(path) { return path.split(/[\\/]/).pop(); }
 
   // ---------- what will be / is being recorded ----------
-  function chosenMonitor() {
-    const want = state.settings ? state.settings.monitor : 'primary';
-    if (want.startsWith('id:')) return state.monitors.find((m) => `id:${m.id}` === want);
-    return state.monitors.find((m) => m.primary) || state.monitors[0];
+  const following = () => !state.settings || state.settings.monitor === 'follow';
+  const pinnedId = () => (state.settings && state.settings.monitor.startsWith('id:') ? state.settings.monitor.slice(3) : null);
+  // Windows' own number for a monitor ("\\.\DISPLAY2" is 2).
+  const displayNo = (m) => { const n = /(\d+)\s*$/.exec(m.device || ''); return n ? n[1] : '?'; };
+  const monitorById = (id) => state.monitors.find((m) => m.id === id);
+
+  // The monitor that would be recorded now: the pinned one, or the one being used.
+  function targetMonitor() {
+    const pin = pinnedId();
+    if (pin) return monitorById(pin);
+    return monitorById(state.focusMonitor) || state.monitors.find((m) => m.primary) || state.monitors[0];
   }
 
   function describeTarget() {
-    if (state.source === 'window') {
-      const w = state.windows.find((x) => String(x.handle) === $('window').value);
-      return w ? `Records the window “${w.title}”` : 'Choose a window to record';
+    if (state.source === 'window') return state.windowTitle ? `Records ${state.windowTitle}` : 'Choose an app to record';
+    const m = targetMonitor();
+    if (pinnedId()) return m ? `Records ${m.name}` : 'Records the chosen monitor (not connected)';
+    return "Records the screen you're using";
+  }
+
+  function renderPicks() {
+    const box = $('mons');
+    box.textContent = '';
+    const recording = state.phase !== 'idle';
+    const recId = state.recording && state.recording.monitor;
+    const pin = pinnedId();
+    const shown = targetMonitor();
+    // Left to right, top to bottom, as in Windows' display settings; sized relative to each other.
+    const mons = [...state.monitors].sort((a, b) => a.x - b.x || a.y - b.y);
+    const maxW = Math.max(1, ...mons.map((m) => m.width));
+    for (const m of mons) {
+      const w = Math.round(150 * Math.max(0.6, m.width / maxW));
+      const hgt = Math.round(w * (m.height / Math.max(1, m.width)));
+      const on = state.source === 'desktop' && shown && shown.id === m.id;
+      const b = h('button', `pick${on ? ' on' : ''}${recording && recId === m.id ? ' rec' : ''}`);
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(on));
+      b.disabled = recording;
+      const mon = h('span', 'mon', displayNo(m));
+      mon.style.width = `${w}px`;
+      mon.style.height = `${Math.max(40, Math.min(120, hgt))}px`;
+      if (pin === m.id) mon.append(h('span', 'pin', 'ALWAYS'));
+      b.append(mon, h('span', 'neck'), h('span', 'beam'), h('span', 'pn', m.name));
+      if (recording && recId === m.id) {
+        const live = h('span', 'live');
+        live.append(h('i'), document.createTextNode('Recording'));
+        b.append(live);
+      } else {
+        b.append(h('span', 'ps', `${m.width}×${m.height}${m.primary ? ' · Primary' : ''}`));
+      }
+      b.title = pin === m.id ? 'Click again to follow the screen you use' : `Always record ${m.name}`;
+      b.onclick = () => pickMonitor(m);
+      box.append(b);
     }
-    const want = state.settings ? state.settings.monitor : 'primary';
-    if (want === 'mouse') return 'Records the monitor your mouse is on';
-    const m = chosenMonitor();
-    return m ? `Records ${m.name}${m.primary ? ' (primary)' : ''}` : 'Records your primary monitor';
+    const app = $('pick-app');
+    app.classList.toggle('on', state.source === 'window');
+    app.setAttribute('aria-checked', String(state.source === 'window'));
+    app.disabled = recording;
+    $('pick-app-sub').textContent = state.source === 'window' && state.windowTitle ? state.windowTitle : 'Choose';
+    // One line explaining what happens.
+    let note = '';
+    if (recording && state.recording && state.recording.following) note = 'Follows the screen you click on. Click a window on another monitor to move the recording there.';
+    else if (recording) note = '';
+    else if (state.source === 'window') note = 'Only this window is recorded, even when you alt-tab. Click a monitor to record the screen instead.';
+    else if (pin) note = 'Always records this monitor. Click it again to follow the screen you use.';
+    else note = 'Records the screen you\u2019re using and follows you when you click on another. Click a monitor to always record that one.';
+    $('pick-note').textContent = note;
+  }
+
+  async function pickMonitor(m) {
+    if (state.phase !== 'idle') return;
+    if (state.source === 'window') {
+      state.source = 'desktop';
+      if (pinnedId() !== m.id) await saveSetting('monitor', `id:${m.id}`);
+    } else {
+      await saveSetting('monitor', pinnedId() === m.id ? 'follow' : `id:${m.id}`);
+    }
+    renderStage();
+  }
+
+  async function pickApp() {
+    if (state.phase !== 'idle') return;
+    try { state.windows = await bridge.listWindows(); } catch (e) { state.windows = []; }
+    const items = state.windows.length
+      ? state.windows.map((w) => ({
+        text: w.exe ? `${w.title} (${w.exe})` : w.title,
+        check: state.source === 'window' && state.windowHandle === w.handle,
+        run: () => {
+          state.source = 'window';
+          state.windowHandle = w.handle;
+          state.windowTitle = w.title;
+          renderStage();
+        },
+      }))
+      : [{ text: 'No windows found', disabled: true, run: () => {} }];
+    const r = $('pick-app').getBoundingClientRect();
+    const m = openMenu(r.left, r.bottom + 6, items);
+    m.dataset.for = 'pick-app';
   }
 
   function renderStage() {
@@ -295,7 +383,8 @@
 
     if (state.phase === 'recording' && state.recording) {
       const r = state.recording;
-      $('what').textContent = `Recording ${r.source.replace(/^Desktop: /, '').replace(/^Window: /, '')}`;
+      const m = r.monitor && monitorById(r.monitor);
+      $('what').textContent = m ? `Recording ${m.name}` : `Recording ${r.source.replace(/^Desktop: /, '').replace(/^Window: /, '')}`;
       $('detail').textContent = `${r.width}×${r.height}, ${r.fps} fps, ${encoderLabel(r.encoder)}${r.pipeline === 'download' ? ' (copy path)' : ''}`;
     } else if (state.phase === 'saving') {
       $('what').textContent = 'Saving your recording';
@@ -306,22 +395,11 @@
       $('timer').textContent = '0:00';
       $('ring-sweep').style.strokeDashoffset = RING;
     }
-    // Source and settings are locked while recording or saving.
+    // Settings that change the file are locked while recording or saving.
     const locked = state.phase !== 'idle';
-    document.querySelectorAll('.seg button, .railbtn').forEach((b) => (b.disabled = locked));
-    $('refresh-windows').disabled = locked;
-    renderSummary();
-  }
-
-  // One line under the source picker saying how recordings are made, with a link to Settings.
-  function renderSummary() {
-    const s = state.settings;
-    if (!s) return;
-    const res = { native: 'Full resolution', '1440p': '1440p', '1080p': '1080p', '720p': '720p' }[s.resolution];
-    const audio = [s.audio_full_mix && 'desktop', s.audio_mic && 'mic', s.audio_app_tracks && 'each app'].filter(Boolean);
-    $('summary').textContent =
-      `${res}, ${s.fps} fps, ${CODEC[s.codec]}, ${s.quality} quality. ` +
-      (audio.length ? `Audio: ${audio.join(', ')}.` : 'No audio.');
+    $('lock-note').hidden = !locked;
+    document.querySelectorAll('#quick select, #quick input').forEach((el) => (el.disabled = locked));
+    renderPicks();
   }
 
   function encoderLabel(name) {
@@ -339,63 +417,16 @@
   }
   setInterval(tick, 250);
 
-  // ---------- settings panel ----------
-  function renderSource() {
-    document.querySelectorAll('.seg button').forEach((b) => {
-      b.setAttribute('aria-checked', String(b.dataset.source === state.source));
-    });
-    document.querySelectorAll('.railbtn').forEach((b) => b.classList.toggle('on', b.dataset.source === state.source));
-    $('monitor-row').hidden = state.source !== 'desktop';
-    $('window-row').hidden = state.source !== 'window';
-    $('window-hint').hidden = state.source !== 'window';
-  }
-
-  function renderMonitors() {
-    const sel = $('monitor');
-    sel.textContent = '';
-    const add = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o); };
-    add('primary', 'Primary monitor');
-    add('mouse', 'Monitor with the mouse');
-    for (const m of state.monitors) add(`id:${m.id}`, `${m.name} (${m.width}×${m.height})${m.primary ? ', primary' : ''}`);
-    const want = state.settings ? state.settings.monitor : 'primary';
-    if (want.startsWith('id:') && !state.monitors.some((m) => `id:${m.id}` === want)) add(want, 'Saved monitor (not connected)');
-    sel.value = want;
-  }
-
-  function renderWindows() {
-    const sel = $('window');
-    const keep = sel.value;
-    sel.textContent = '';
-    if (!state.windows.length) {
-      const o = document.createElement('option');
-      o.value = '';
-      o.textContent = 'No windows found';
-      sel.appendChild(o);
-      return;
-    }
-    for (const w of state.windows) {
-      const o = document.createElement('option');
-      o.value = String(w.handle);
-      o.textContent = w.exe ? `${w.title} (${w.exe})` : w.title;
-      sel.appendChild(o);
-    }
-    if (state.windows.some((w) => String(w.handle) === keep)) sel.value = keep;
-  }
-
+  // ---------- settings (side panel and Settings window share the same controls) ----------
   function renderSettings() {
     const s = state.settings;
     if (!s) return;
-    $('codec').value = s.codec;
-    $('fps').value = String(s.fps);
-    $('resolution').value = s.resolution;
-    $('quality').value = s.quality;
-    $('cursor').checked = !!s.capture_cursor;
-    $('output').value = s.output_dir;
-    $('audio-full').checked = !!s.audio_full_mix;
-    $('audio-mic').checked = !!s.audio_mic;
-    $('audio-apps').checked = !!s.audio_app_tracks;
+    document.querySelectorAll('[data-setting]').forEach((el) => {
+      const v = s[el.dataset.setting];
+      if (el.type === 'checkbox') el.checked = !!v;
+      else if (v !== undefined) el.value = String(v);
+    });
     renderInputs();
-    renderMonitors();
     renderCodecs();
   }
 
@@ -447,6 +478,7 @@
     try {
       state.settings = await bridge.setSettings({ [key]: value });
       if (key === 'audio_mic') renderInputs();
+      renderSettings();
       renderStage();
       renderUpdate();
     } catch (e) {
@@ -455,17 +487,8 @@
     }
   }
 
-  async function refreshWindows() {
-    try {
-      state.windows = await bridge.listWindows();
-    } catch (e) { state.windows = []; }
-    renderWindows();
-    renderStage();
-  }
-
   async function refreshMonitors() {
     try { state.monitors = await bridge.listMonitors(); } catch (e) { state.monitors = []; }
-    renderMonitors();
     renderStage();
   }
 
@@ -474,9 +497,8 @@
     if (state.phase === 'idle') {
       let source = { source: 'desktop' };
       if (state.source === 'window') {
-        const handle = Number($('window').value);
-        if (!handle) { toast('Choose a window to record first.', 'warning'); return; }
-        source = { source: 'window', handle };
+        if (!state.windowHandle) { toast('Choose an app to record first.', 'warning'); return; }
+        source = { source: 'window', handle: state.windowHandle };
       }
       state.phase = 'starting';
       renderStage();
@@ -503,30 +525,28 @@
     }
   }
 
+  // "Desktop 2026.10.31 - 21.32.04.mp4" shows as "Desktop 21.32.04" when it's from today.
+  function shortName(path) {
+    const n = fileName(path).replace(/\.mp4$/i, '');
+    const t = new Date();
+    const today = `${t.getFullYear()}.${String(t.getMonth() + 1).padStart(2, '0')}.${String(t.getDate()).padStart(2, '0')} - `;
+    return n.replace(today, '');
+  }
+
   function addRecent(d) {
     state.recent.unshift(d);
-    const ul = $('recent');
-    const li = document.createElement('li');
-    const name = document.createElement('span');
-    name.className = 'file';
-    name.textContent = fileName(d.path);
-    name.title = d.path;
-    if (d.recovered) {
-      const t = document.createElement('span');
-      t.className = 'tag';
-      t.textContent = 'recovered';
-      name.appendChild(t);
-    }
-    const meta = document.createElement('span');
-    meta.className = 'meta';
-    meta.textContent = d.duration_ms ? `${clock(d.duration_ms)}, ${size(d.size_bytes)}` : size(d.size_bytes);
-    const btn = document.createElement('button');
-    btn.className = 'btn sm';
-    btn.textContent = 'Show in folder';
-    btn.onclick = () => bridge.revealFile(d.path).catch((e) => toast(String(e), 'error'));
-    li.append(name, meta, btn);
-    ul.prepend(li);
-    $('recent-wrap').hidden = false;
+    const li = h('li');
+    li.title = `${d.path}\nClick to show in folder`;
+    const thumb = h('span', 'thumb');
+    thumb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor" stroke="none"/></svg>';
+    const text = h('div', 'rtext');
+    const name = h('div', 'rname', shortName(d.path));
+    if (d.recovered) name.append(h('span', 'tag', 'recovered'));
+    text.append(name, h('div', 'rmeta', d.duration_ms ? `${clock(d.duration_ms)} · ${size(d.size_bytes)}` : size(d.size_bytes)));
+    li.append(thumb, text);
+    li.onclick = () => bridge.revealFile(d.path).catch((e) => toast(String(e), 'error'));
+    $('recent').prepend(li);
+    $('recent-empty').hidden = true;
   }
 
   // ---------- engine events ----------
@@ -552,6 +572,14 @@
       case 'status':
         if (data.state === 'saving' && state.phase === 'recording') state.phase = 'saving';
         if (data.state === 'idle' && state.phase === 'saving') state.phase = 'idle';
+        renderStage();
+        break;
+      case 'focus_monitor':
+        state.focusMonitor = data.id || state.focusMonitor;
+        if (state.phase === 'idle') renderStage();
+        break;
+      case 'monitor_switched':
+        if (state.recording) state.recording.monitor = data.monitor;
         renderStage();
         break;
       case 'audio_app_added':
@@ -580,18 +608,15 @@
 
   // ---------- wiring ----------
   $('record').addEventListener('click', toggleRecording);
-  document.querySelectorAll('.seg button, .railbtn').forEach((b) =>
-    b.addEventListener('click', () => {
-      state.source = b.dataset.source;
-      localStore('encore.source', state.source);
-      renderSource();
-      if (state.source === 'window') refreshWindows();
-      renderStage();
-    })
-  );
-  $('refresh-windows').addEventListener('click', refreshWindows);
-  $('window').addEventListener('change', renderStage);
-  $('monitor').addEventListener('change', (e) => saveSetting('monitor', e.target.value));
+  $('pick-app').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const m = $('ctxmenu');
+    if (!m.hidden && m.dataset.for === 'pick-app') { hideMenu(); return; }
+    pickApp();
+  });
+  const openOutput = () => { if (state.settings) bridge.openFolder(state.settings.output_dir).catch((e) => toast(String(e), 'error')); };
+  $('open-folder').addEventListener('click', openOutput);
+  $('rail-folder').addEventListener('click', openOutput);
   $('mic-device').addEventListener('change', (e) => saveSetting('mic_device', e.target.value));
   document.querySelectorAll('[data-setting]').forEach((el) => {
     if (el.id === 'output') {
@@ -801,14 +826,14 @@
 
   // ---------- start-up ----------
   async function init() {
-    renderSource();
     renderStage();
     try {
       state.settings = await bridge.getSettings();
       renderSettings();
       const status = await bridge.getStatus();
+      state.focusMonitor = status.focus_monitor || null;
       if (status.state === 'recording') {
-        state.recording = { ...status.recording, source: status.recording.label, fps: '' };
+        state.recording = { ...status.recording, source: status.recording.label };
         state.phase = 'recording';
       }
     } catch (e) {
@@ -816,7 +841,6 @@
     }
     await refreshMonitors();
     await refreshInputs();
-    if (state.source === 'window') await refreshWindows();
     // Capabilities arrive as an event, but may have been sent before we were listening.
     for (let i = 0; i < 40 && !(state.caps && state.caps.probed); i++) {
       try { state.caps = await bridge.getCapabilities(); } catch (e) { /* engine still starting */ }

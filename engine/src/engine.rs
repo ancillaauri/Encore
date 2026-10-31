@@ -187,6 +187,7 @@ impl Engine {
                     "pipeline": a.pipeline,
                     "width": a.width,
                     "height": a.height,
+                    "fps": a.fps(),
                     "started_unix_ms": a.started_unix_ms,
                     "elapsed_ms": a.elapsed_ms(),
                     "out_path": a.out_path.display().to_string(),

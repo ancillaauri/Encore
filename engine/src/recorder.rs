@@ -351,6 +351,10 @@ impl Active {
         self.proc.log_path.clone()
     }
 
+    pub fn fps(&self) -> u32 {
+        self.spec.fps
+    }
+
     /// What is being recorded right now (the monitor or window).
     pub fn target(&self) -> Target {
         self.proc.target

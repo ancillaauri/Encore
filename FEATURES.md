@@ -9,7 +9,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 |---|---|---|
 | Manual recording (start/stop) | 3 | [~] |
 | Capture modes: Game window / Desktop (toggle style TBC) | 3, 6 | [ ] |
-| Monitor selection for Desktop mode (follow game / follow mouse / primary / named monitor) | 3 | [~] |
+| Monitor selection for Desktop mode: follow the screen you click on (default) or always one monitor | 3 | [x] 0.5 |
 | "What's being recorded" indicator (tray + window) | 6 | [ ] |
 | Codec choice: H.264 default, HEVC and AV1 optional | 3 | [~] |
 | Quality settings: resolution (native/downscaled), frame rate up to 144, quality/bitrate presets | 3 | [~] |
@@ -18,7 +18,8 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | One audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [~] |
 | Global hotkeys, tray icon, settings screen | 6 | [ ] |
 | Game detection (auto + always/never list + pick a window) | 6 | [ ] |
-| Swap monitor / mode mid-recording (hotkey + tray) | 6 | [ ] |
+| Recording moves to the monitor you click on, mid-recording, with no gap | 6 | [x] 0.5 |
+| Switch Game ↔ Desktop mid-recording (reuses the same mechanism) | 6 | [ ] |
 | Pause / resume manual recording | 6 | [ ] |
 | Screenshot hotkey | 6 | [ ] |
 | "Saved" feedback: sound + Windows notification | 6 | [ ] |
