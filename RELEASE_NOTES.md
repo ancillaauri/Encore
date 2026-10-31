@@ -1,6 +1,7 @@
-## Encore 0.3.0 (beta), test build 3: new layout and settings
+## Encore 0.3.1 (beta), test build 3: new layout, settings, and in-app updates
 
 ### What's new
+- **In-app updates now work.** This is the first signed release, so copies of 0.3.0 can update to it from inside the app (≡ → Check for updates).
 - **New layout**, in the same style as the companion clip editor:
   - **≡ menu** in the top-left: Settings, Check for updates, Changelog, About Encore.
   - **What to record** panel on the left (Desktop or One window, and which monitor). Collapse it
@@ -16,15 +17,13 @@
 - Still in this build from 0.2: separate audio tracks (Full mix, Microphone, one per app) and the new icon.
 
 ### Install
-Download `Encore_0.3.0_x64-setup.exe` below and run it (it updates earlier versions in place). Windows
+Already on 0.3.0? Update from inside Encore instead (≡ → Check for updates). Otherwise download `Encore_0.3.1_x64-setup.exe` below and run it (it updates earlier versions in place). Windows
 may say "Windows protected your PC": click **More info**, then **Run anyway**.
 
 ### Test checklist
 1. **Layout.** Open the ≡ menu and each item. Collapse and expand the left panel. Change a setting,
    close Encore, reopen it: is the setting kept?
-2. **Updates.** In Settings → Updates, pick each option and press **Check for updates**. (Installing
-   updates from inside the app needs the update-signing setup finished; until then the check may
-   say it couldn't check, which is expected.)
+2. **Updates.** In Settings → Updates, pick each option and press **Check for updates**.
 3. **Audio (from 0.2, not tested yet).** Record about a minute with a game, Spotify, a YouTube video
    and you talking. While recording, the track list under the timer should grow. Send the file if
    you can: I'll measure the sync and check every track.
