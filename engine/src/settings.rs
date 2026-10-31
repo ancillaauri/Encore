@@ -45,6 +45,16 @@ pub struct Settings {
     pub capture_cursor: bool,
     /// Desktop mode monitor: "primary", "mouse", or "id:<stable monitor id>".
     pub monitor: String,
+    /// Record everything you hear as the "Full mix" track.
+    pub audio_full_mix: bool,
+    /// Record the microphone as its own track.
+    pub audio_mic: bool,
+    /// "default" or a microphone id from `list_audio_inputs`.
+    pub mic_device: String,
+    /// Give each app that plays sound its own track.
+    pub audio_app_tracks: bool,
+    /// Fine-tunes audio/video sync in milliseconds (positive = audio later). Normally 0.
+    pub audio_offset_ms: i32,
 }
 
 impl Default for Settings {
@@ -57,6 +67,11 @@ impl Default for Settings {
             quality: Quality::High,
             capture_cursor: true,
             monitor: "primary".into(),
+            audio_full_mix: true,
+            audio_mic: true,
+            mic_device: "default".into(),
+            audio_app_tracks: true,
+            audio_offset_ms: 0,
         }
     }
 }
@@ -105,6 +120,12 @@ impl Settings {
         if updated.output_dir.trim().is_empty() {
             return Err("Output folder cannot be empty".into());
         }
+        if !(-1000..=1000).contains(&updated.audio_offset_ms) {
+            return Err("Audio offset must be between -1000 and 1000 ms".into());
+        }
+        if updated.mic_device.trim().is_empty() {
+            return Err("Microphone cannot be empty".into());
+        }
         let m = updated.monitor.as_str();
         if !(m == "primary" || m == "mouse" || (m.starts_with("id:") && m.len() > 3)) {
             return Err("Monitor must be primary, mouse, or a monitor id".into());
@@ -146,6 +167,9 @@ mod tests {
         assert!(s.apply_patch(&json!({"monitor": "left"})).is_err());
         assert!(s.apply_patch(&json!({"output_dir": "  "})).is_err());
         assert!(s.apply_patch(&json!([1, 2])).is_err());
+        assert!(s.apply_patch(&json!({"audio_offset_ms": 5000})).is_err());
+        assert!(s.apply_patch(&json!({"audio_mic": "yes"})).is_err());
+        assert!(s.apply_patch(&json!({"audio_mic": false, "audio_offset_ms": -40})).is_ok());
     }
 
     #[test]
@@ -161,5 +185,7 @@ mod tests {
         assert_eq!(s.fps, 30);
         assert_eq!(s.codec, Codec::H264);
         assert_eq!(s.monitor, "primary");
+        assert!(s.audio_full_mix && s.audio_mic && s.audio_app_tracks);
+        assert_eq!(s.mic_device, "default");
     }
 }

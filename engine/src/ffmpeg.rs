@@ -147,6 +147,9 @@ fn encoder_args(enc: Encoder, kbps: u32) -> Vec<String> {
         }
     }
     a.extend(["-b:v".into(), b, "-maxrate".into(), max, "-bufsize".into(), buf]);
+    // No B-frames: with them, joining the 2-second segments shifted the whole video 2 frames
+    // later than the audio (found in testing). The compression cost is a few percent.
+    a.extend(["-bf".into(), "0".into()]);
     a
 }
 
@@ -165,6 +168,12 @@ pub fn record_args(
         "-nostats".into(),
         "-loglevel".into(),
         "warning".into(),
+        // Progress reports on stdout let the engine work out exactly when the video started,
+        // which is how the audio tracks are lined up with it.
+        "-progress".into(),
+        "pipe:1".into(),
+        "-stats_period".into(),
+        "0.05".into(),
         "-filter_complex".into(),
         format!("{}[v]", capture_filter(spec, pipeline, enc.vendor)),
         "-map".into(),
@@ -205,9 +214,19 @@ pub fn concat_list(files: &[PathBuf]) -> String {
     s
 }
 
-/// Joins segments (listed in `list_file`) into the final MP4 without re-encoding.
-pub fn finalise_args(list_file: &Path, out: &Path) -> Vec<String> {
-    vec![
+/// An audio track to attach: raw 48 kHz stereo s16le PCM aligned to the session origin.
+#[derive(Debug, Clone)]
+pub struct AudioInput {
+    pub path: PathBuf,
+    pub title: String,
+}
+
+/// Joins video segments (listed in `list_file`) without re-encoding them, and attaches the audio
+/// tracks in order (encoded to AAC). `audio_skip` seconds are cut from the start of every audio
+/// file so audio and video start at the same moment. The first audio track is the default one
+/// players use.
+pub fn finalise_args(list_file: &Path, audio: &[AudioInput], audio_skip: f64, out: &Path) -> Vec<String> {
+    let mut a: Vec<String> = vec![
         "-hide_banner".into(),
         "-loglevel".into(),
         "error".into(),
@@ -217,17 +236,50 @@ pub fn finalise_args(list_file: &Path, out: &Path) -> Vec<String> {
         "0".into(),
         "-i".into(),
         list_file.to_string_lossy().into_owned(),
-        "-map".into(),
-        "0".into(),
-        "-c".into(),
-        "copy".into(),
+    ];
+    for t in audio {
+        a.extend([
+            "-ss".into(),
+            format!("{audio_skip:.6}"),
+            "-f".into(),
+            "s16le".into(),
+            "-ar".into(),
+            "48000".into(),
+            "-ac".into(),
+            "2".into(),
+            "-i".into(),
+            t.path.to_string_lossy().into_owned(),
+        ]);
+    }
+    a.extend(["-map".into(), "0:v:0".into()]);
+    for i in 0..audio.len() {
+        a.extend(["-map".into(), format!("{}:a:0", i + 1)]);
+    }
+    a.extend(["-c:v".into(), "copy".into()]);
+    if !audio.is_empty() {
+        a.extend(["-c:a".into(), "aac".into(), "-b:a".into(), "192k".into()]);
+        for (i, t) in audio.iter().enumerate() {
+            a.extend([
+                format!("-metadata:s:a:{i}"),
+                format!("title={}", t.title),
+                format!("-metadata:s:a:{i}"),
+                format!("handler_name={}", t.title),
+                format!("-disposition:a:{i}"),
+                if i == 0 { "default".into() } else { "0".into() },
+            ]);
+        }
+        // Audio is padded to the moment recording stopped; stop at whichever stream ends first.
+        a.push("-shortest".into());
+    }
+    a.extend([
         "-movflags".into(),
         "+faststart".into(),
         "-metadata".into(),
         "comment=rec-format:1".into(),
         "-y".into(),
         out.to_string_lossy().into_owned(),
-    ]
+    ]);
+    a
 }
 
 /// Encodes a few blank frames to see whether this PC can use an encoder.
@@ -355,8 +407,14 @@ mod tests {
         assert!(joined.contains("-b:v 37000k -maxrate 55500k -bufsize 74000k"));
         assert!(joined.contains("-g 120"));
         assert!(joined.contains("-forced-idr 1"));
+        assert!(joined.contains("-bf 0"));
+        for v in VENDOR_ORDER {
+            let e = Encoder { codec: Codec::Hevc, vendor: v };
+            assert!(record_args(&spec(), e, Pipeline::ZeroCopy, 1, Path::new("x")).join(" ").contains("-bf 0"));
+        }
         assert!(joined.contains("-f segment -segment_time 2 -segment_format matroska -reset_timestamps 1"));
         assert!(!a.contains(&"-nostdin".to_string()));
+        assert!(joined.contains("-progress pipe:1 -stats_period 0.05"));
         assert!(a.last().unwrap().ends_with("seg_%06d.mkv"));
         let av1 = Encoder { codec: Codec::Av1, vendor: Vendor::Nvidia };
         assert!(!record_args(&spec(), av1, Pipeline::ZeroCopy, 1, Path::new("x")).contains(&"-forced-idr".to_string()));
@@ -382,8 +440,27 @@ mod tests {
 
     #[test]
     fn finalise_tags_file_for_the_editor() {
-        let a = finalise_args(Path::new("list.txt"), Path::new("out.mp4"));
+        let a = finalise_args(Path::new("list.txt"), &[], 0.0, Path::new("out.mp4"));
         assert!(a.windows(2).any(|w| w[0] == "-metadata" && w[1] == "comment=rec-format:1"));
-        assert!(a.windows(2).any(|w| w[0] == "-c" && w[1] == "copy"));
+        assert!(a.windows(2).any(|w| w[0] == "-c:v" && w[1] == "copy"));
+        assert!(!a.contains(&"-shortest".to_string()));
+    }
+
+    #[test]
+    fn finalise_attaches_titled_audio_tracks_in_order() {
+        let audio = vec![
+            AudioInput { path: PathBuf::from("a00_full.pcm"), title: "Full mix".into() },
+            AudioInput { path: PathBuf::from("a01_mic.pcm"), title: "Microphone".into() },
+            AudioInput { path: PathBuf::from("a02_app.pcm"), title: "Spotify".into() },
+        ];
+        let a = finalise_args(Path::new("list.txt"), &audio, 0.3125, Path::new("out.mp4"));
+        let j = a.join(" ");
+        assert!(j.contains("-ss 0.312500 -f s16le -ar 48000 -ac 2 -i a00_full.pcm"));
+        assert!(j.contains("-map 0:v:0 -map 1:a:0 -map 2:a:0 -map 3:a:0"));
+        assert!(j.contains("-metadata:s:a:0 title=Full mix"));
+        assert!(j.contains("-metadata:s:a:2 title=Spotify -metadata:s:a:2 handler_name=Spotify"));
+        assert!(j.contains("-disposition:a:0 default"));
+        assert!(j.contains("-disposition:a:1 0"));
+        assert!(j.contains("-shortest"));
     }
 }

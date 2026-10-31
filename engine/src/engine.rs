@@ -1,5 +1,6 @@
 //! Engine state and command handling. One command at a time, on the main thread.
 
+use crate::audio::{self, AudioOptions};
 use crate::ffmpeg::{self, CaptureSpec, Encoder, Pipeline, Target, ALL_CODECS, VENDOR_ORDER};
 use crate::log::{log, tail};
 use crate::paths;
@@ -120,7 +121,8 @@ impl Engine {
             "get_capabilities" => Ok(serde_json::to_value(self.caps()).unwrap_or(Value::Null)),
             "list_monitors" => Ok(serde_json::to_value(platform::list_monitors()).unwrap_or(Value::Null)),
             "list_windows" => Ok(serde_json::to_value(platform::list_windows()).unwrap_or(Value::Null)),
-            "list_audio_apps" => Ok(json!([])),
+            "list_audio_apps" => Ok(serde_json::to_value(audio::list_apps()).unwrap_or(Value::Null)),
+            "list_audio_inputs" => Ok(serde_json::to_value(audio::list_inputs()).unwrap_or(Value::Null)),
             "start_recording" => self.start_recording(&c.args),
             "stop_recording" => {
                 // Reply first so the interface can show "Saving..." while the file is assembled.
@@ -163,6 +165,7 @@ impl Engine {
                     "started_unix_ms": a.started_unix_ms,
                     "elapsed_ms": a.elapsed_ms(),
                     "out_path": a.out_path.display().to_string(),
+                    "audio_tracks": a.track_titles(),
                 }
             }),
         }
@@ -227,8 +230,26 @@ impl Engine {
         let out_dir = PathBuf::from(&self.settings.output_dir);
         let out_path = recorder::output_path(&out_dir, &label, platform::local_time());
         let preferred = self.known_pipeline.get(encoder.name()).copied();
+        let audio_opts = AudioOptions {
+            full_mix: self.settings.audio_full_mix,
+            mic: self.settings.audio_mic,
+            mic_device: self.settings.mic_device.clone(),
+            app_tracks: self.settings.audio_app_tracks,
+            max_app_tracks: 8,
+        };
 
-        let active = recorder::start(&self.ffmpeg, &spec, encoder, kbps, &label, out_path, &paths::temp_dir(), preferred)?;
+        let active = recorder::start(
+            &self.ffmpeg,
+            &spec,
+            encoder,
+            kbps,
+            &label,
+            out_path,
+            &paths::temp_dir(),
+            preferred,
+            &audio_opts,
+            self.settings.audio_offset_ms,
+        )?;
         self.known_pipeline.insert(encoder.name(), active.pipeline);
         let info = json!({
             "label": active.label,
@@ -240,6 +261,7 @@ impl Engine {
             "fps": spec.fps,
             "bitrate_kbps": kbps,
             "started_unix_ms": active.started_unix_ms,
+            "audio_tracks": active.track_titles(),
         });
         if active.pipeline == Pipeline::Download {
             send_event("warning", json!({ "message": "Recording is using the slower copy path on this PC (zero-copy was not accepted by the driver). It works, but uses more CPU." }));

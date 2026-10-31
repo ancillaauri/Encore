@@ -1,6 +1,8 @@
 //! Windows-specific lookups: monitors, windows, cursor position, local time.
 //! On other platforms these return empty results so the rest of the engine can be tested anywhere.
 
+#![cfg_attr(not(windows), allow(dead_code))]
+
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -27,6 +29,39 @@ pub struct WindowInfo {
     pub exe: String,
     pub width: u32,
     pub height: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProcInfo {
+    pub parent: u32,
+    pub exe: String,
+}
+
+/// The top-most ancestor of `pid` that is the same program (e.g. Chrome's audio helper -> Chrome).
+/// Capturing that process "and its children" gets all of the app's sound.
+pub fn app_root(pid: u32, procs: &std::collections::HashMap<u32, ProcInfo>) -> u32 {
+    let Some(me) = procs.get(&pid) else { return pid };
+    let exe = me.exe.to_ascii_lowercase();
+    let mut current = pid;
+    for _ in 0..32 {
+        match procs.get(&current) {
+            Some(p) if p.parent != 0 && p.parent != current => match procs.get(&p.parent) {
+                Some(parent) if parent.exe.to_ascii_lowercase() == exe => current = p.parent,
+                _ => break,
+            },
+            _ => break,
+        }
+    }
+    current
+}
+
+/// "VALORANT-Win64-Shipping.exe" -> "VALORANT-Win64-Shipping"; used when an app has no description.
+pub fn exe_stem(exe: &str) -> String {
+    let base = exe.rsplit(['\\', '/']).next().unwrap_or(exe);
+    match base.rfind('.') {
+        Some(i) if i > 0 => base[..i].to_string(),
+        _ => base.to_string(),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,6 +101,19 @@ mod other {
     }
     pub fn window_minimised(_handle: u64) -> bool {
         false
+    }
+    /// Monotonic clock in 100 ns units (Windows uses the same clock as audio and video timestamps).
+    pub fn now_hns() -> u64 {
+        use std::sync::OnceLock;
+        static START: OnceLock<std::time::Instant> = OnceLock::new();
+        let start = START.get_or_init(std::time::Instant::now);
+        1_000_000_000 + (start.elapsed().as_nanos() / 100) as u64
+    }
+    pub fn processes() -> std::collections::HashMap<u32, ProcInfo> {
+        std::collections::HashMap::new()
+    }
+    pub fn app_display_name(pid: u32) -> String {
+        format!("App {pid}")
     }
     pub fn local_time() -> LocalTime {
         let secs = std::time::SystemTime::now()
@@ -117,6 +165,11 @@ mod win {
     use windows_sys::Win32::Graphics::Gdi::{
         EnumDisplayMonitors, GetMonitorInfoW, MonitorFromPoint, HDC, HMONITOR, MONITORINFO, MONITORINFOEXW,
     };
+    use windows_sys::Win32::Storage::FileSystem::{GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW};
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+    };
+    use windows_sys::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
     use windows_sys::Win32::System::SystemInformation::GetLocalTime;
     use windows_sys::Win32::System::Threading::{GetCurrentProcessId, OpenProcess, QueryFullProcessImageNameW};
     use windows_sys::Win32::UI::HiDpi::SetProcessDpiAwarenessContext;
@@ -137,6 +190,7 @@ mod win {
     const DWMWA_CLOAKED: i32 = 14;
     const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
     const DPI_PER_MONITOR_AWARE_V2: isize = -4;
+    const TH32CS_SNAPPROCESS: u32 = 2;
 
     fn wide_to_string(buf: &[u16]) -> String {
         let end = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
@@ -278,6 +332,109 @@ mod win {
         }
     }
 
+    /// Windows' high-resolution clock in 100 ns units: the same clock audio packets and
+    /// captured video frames are stamped with.
+    pub fn now_hns() -> u64 {
+        unsafe {
+            let mut freq: i64 = 0;
+            let mut count: i64 = 0;
+            QueryPerformanceFrequency(&mut freq);
+            QueryPerformanceCounter(&mut count);
+            if freq <= 0 {
+                return 0;
+            }
+            (count as i128 * 10_000_000 / freq as i128) as u64
+        }
+    }
+
+    /// Every running process: parent and executable name.
+    pub fn processes() -> HashMap<u32, ProcInfo> {
+        let mut map = HashMap::new();
+        unsafe {
+            let snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS as _, 0);
+            if snap.is_null() || snap as isize == -1 {
+                return map;
+            }
+            let mut e: PROCESSENTRY32W = zeroed();
+            e.dwSize = size_of::<PROCESSENTRY32W>() as u32;
+            if Process32FirstW(snap, &mut e) != 0 {
+                loop {
+                    map.insert(
+                        e.th32ProcessID,
+                        ProcInfo { parent: e.th32ParentProcessID, exe: wide_to_string(&e.szExeFile) },
+                    );
+                    if Process32NextW(snap, &mut e) == 0 {
+                        break;
+                    }
+                }
+            }
+            CloseHandle(snap);
+        }
+        map
+    }
+
+    fn process_path(pid: u32) -> String {
+        unsafe {
+            let hp = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION as _, 0, pid);
+            if hp.is_null() {
+                return String::new();
+            }
+            let mut buf = vec![0u16; 1024];
+            let mut size = buf.len() as u32;
+            let ok = QueryFullProcessImageNameW(hp, 0, buf.as_mut_ptr(), &mut size);
+            CloseHandle(hp);
+            if ok == 0 {
+                return String::new();
+            }
+            String::from_utf16_lossy(&buf[..size as usize])
+        }
+    }
+
+    fn to_wide(s: &str) -> Vec<u16> {
+        s.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    /// The "File description" of a program, e.g. "Google Chrome", "Spotify".
+    fn file_description(path: &str) -> Option<String> {
+        unsafe {
+            let wpath = to_wide(path);
+            let mut handle: u32 = 0;
+            let size = GetFileVersionInfoSizeW(wpath.as_ptr(), &mut handle);
+            if size == 0 {
+                return None;
+            }
+            let mut data = vec![0u8; size as usize];
+            if GetFileVersionInfoW(wpath.as_ptr(), 0, size, data.as_mut_ptr() as *mut c_void) == 0 {
+                return None;
+            }
+            let mut ptr: *mut c_void = null_mut();
+            let mut len: u32 = 0;
+            let trans = to_wide("\\VarFileInfo\\Translation");
+            let mut lang_cp = (0x0409u16, 0x04b0u16);
+            if VerQueryValueW(data.as_ptr() as *const c_void, trans.as_ptr(), &mut ptr, &mut len) != 0 && len >= 4 {
+                let pair = std::slice::from_raw_parts(ptr as *const u16, 2);
+                lang_cp = (pair[0], pair[1]);
+            }
+            let key = to_wide(&format!("\\StringFileInfo\\{:04x}{:04x}\\FileDescription", lang_cp.0, lang_cp.1));
+            if VerQueryValueW(data.as_ptr() as *const c_void, key.as_ptr(), &mut ptr, &mut len) == 0 || len == 0 {
+                return None;
+            }
+            let text = std::slice::from_raw_parts(ptr as *const u16, len as usize);
+            let s = wide_to_string(text).trim().to_string();
+            if s.is_empty() { None } else { Some(s) }
+        }
+    }
+
+    /// Friendly name for an app's audio track: its file description, else the program name.
+    pub fn app_display_name(pid: u32) -> String {
+        let path = process_path(pid);
+        if let Some(d) = file_description(&path).filter(|d| d.chars().count() <= 48) {
+            return d;
+        }
+        let stem = exe_stem(&path);
+        if stem.is_empty() { format!("App {pid}") } else { stem }
+    }
+
     fn process_exe(pid: u32) -> String {
         unsafe {
             let hp = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION as _, 0, pid);
@@ -370,5 +527,43 @@ mod win {
                 second: t.wSecond,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn p(parent: u32, exe: &str) -> ProcInfo {
+        ProcInfo { parent, exe: exe.into() }
+    }
+
+    #[test]
+    fn app_root_climbs_to_the_top_process_of_the_same_app() {
+        let procs: HashMap<u32, ProcInfo> = HashMap::from([
+            (1, p(0, "explorer.exe")),
+            (10, p(1, "chrome.exe")),
+            (11, p(10, "chrome.exe")),
+            (12, p(11, "Chrome.exe")),
+            (20, p(1, "Spotify.exe")),
+            (30, p(1, "steam.exe")),
+            (31, p(30, "game.exe")),
+        ]);
+        assert_eq!(app_root(12, &procs), 10); // Chrome's audio helper -> Chrome
+        assert_eq!(app_root(20, &procs), 20);
+        assert_eq!(app_root(31, &procs), 31); // a game launched by Steam is its own app
+        assert_eq!(app_root(999, &procs), 999); // unknown process
+        let cyc: HashMap<u32, ProcInfo> = HashMap::from([(5, p(6, "a.exe")), (6, p(5, "a.exe"))]);
+        let r = app_root(5, &cyc);
+        assert!(r == 5 || r == 6); // parent loops don't hang
+    }
+
+    #[test]
+    fn exe_stems() {
+        assert_eq!(exe_stem(r"C:\Games\VALORANT-Win64-Shipping.exe"), "VALORANT-Win64-Shipping");
+        assert_eq!(exe_stem("Spotify.exe"), "Spotify");
+        assert_eq!(exe_stem("noext"), "noext");
+        assert_eq!(exe_stem(".hidden"), ".hidden");
     }
 }

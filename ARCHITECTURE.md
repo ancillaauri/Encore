@@ -101,7 +101,7 @@ Game detection (step 6):
 - User list overrides: "always a game" / "never a game", plus "pick a window" manually.
 - The detected game names the file, the per-game folder, and its own audio track.
 
-Audio (steps 4 and 5):
+Audio (steps 4 and 5) — built in batch 2:
 - Full mix: WASAPI loopback on the default output device.
 - Microphone: WASAPI capture on the default input device (selectable in settings).
 - Per app: WASAPI process loopback, "include process tree" on the app's top-level process
@@ -109,11 +109,19 @@ Audio (steps 4 and 5):
 - App discovery: audio session manager on the default output device; new sessions raise
   `audio_app_added`. Our own app is excluded.
 - All sources timestamped against one clock (QueryPerformanceCounter). Silence is inserted for gaps.
-- Each source written to its own segmented temp file, aligned to the video segments.
-- Limit: 8 app tracks by default. Further apps go to an "Other" track. Settings allow
-  "always own track" / "never own track" per app.
-- Known risk: lining up FFmpeg's video start with the engine's audio clock. Must be measured
-  (e.g. record a clap / on-screen flash) and corrected before step 5 is signed off.
+- Each source is written as raw 48 kHz stereo 16-bit PCM to its own file, placed by packet
+  timestamp (gaps filled with silence, overlaps trimmed): see `engine/src/timeline.rs`.
+  `audio.json` in the session folder records the tracks and timing, so crashes recover with audio.
+- Sync: FFmpeg's video timestamps and WASAPI packet timestamps are both Windows' QPC clock, but
+  FFmpeg rebases video to start at zero. FFmpeg reports progress 20 times a second; the earliest
+  `arrival time - video time` is taken as the video's start. Audio is trimmed by
+  `video start - origin` when the file is assembled. A hidden `audio_offset_ms` setting allows
+  fine adjustment if real-world tests show a constant offset.
+- B-frames are disabled: with them, joining segments shifts video 2 frames late.
+- Limit: 8 app tracks. Further apps are only in the Full mix (an "Other" track would need a
+  different capture method; not built). Per-app always/never lists: later.
+- Audio is encoded to AAC when the recording is saved, so saving a long recording with many
+  tracks takes a little while. Encoding during recording is a later optimisation.
 
 Instant replay (step 7):
 - Rolling window of video and audio segments on disk (like ShadowPlay), length set in settings.
@@ -122,11 +130,13 @@ Instant replay (step 7):
 ## File contract (what the companion editor relies on)
 
 - Container: MP4. Video H.264 (HEVC/AV1 may be added later as options). Audio AAC, 48 kHz stereo.
-- Audio stream order:
-  - Stream 0: title `Full mix`
-  - Stream 1: title `Microphone`
-  - Stream 2 onwards: one per app, title = app's display name (e.g. `Spotify`, `Google Chrome`, `Discord`, the game's name)
-- `handler_name` on each audio stream set to the same text as the title.
+- Audio stream order (a track switched off in settings is simply absent, so identify tracks by name):
+  - `Full mix` first (the default track, so the file plays normally anywhere)
+  - `Microphone`
+  - then one per app, named from the app's file description (e.g. `Spotify`, `Google Chrome`,
+    `Discord`, the game's name); duplicates become `Discord 2` etc.
+- The track name is stored in each audio stream's `handler_name` (the MP4 muxer does not keep a
+  separate `title` tag). NVIDIA's own multi-track files use the same field.
 - File-level metadata `comment` = `rec-format:1` so the companion editor can recognise our files.
 - Apps that start mid-recording still get a full-length track, silent before they started.
 - Filename: `<Game or App> YYYY.MM.DD - HH.MM.SS.mp4`, saved in a per-game subfolder.

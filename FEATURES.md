@@ -13,9 +13,9 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | "What's being recorded" indicator (tray + window) | 6 | [ ] |
 | Codec choice: H.264 default, HEVC and AV1 optional | 3 | [~] |
 | Quality settings: resolution (native/downscaled), frame rate up to 144, quality/bitrate presets | 3 | [~] |
-| Full desktop audio + microphone tracks | 4 | [ ] |
-| Microphone choice + push-to-talk | 4 | [ ] |
-| One audio track per app (cap 8, then "Other"; always/never lists) | 5 | [ ] |
+| Full desktop audio + microphone tracks | 4 | [~] |
+| Microphone choice (push-to-talk comes with hotkeys) | 4 | [~] |
+| One audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [~] |
 | Global hotkeys, tray icon, settings screen | 6 | [ ] |
 | Game detection (auto + always/never list + pick a window) | 6 | [ ] |
 | Swap monitor / mode mid-recording (hotkey + tray) | 6 | [ ] |

@@ -79,11 +79,24 @@ First real test (2560x1440, 120 fps, H.264, High) looked excellent. The High pre
 133 Mbps at those settings (about 1 GB per minute of fast gameplay); file size is acceptable for now.
 Later: a Custom bitrate option and an expected-size-per-minute readout beside Quality.
 
+## 2026-10-31: Batch 2 (audio) design and findings
+- Each source (full mix, mic, each app) captured on its own thread via WASAPI, written to its own
+  file and placed by packet timestamp. App tracks are found by watching active audio sessions every
+  half second and grouped by app (Chrome's helper processes count as Chrome).
+- Sync by shared clock (see ARCHITECTURE.md). End-to-end test: a flash at 2.000 s in the video and
+  a beep in the audio files offset by 0.35 s came out at 2.000 s and 2.000 s in the saved file.
+- Found in that test: B-frames shifted video 33 ms late after joining segments (constant, not
+  cumulative). B-frames are now off in every encoder; timing exact afterwards.
+- MP4 keeps each track's name in `handler_name`, not `title`. The companion editor reads either.
+- Mic is recorded by default; it is its own track, so it can be muted when editing.
+- More than 8 apps: extras are only in the Full mix (no "Other" track for now).
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.
 - Default hotkeys: pick ones that do not clash with NVIDIA ShadowPlay (Alt+F9 / Alt+F10).
-- Audio temp format (raw PCM vs encoded) to be chosen in batch 2 based on disk use and CPU.
+- Real-world sync accuracy of the progress-report method: confirm with a clap test (batch 2).
+- Switching the default output device mid-recording is not handled yet.
 - Installer is not code-signed: Windows SmartScreen will warn on first run.
 
 ## Performance log

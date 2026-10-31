@@ -5,6 +5,7 @@
 //!   encore-engine --selftest [--ffmpeg <path>]         print a diagnostic report and exit
 //!       [--selftest-capture <file.mkv>]                also try a 3-second CPU-path capture
 
+mod audio;
 mod engine;
 mod ffmpeg;
 mod log;
@@ -13,6 +14,7 @@ mod platform;
 mod protocol;
 mod recorder;
 mod settings;
+mod timeline;
 
 use protocol::{parse_command, send_event, PROTOCOL_VERSION};
 use serde_json::json;

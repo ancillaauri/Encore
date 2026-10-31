@@ -1,10 +1,13 @@
 //! One recording session: FFmpeg writing segments to a temp folder, then joined into the final MP4.
 //! Segments mean a crash or power cut loses seconds, not the recording.
 
-use crate::ffmpeg::{self, CaptureSpec, Encoder, Pipeline};
+use crate::audio::{self, AudioOptions, AudioSession, Manifest};
+use crate::ffmpeg::{self, AudioInput, CaptureSpec, Encoder, Pipeline};
 use crate::log::{log, tail};
-use crate::platform::LocalTime;
-use std::io::Write;
+use crate::platform::{self, LocalTime};
+use crate::timeline::{self, VideoClock};
+use std::io::{BufRead, BufReader, Write};
+use std::sync::{Arc, Mutex};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -17,6 +20,9 @@ const STOP_TIMEOUT: Duration = Duration::from_secs(20);
 pub struct Active {
     child: Child,
     stdin: Option<ChildStdin>,
+    audio: Option<AudioSession>,
+    manifest: Arc<Mutex<Manifest>>,
+    clock: Arc<Mutex<VideoClock>>,
     pub seg_dir: PathBuf,
     pub log_path: PathBuf,
     pub started: Instant,
@@ -115,6 +121,8 @@ pub fn start(
     out_path: PathBuf,
     temp_root: &Path,
     preferred: Option<Pipeline>,
+    audio_opts: &AudioOptions,
+    audio_offset_ms: i32,
 ) -> Result<Active, String> {
     let session = format!("rec-{}", unix_ms());
     let seg_dir = temp_root.join(&session);
@@ -122,21 +130,39 @@ pub fn start(
         Some(Pipeline::Download) => vec![Pipeline::Download],
         _ => vec![Pipeline::ZeroCopy, Pipeline::Download],
     };
+    std::fs::create_dir_all(&seg_dir).map_err(|e| format!("Could not create temp folder: {e}"))?;
+    // Audio starts first so it covers the very first video frame; both share this origin.
+    let origin = platform::now_hns();
+    let audio = audio::start(&seg_dir, origin, audio_offset_ms, audio_opts);
+    let manifest = audio.manifest();
+    let mut audio = Some(audio);
     let mut last_error = String::new();
     for pipeline in order {
-        let _ = std::fs::remove_dir_all(&seg_dir);
-        std::fs::create_dir_all(&seg_dir).map_err(|e| format!("Could not create temp folder: {e}"))?;
+        clear_video_files(&seg_dir);
         let log_path = seg_dir.join("ffmpeg.log");
         let log_file = std::fs::File::create(&log_path).map_err(|e| format!("Could not create log: {e}"))?;
         let args = ffmpeg::record_args(spec, encoder, pipeline, kbps, &seg_dir);
         log(&format!("starting capture ({pipeline:?}, {}): ffmpeg {}", encoder.name(), args.join(" ")));
-        let mut child = ffmpeg::hidden_command(ffmpeg_path)
+        let spawned = ffmpeg::hidden_command(ffmpeg_path)
             .args(&args)
             .stdin(Stdio::piped())
-            .stdout(Stdio::null())
+            .stdout(Stdio::piped())
             .stderr(Stdio::from(log_file))
-            .spawn()
-            .map_err(|e| format!("Could not start FFmpeg ({}): {e}", ffmpeg_path.display()))?;
+            .spawn();
+        let mut child = match spawned {
+            Ok(c) => c,
+            Err(e) => {
+                if let Some(a) = audio.take() {
+                    a.stop(platform::now_hns());
+                }
+                let _ = std::fs::remove_dir_all(&seg_dir);
+                return Err(format!("Could not start FFmpeg ({}): {e}", ffmpeg_path.display()));
+            }
+        };
+        let clock = Arc::new(Mutex::new(VideoClock::default()));
+        if let Some(stdout) = child.stdout.take() {
+            watch_progress(stdout, clock.clone(), manifest.clone(), seg_dir.clone());
+        }
 
         let begun = Instant::now();
         let mut exited = None;
@@ -153,6 +179,9 @@ pub fn start(
                 return Ok(Active {
                     child,
                     stdin,
+                    audio,
+                    manifest,
+                    clock,
                     seg_dir,
                     log_path,
                     started: begun,
@@ -171,6 +200,9 @@ pub fn start(
             }
         }
     }
+    if let Some(a) = audio.take() {
+        a.stop(platform::now_hns());
+    }
     let _ = std::fs::remove_dir_all(&seg_dir);
     Err(if last_error.is_empty() {
         "FFmpeg stopped straight away without an error message.".into()
@@ -179,7 +211,51 @@ pub fn start(
     })
 }
 
+/// Removes video segments and the FFmpeg log from a failed start, keeping audio files.
+fn clear_video_files(seg_dir: &Path) {
+    for p in segments(seg_dir) {
+        let _ = std::fs::remove_file(p);
+    }
+    let _ = std::fs::remove_file(seg_dir.join("ffmpeg.log"));
+}
+
+/// Reads FFmpeg's progress reports to pin down when the video timeline started (see VideoClock),
+/// and records it in the manifest so a crashed recording can still be lined up.
+fn watch_progress(
+    stdout: std::process::ChildStdout,
+    clock: Arc<Mutex<VideoClock>>,
+    manifest: Arc<Mutex<Manifest>>,
+    dir: PathBuf,
+) {
+    std::thread::spawn(move || {
+        let mut last_saved: Option<u64> = None;
+        let mut last_save_time = Instant::now();
+        for line in BufReader::new(stdout).lines() {
+            let Ok(line) = line else { break };
+            let now = platform::now_hns();
+            if let Some(us) = timeline::parse_out_time_us(&line) {
+                let best = {
+                    let mut c = clock.lock().unwrap();
+                    c.observe(now, us);
+                    c.start_hns()
+                };
+                if best != last_saved && last_save_time.elapsed() > Duration::from_secs(2) {
+                    let mut m = manifest.lock().unwrap();
+                    m.video_start_hns = best;
+                    m.save(&dir);
+                    last_saved = best;
+                    last_save_time = Instant::now();
+                }
+            }
+        }
+    });
+}
+
 impl Active {
+    pub fn track_titles(&self) -> Vec<String> {
+        self.audio.as_ref().map(|a| a.track_titles()).unwrap_or_default()
+    }
+
     pub fn elapsed_ms(&self) -> u64 {
         self.started.elapsed().as_millis() as u64
     }
@@ -192,6 +268,7 @@ impl Active {
     /// Asks FFmpeg to finish cleanly, waits, then joins the segments into the final file.
     pub fn stop_and_save(mut self, ffmpeg_path: &Path) -> Result<Saved, String> {
         let duration_ms = self.elapsed_ms();
+        let end_hns = platform::now_hns();
         if let Some(mut stdin) = self.stdin.take() {
             let _ = stdin.write_all(b"q\n");
             let _ = stdin.flush();
@@ -209,6 +286,18 @@ impl Active {
                 }
             }
         }
+        let mut manifest = match self.audio.take() {
+            Some(a) => a.stop(end_hns),
+            None => self.manifest.lock().unwrap().clone(),
+        };
+        let clock = *self.clock.lock().unwrap();
+        manifest.video_start_hns = clock.start_hns().or(manifest.video_start_hns);
+        manifest.save(&self.seg_dir);
+        log(&format!(
+            "sync: video starts {} ms after origin ({} progress reports)",
+            manifest.video_start_hns.map(|v| (v as i64 - manifest.origin_hns as i64) / 10_000).unwrap_or(-1),
+            clock.samples()
+        ));
         finalise(ffmpeg_path, &self.seg_dir, &self.out_path, duration_ms)
     }
 }
@@ -225,8 +314,9 @@ pub fn finalise(ffmpeg_path: &Path, seg_dir: &Path, out_path: &Path, duration_ms
     }
     let list = seg_dir.join("segments.ffconcat");
     std::fs::write(&list, ffmpeg::concat_list(&files)).map_err(|e| format!("Could not write segment list: {e}"))?;
+    let (audio, skip) = audio_inputs(seg_dir);
     let out = ffmpeg::hidden_command(ffmpeg_path)
-        .args(ffmpeg::finalise_args(&list, out_path))
+        .args(ffmpeg::finalise_args(&list, &audio, skip, out_path))
         .stdin(Stdio::null())
         .output()
         .map_err(|e| format!("Could not run FFmpeg to save the file: {e}"))?;
@@ -242,6 +332,19 @@ pub fn finalise(ffmpeg_path: &Path, seg_dir: &Path, out_path: &Path, duration_ms
     let _ = std::fs::remove_dir_all(seg_dir);
     log(&format!("saved {} ({} bytes)", out_path.display(), size));
     Ok(Saved { path: out_path.to_path_buf(), duration_ms, size_bytes: size })
+}
+
+/// The audio tracks recorded in `seg_dir` (from its manifest) and how much to trim from their start.
+fn audio_inputs(seg_dir: &Path) -> (Vec<AudioInput>, f64) {
+    let Some(m) = Manifest::load(seg_dir) else { return (Vec::new(), 0.0) };
+    let tracks: Vec<AudioInput> = m
+        .tracks
+        .iter()
+        .map(|t| AudioInput { path: seg_dir.join(&t.file), title: t.title.clone() })
+        .filter(|t| std::fs::metadata(&t.path).map(|md| md.len() > 0).unwrap_or(false))
+        .collect();
+    let skip = timeline::audio_skip_seconds(m.origin_hns, m.video_start_hns, m.audio_offset_ms);
+    (tracks, skip)
 }
 
 /// Recordings left behind by a crash (temp folders with segments). Used to recover on start-up.
