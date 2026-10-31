@@ -144,7 +144,9 @@ Instant replay (step 7):
     `Discord`, the game's name); duplicates become `Discord 2` etc.
 - The track name is stored in each audio stream's `handler_name` (the MP4 muxer does not keep a
   separate `title` tag). NVIDIA's own multi-track files use the same field.
-- File-level metadata `comment` = `rec-format:1` so the companion editor can recognise our files.
+- File-level metadata `comment` = `rec-format:2` so the companion editor can recognise our files.
+  History: `rec-format:1` (0.2–0.3.x, and 0.4.0) had Full mix without the mic and no Desktop audio
+  track (0.4.0 files have the new layout but the old marker; only test builds made them).
 - Apps that start mid-recording still get a full-length track, silent before they started.
 - Filename: `<Game or App> YYYY.MM.DD - HH.MM.SS.mp4`, saved in a per-game subfolder.
 
@@ -156,10 +158,13 @@ Its `audioGroups()` in `main.js` currently treats any non-Discord, non-NVIDIA mu
 "Game / Desktop" + "Microphone". With our files that would play the full mix AND every app track
 together (everything doubled). The change needed mirrors how it already handles Discord's "all" track:
 
-- If `comment` contains `rec-format:1`: one row per audio stream except `Full mix`, named from the
+- If `comment` contains `rec-format:1` or `rec-format:2`: one row per audio stream except `Full mix`, named from the
   stream's `handler_name` (Microphone gets the mic icon). `Desktop audio` gets a row only when the
   file has no per-app tracks; otherwise it is hidden like `Full mix` (it already contains them).
-- When no slider has been touched, export using the `Full mix` stream only.
+- When no slider has been touched, export using the `Full mix` stream only for `rec-format:2`;
+  for `rec-format:1` mix `Full mix` + `Microphone` (that Full mix had no mic).
+- A `rec-format:1` file that has a `Desktop audio` track was made by 0.4.0 (new layout, old
+  marker): treat it as `rec-format:2`.
 
 ## Updates (shell)
 

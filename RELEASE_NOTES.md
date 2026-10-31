@@ -1,6 +1,11 @@
-## Encore 0.4.0 (beta), test build 4: mic in the main track, new title bar, matched design
+## Encore 0.4.1 (beta), test build 4: mic in the main track, new title bar, matched design
 
-### What's new
+**0.4.1:** recordings are now marked as the new track layout (`rec-format:2`), so the companion
+clip editor can tell them apart from 0.3 recordings, whose first track has no mic. Nothing else
+changed from 0.4.0.
+
+### Changes since 0.3.1
+
 - **The first audio track now includes your microphone.** "Full mix" is everything: the PC's
   sound plus your voice. That's the track players, Discord and VLC use, so a recording sounds
   right anywhere without editing.
@@ -20,8 +25,8 @@
 - Settings → Audio: "Everything you hear" is now called **Desktop audio**.
 
 ### Install
-Already on 0.3.1? Update from inside Encore (≡ → Help → Update to 0.4.0). Otherwise download
-`Encore_0.4.0_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
+Already on 0.3.1 or 0.4.0? Update from inside Encore (≡ → Help → Update to 0.4.1). Otherwise download
+`Encore_0.4.1_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
 **More info**, then **Run anyway**.
 
 **Taskbar still showing the old icon?** That's Windows' icon cache, not Encore. Press Win+R, type
@@ -29,7 +34,7 @@ Already on 0.3.1? Update from inside Encore (≡ → Help → Update to 0.4.0). 
 again, or restart your PC.
 
 ### Test checklist
-1. **Update from 0.3.1** inside the app. Does it close, install and reopen on 0.4.0 by itself?
+1. **Update from inside the app.** Does it close, install and reopen on 0.4.1 by itself?
 2. **Title bar.** Drag the window by the bar, double-click it, use minimise / maximise / close.
    Resize from the edges. Snap it with Win+Left/Right.
 3. **Audio.** Record about 30 seconds with music playing and you talking.

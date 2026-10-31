@@ -326,7 +326,7 @@ pub fn finalise_args(list_file: &Path, audio: &[AudioOut], audio_skip: f64, out:
         "-movflags".into(),
         "+faststart".into(),
         "-metadata".into(),
-        "comment=rec-format:1".into(),
+        "comment=rec-format:2".into(),
         "-y".into(),
         out.to_string_lossy().into_owned(),
     ]);
@@ -492,7 +492,7 @@ mod tests {
     #[test]
     fn finalise_tags_file_for_the_editor() {
         let a = finalise_args(Path::new("list.txt"), &[], 0.0, Path::new("out.mp4"));
-        assert!(a.windows(2).any(|w| w[0] == "-metadata" && w[1] == "comment=rec-format:1"));
+        assert!(a.windows(2).any(|w| w[0] == "-metadata" && w[1] == "comment=rec-format:2"));
         assert!(a.windows(2).any(|w| w[0] == "-c:v" && w[1] == "copy"));
         assert!(!a.contains(&"-shortest".to_string()));
     }

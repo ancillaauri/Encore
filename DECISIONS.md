@@ -134,8 +134,13 @@ companion editor doesn't yet read per-app tracks. See FEATURES.md "Found in test
 ## 2026-10-31: Full mix includes the mic; Desktop audio track added
 Players and Discord use the first track, so it is now everything, mic included. System sound
 without the mic is a new "Desktop audio" track (only when a mic is recorded). Mixing happens when
-the file is saved, at full level (no automatic lowering). The file stays `rec-format:1`: no editor
-release reads Encore's tracks yet, so the companion editor's spec was updated instead of bumping.
+the file is saved, at full level (no automatic lowering).
+
+## 2026-10-31: File format marker bumped to rec-format:2 (corrects the entry above)
+The entry above kept `rec-format:1`, which was wrong: files from 0.3.x carry the same marker but
+their Full mix has no mic, so the editor could not tell the two layouts apart and an untouched
+export of an old file would lose the voice. Raised by the companion editor's side. From 0.4.1
+files are `rec-format:2`; the editor treats `:1` files as "Full mix + Microphone".
 
 ## 2026-10-31: Own title bar and audit against the editor (0.4.0)
 The window has no Windows frame; Encore draws the title bar and the minimise / maximise / close
