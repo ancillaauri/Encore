@@ -74,14 +74,30 @@ fn open_link(url: String) -> Result<(), String> {
     Ok(())
 }
 
+/// The window opens at the companion editor's size (1500x920); on a smaller screen it is shrunk
+/// to fit the screen's work area (the screen minus the taskbar) and centred.
+fn fit_to_screen(app: &tauri::AppHandle) {
+    let Some(win) = app.get_webview_window("main") else { return };
+    let (Ok(size), Ok(Some(mon))) = (win.outer_size(), win.current_monitor()) else { return };
+    let area = mon.work_area().size;
+    if size.width > area.width || size.height > area.height {
+        let fitted = tauri::PhysicalSize::new(size.width.min(area.width), size.height.min(area.height));
+        let _ = win.set_size(fitted);
+        let _ = win.center();
+    }
+}
+
 fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        // Reopens at the size and place it was closed at, like the companion editor.
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .manage(updater::UpdateState::default())
         .setup(|app| {
             let link = EngineLink::start(app.handle())?;
             app.manage(Arc::new(link));
             updater::start(app.handle().clone());
+            fit_to_screen(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

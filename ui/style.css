@@ -386,7 +386,7 @@ input[type="text"]:focus { border-color: var(--acc); }
 .toggle.sm:checked::after { transform: translateX(14px); }
 
 /* ---------- stage: the record control is the one bold element ---------- */
-.stage { display: flex; flex-direction: column; align-items: center; padding: 34px 24px 24px; overflow-y: auto; min-height: 0; }
+.stage { display: flex; flex-direction: column; align-items: center; justify-content: safe center; padding: 34px 24px 40px; overflow-y: auto; min-height: 0; }
 .record {
   position: relative;
   width: 190px;
@@ -440,9 +440,9 @@ body.recording #settings .setcard, body.saving #settings .setcard { pointer-even
 
 /* ---------- what to record: monitors as holograms, laid out like Windows has them ---------- */
 .pickhead { margin: 28px 0 12px; font-size: 12px; font-weight: 600; color: var(--mute); }
-.picks { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.picks { display: flex; align-items: flex-end; gap: 14px; flex-wrap: nowrap; justify-content: center; max-width: 100%; }
 .mons { display: flex; align-items: flex-end; gap: 10px; }
-.pick { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 12px 10px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text); min-width: 120px; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.pick { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 12px 10px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text); min-width: 112px; flex: none; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
 .pick:hover:not(:disabled) { background: #121114; }
 .pick:disabled { cursor: default; }
 .pick:disabled .pn { color: var(--mute); }

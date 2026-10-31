@@ -286,6 +286,10 @@
     return "Records the screen you're using";
   }
 
+  // Monitors are drawn at most this wide; narrower when the window is (see fitPicks).
+  const MON_MAX = 210;
+  let monBase = MON_MAX;
+
   function renderPicks() {
     const box = $('mons');
     box.textContent = '';
@@ -297,7 +301,7 @@
     const mons = [...state.monitors].sort((a, b) => a.x - b.x || a.y - b.y);
     const maxW = Math.max(1, ...mons.map((m) => m.width));
     for (const m of mons) {
-      const w = Math.round(150 * Math.max(0.6, m.width / maxW));
+      const w = Math.round(monBase * Math.max(0.6, m.width / maxW));
       const hgt = Math.round(w * (m.height / Math.max(1, m.width)));
       const on = state.source === 'desktop' && shown && shown.id === m.id;
       const b = h('button', `pick${on ? ' on' : ''}${recording && recId === m.id ? ' rec' : ''}`);
@@ -307,7 +311,7 @@
       b.disabled = recording;
       const mon = h('span', 'mon', displayNo(m));
       mon.style.width = `${w}px`;
-      mon.style.height = `${Math.max(40, Math.min(120, hgt))}px`;
+      mon.style.height = `${Math.max(40, Math.min(170, hgt))}px`;
       if (pin === m.id) mon.append(h('span', 'pin', 'ALWAYS'));
       b.append(mon, h('span', 'neck'), h('span', 'beam'), h('span', 'pn', m.name));
       if (recording && recId === m.id) {
@@ -335,6 +339,22 @@
     else note = 'Records the screen you\u2019re using and follows you when you click on another. Click a monitor to always record that one.';
     $('pick-note').textContent = note;
   }
+
+  // Keeps the picker on one line: shrinks the monitors until everything fits the stage.
+  function fitPicks() {
+    const row = $('picks');
+    // The row never wraps; it overflows instead, which is easy to measure.
+    const wraps = () => row.scrollWidth > row.clientWidth + 1;
+    // Larger windows get larger monitors, up to MON_MAX.
+    const stage = document.querySelector('.stage');
+    monBase = stage && stage.clientHeight > 760 ? MON_MAX : 150;
+    renderPicks();
+    while (monBase > 70 && wraps()) {
+      monBase -= 10;
+      renderPicks();
+    }
+  }
+  try { new ResizeObserver(() => fitPicks()).observe(document.querySelector('.stage')); } catch (e) { /* older engine */ }
 
   async function pickMonitor(m) {
     if (state.phase !== 'idle') return;
@@ -399,7 +419,7 @@
     const locked = state.phase !== 'idle';
     $('lock-note').hidden = !locked;
     document.querySelectorAll('#quick select, #quick input').forEach((el) => (el.disabled = locked));
-    renderPicks();
+    fitPicks();
   }
 
   function encoderLabel(name) {

@@ -163,6 +163,10 @@ From three mock-ups: settings and "Saved this session" in the left panel; under 
 the monitors as holograms laid out as in Windows, then "One app" and "Game" tiles. The monitor
 being recorded glows red. "Game" shows "Coming soon" until game detection is built.
 
+## 2026-10-31: Window size matches the editor
+Opens at 1500x920 (shrunk to fit smaller screens), minimum 980x640, and reopens at the size and
+place it was closed at, as the editor does. The monitor picker stays on one line at any size.
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.

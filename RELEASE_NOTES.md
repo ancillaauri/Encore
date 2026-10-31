@@ -1,4 +1,9 @@
-## Encore 0.5.0 (beta), test build 5: new layout, and recording follows the screen you click on
+## Encore 0.5.1 (beta), test build 5: new layout, and recording follows the screen you click on
+
+**0.5.1:** the window now opens at the same size as the companion clip editor (smaller screens
+get a window that fits), remembers its size and position, and can't be made smaller than the
+editor's minimum. The monitor picker always stays on one line: monitors shrink in a small
+window and grow in a large one, and the content sits in the middle of the window.
 
 ### What's new
 - **Recording follows the screen you're using.** In Desktop mode, Encore records the monitor of
@@ -20,8 +25,8 @@
   screen you use. If you had picked a specific monitor, it's still picked.
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.5.0). Otherwise download
-`Encore_0.5.0_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
+Update from inside Encore (≡ → Help → Update to 0.5.1). Otherwise download
+`Encore_0.5.1_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
 **More info**, then **Run anyway**.
 
 ### Test checklist
