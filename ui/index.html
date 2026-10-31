@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Encore</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="var(--acc)"/>
+        <path d="M23.3 12.2a8.5 8.5 0 1 1-2.6-3.3" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M18.6 5.6l4.6 2.9-3.9 3.8z" fill="#fff"/>
+        <circle cx="16" cy="16.5" r="3.6" fill="var(--red)"/>
+      </svg>
+      <span class="name">Encore</span>
+    </div>
+    <p id="engine-line" class="engine-line">Starting the recorder…</p>
+  </header>
+
+  <main class="layout">
+    <section class="stage" aria-label="Recording">
+      <button id="record" class="record" type="button" aria-describedby="what">
+        <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
+          <circle class="ring-track" cx="110" cy="110" r="96"/>
+          <circle id="ring-sweep" class="ring-sweep" cx="110" cy="110" r="96"/>
+        </svg>
+        <span class="dot" aria-hidden="true"></span>
+        <span id="timer" class="timer">0:00</span>
+        <span id="record-label" class="record-label">Start recording</span>
+      </button>
+      <p id="what" class="what">Records your primary monitor</p>
+      <p id="detail" class="detail"></p>
+
+      <div class="recent" id="recent-wrap" hidden>
+        <h2>Saved this session</h2>
+        <ul id="recent" class="recent-list"></ul>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Settings">
+      <h2>What to record</h2>
+      <div class="seg" role="radiogroup" aria-label="Source">
+        <button type="button" role="radio" data-source="desktop" aria-checked="true">Desktop</button>
+        <button type="button" role="radio" data-source="window" aria-checked="false">One window</button>
+      </div>
+
+      <label class="row" id="monitor-row">
+        <span>Monitor</span>
+        <select id="monitor"></select>
+      </label>
+
+      <div class="row" id="window-row" hidden>
+        <label for="window">Window</label>
+        <div class="with-button">
+          <select id="window"></select>
+          <button type="button" class="ibtn" id="refresh-windows" aria-label="Refresh window list" title="Refresh window list">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 6.5A6.5 6.5 0 1 0 16.4 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.5 2.5v4.5H12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="hint" id="window-hint" hidden>Only the window is recorded, so alt-tabbing never shows your desktop. Automatic game detection comes in a later update.</p>
+
+      <h2>Video</h2>
+      <label class="row"><span>Format</span>
+        <select id="codec" data-setting="codec">
+          <option value="h264">H.264 (plays everywhere)</option>
+          <option value="hevc">HEVC (smaller files)</option>
+          <option value="av1">AV1 (smallest files)</option>
+        </select>
+      </label>
+      <label class="row"><span>Frame rate</span>
+        <select id="fps" data-setting="fps" data-number>
+          <option value="30">30 fps</option>
+          <option value="60">60 fps</option>
+          <option value="120">120 fps</option>
+          <option value="144">144 fps</option>
+          <option value="240">240 fps</option>
+        </select>
+      </label>
+      <label class="row"><span>Resolution</span>
+        <select id="resolution" data-setting="resolution">
+          <option value="native">Same as source</option>
+          <option value="1440p">1440p</option>
+          <option value="1080p">1080p</option>
+          <option value="720p">720p</option>
+        </select>
+      </label>
+      <label class="row"><span>Quality</span>
+        <select id="quality" data-setting="quality">
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low (smaller files)</option>
+        </select>
+      </label>
+      <label class="row toggle-row"><span>Show mouse cursor</span>
+        <input type="checkbox" id="cursor" data-setting="capture_cursor" class="toggle">
+      </label>
+
+      <h2>Saving</h2>
+      <div class="row">
+        <label for="output">Save recordings to</label>
+        <div class="with-button">
+          <input id="output" type="text" spellcheck="false" data-setting="output_dir">
+          <button type="button" class="btn sm" id="open-output">Open</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="bridge.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

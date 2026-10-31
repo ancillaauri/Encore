@@ -32,13 +32,15 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: ./scripts/fetch-ffmpeg.ps1
+        run: ./scripts/ci-step.ps1 -Always -Lines 40 -Title "FFmpeg" -Run "./scripts/fetch-ffmpeg.ps1"
 
       - name: Engine tests
-        run: cargo test -p encore-engine
+        shell: pwsh
+        run: ./scripts/ci-step.ps1 -Title "Engine tests" -Run "cargo test -p encore-engine"
 
       - name: Build engine
-        run: cargo build --release -p encore-engine
+        shell: pwsh
+        run: ./scripts/ci-step.ps1 -Title "Build engine" -Run "cargo build --release -p encore-engine"
 
       - name: Stage engine for bundling
         shell: pwsh
@@ -49,14 +51,14 @@ jobs:
       - name: Engine self-test (diagnostic only; build machines have no GPU)
         continue-on-error: true
         shell: pwsh
-        run: |
-          ./target/release/encore-engine.exe --selftest --ffmpeg src-tauri/resources/ffmpeg.exe --selftest-capture "$env:RUNNER_TEMP/selftest.mkv"
+        run: ./scripts/ci-step.ps1 -Always -Lines 80 -Title "Engine self-test" -Run "./target/release/encore-engine.exe --selftest --ffmpeg src-tauri/resources/ffmpeg.exe --selftest-capture $env:RUNNER_TEMP/selftest.mkv"
 
       - name: Install app build tools
         run: npm ci
 
       - name: Build app and installer
-        run: npx tauri build
+        shell: pwsh
+        run: ./scripts/ci-step.ps1 -Lines 80 -Title "App build" -Run "npx tauri build"
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

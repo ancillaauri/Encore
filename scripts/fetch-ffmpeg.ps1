@@ -52,7 +52,7 @@ foreach ($asset in $candidates) {
   & $exe.FullName -hide_banner -encoders 2>&1 | Select-String -Pattern '_(nvenc|amf|qsv)\b'
   Write-Host 'gfxcapture options:'
   Write-Host $help
-  exit 0
+  return
 }
 
 throw 'No LGPL FFmpeg 8.1+ build with gfxcapture was found. Encore cannot capture without it.'
