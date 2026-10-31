@@ -1,0 +1,74 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Fetch FFmpeg (LGPL, 8.1 or newer, must have gfxcapture)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/fetch-ffmpeg.ps1
+
+      - name: Engine tests
+        run: cargo test -p encore-engine
+
+      - name: Build engine
+        run: cargo build --release -p encore-engine
+
+      - name: Stage engine for bundling
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force src-tauri/binaries | Out-Null
+          Copy-Item target/release/encore-engine.exe src-tauri/binaries/encore-engine-x86_64-pc-windows-msvc.exe
+
+      - name: Engine self-test (diagnostic only; build machines have no GPU)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          ./target/release/encore-engine.exe --selftest --ffmpeg src-tauri/resources/ffmpeg.exe --selftest-capture "$env:RUNNER_TEMP/selftest.mkv"
+
+      - name: Install app build tools
+        run: npm ci
+
+      - name: Build app and installer
+        run: npx tauri build
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Encore-installer
+          path: target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+      - name: Publish release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/release/bundle/nsis/*.exe
+          prerelease: true
+          body_path: RELEASE_NOTES.md
