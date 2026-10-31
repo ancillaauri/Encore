@@ -131,8 +131,19 @@ expected tracks; per-app separation and mic isolation confirmed by measurement; 
 1.5–4.2 ms, constant. Issues were in playback: VLC plays Full mix (no mic, by design), and the
 companion editor doesn't yet read per-app tracks. See FEATURES.md "Found in testing".
 
+## 2026-10-31: Full mix includes the mic; Desktop audio track added
+Players and Discord use the first track, so it is now everything, mic included. System sound
+without the mic is a new "Desktop audio" track (only when a mic is recorded). Mixing happens when
+the file is saved, at full level (no automatic lowering). The file stays `rec-format:1`: no editor
+release reads Encore's tracks yet, so the companion editor's spec was updated instead of bumping.
+
+## 2026-10-31: Own title bar and audit against the editor (0.4.0)
+The window has no Windows frame; Encore draws the title bar and the minimise / maximise / close
+buttons, sized and coloured like the editor's (46×40, Windows' own glyph font, the editor's
+colours). Side-by-side audit fixed every difference found (FEATURES.md "Match the editor
+exactly"). Known gap: snap layouts on the Maximise button.
+
 ## Open items
-- Should the first (default) track include the mic? Proposed yes, with a separate "Desktop audio" track.
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.
 - Default hotkeys: pick ones that do not clash with NVIDIA ShadowPlay (Alt+F9 / Alt+F10).

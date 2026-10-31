@@ -34,7 +34,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 
 | Issue | Finding | Status |
 |---|---|---|
-| Raw file in VLC has no mic | Works as built: first track "Full mix" = what the PC plays, which excludes the mic. Players use the first track, so people expect it to include the mic. Proposed: first track = everything including mic; add "Desktop audio" (without mic). Awaiting decision. | [ ] |
+| Raw file in VLC has no mic | First track "Full mix" now includes the mic; new "Desktop audio" track has system sound without it (0.4.0). | [x] |
 | Companion editor shows only "Game / Desktop" + "Microphone", audio doubled | Encore's file was correct (Full mix, Microphone, Spotify, Microsoft Edge). The editor doesn't read per-app tracks yet and lumps Full mix + app tracks together. Needs the "Companion editor change" in ARCHITECTURE.md (editor side). | [ ] |
 | Mic track "had everything" in the editor | Measured: Encore's Microphone track contains only the voice (no correlation with any app audio). Cause is the editor's lumping/preview; fixed by the same editor change. | [ ] |
 | Per-app split | Confirmed working: Spotify and Edge on separate tracks, fully separated; all tracks within 5 ms of each other, no drift over 63 s. | [x] |
@@ -43,8 +43,9 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 
 | Difference | Status |
 |---|---|
-| Custom title bar merged into the dark interface (own minimise/maximise/close, drag area), like the editor's | [ ] |
-| Audit every screen side by side with the editor and list any remaining differences | [ ] |
+| Custom title bar merged into the dark interface (own minimise/maximise/close, drag area), like the editor's | [x] 0.4.0 |
+| Audit every screen side by side with the editor (0.4.0): font, icon stroke, scrollbars, tooltips, File/View/Help menu with shortcuts, dropdown buttons instead of Windows dropdowns, chips, buttons, dialogs and their fades, toasts, panel width and collapsed rail | [x] |
+| Windows 11 snap layouts when hovering Maximise (the editor gets them from Windows; Encore draws its own buttons). Win+Z still works | [ ] |
 
 ## Later (agreed, after core works)
 

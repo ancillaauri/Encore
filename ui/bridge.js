@@ -28,6 +28,18 @@
     installUpdate: () => T.core.invoke('install_update'),
     onUpdateStatus: (callback) => T.event.listen('update-status', (e) => callback(e.payload || {})),
     onUpdateProgress: (callback) => T.event.listen('update-progress', (e) => callback(e.payload || {})),
+    // The window (Encore draws its own title bar and window buttons)
+    win: (() => {
+      const w = () => T.window.getCurrentWindow();
+      return {
+        minimize: () => w().minimize(),
+        toggleMaximize: () => w().toggleMaximize(),
+        close: () => w().close(),
+        isMaximized: () => w().isMaximized(),
+        onResized: (callback) => w().onResized(() => callback()),
+        onFocusChanged: (callback) => w().onFocusChanged((e) => callback(!!e.payload)),
+      };
+    })(),
     onEvent: (callback) =>
       T.event.listen('engine-event', (e) => callback(e.payload.event, e.payload.data || {})),
   };

@@ -58,8 +58,13 @@ fn open_folder(path: String) -> Result<(), String> {
 /// Opens a web link in the default browser. Only the project's own GitHub pages are allowed.
 #[tauri::command]
 fn open_link(url: String) -> Result<(), String> {
-    const ALLOWED: &str = "https://github.com/ancillaauri/Encore";
-    if !(url == ALLOWED || url.starts_with(&format!("{ALLOWED}/"))) {
+    // Only Encore's own pages and the pages About links to.
+    const ALLOWED: [&str; 3] = [
+        "https://github.com/ancillaauri/Encore",
+        "https://github.com/BtbN/FFmpeg-Builds",
+        "https://ffmpeg.org/download.html",
+    ];
+    if !ALLOWED.iter().any(|a| url == *a || url.starts_with(&format!("{a}/"))) {
         return Err("That link isn't allowed.".into());
     }
     #[cfg(windows)]

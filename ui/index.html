@@ -7,36 +7,37 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header id="titlebar">
+  <header id="titlebar" data-tauri-drag-region>
     <button type="button" id="menu-btn" class="tb-btn" aria-label="Menu" aria-haspopup="menu" aria-expanded="false" title="Menu">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg>
     </button>
-    <div class="brand">
-      <img class="mark" src="img/icon.png" alt="" width="22" height="22">
-      <span class="name">Encore</span>
-      <span class="beta" title="Encore is in beta until version 1.0">Beta</span>
+    <div class="brand" data-tauri-drag-region>
+      <img class="mark" data-tauri-drag-region src="img/icon.png" alt="" width="22" height="22">
+      <span class="name" data-tauri-drag-region>Encore</span>
+      <span class="beta" data-tauri-drag-region title="Encore is in beta until version 1.0">Beta</span>
     </div>
-    <div class="tb-fill"></div>
-    <p id="engine-line" class="engine-line">Starting the recorder…</p>
+    <div class="tb-fill" data-tauri-drag-region></div>
+    <p id="engine-line" class="engine-line" data-tauri-drag-region>Starting the recorder…</p>
     <button type="button" id="update" class="tb-upd" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>
       <span id="update-text">Update available</span>
     </button>
+    <div class="tb-wc">
+      <button type="button" id="wc-min" class="wc" aria-label="Minimise" title="Minimise" tabindex="-1">&#xE921;</button>
+      <button type="button" id="wc-max" class="wc" aria-label="Maximise" title="Maximise" tabindex="-1">&#xE922;</button>
+      <button type="button" id="wc-close" class="wc close" aria-label="Close" title="Close" tabindex="-1">&#xE8BB;</button>
+    </div>
   </header>
 
-  <div id="menu" class="popmenu" role="menu" aria-labelledby="menu-btn" hidden>
-    <button type="button" role="menuitem" data-open="settings">Settings</button>
-    <button type="button" role="menuitem" id="menu-check">Check for updates</button>
-    <div class="msep" role="separator"></div>
-    <button type="button" role="menuitem" data-open="changelog">Changelog</button>
-    <button type="button" role="menuitem" data-open="about">About Encore</button>
-  </div>
+  <div id="ctxmenu" role="menu" hidden></div>
+  <div id="tip" hidden></div>
 
   <main class="layout">
     <nav id="side" class="side" aria-label="What to record">
       <div class="sidehead">
         <button type="button" id="side-toggle" class="sidetoggle" aria-expanded="true" title="Collapse panel">
           <svg class="tg-collapse" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 4.5v15M15.5 9.5 13 12l2.5 2.5"/></svg>
+          <svg class="tg-lib" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>
           <svg class="tg-open" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 4.5v15M13 9.5l2.5 2.5-2.5 2.5"/></svg>
           <span class="sidename">What to record</span>
         </button>
@@ -50,14 +51,14 @@
 
         <label class="row" id="monitor-row">
           <span>Monitor</span>
-          <select id="monitor"></select>
+          <select class="dd" id="monitor"></select>
         </label>
 
         <div class="row" id="window-row" hidden>
           <label for="window">Window</label>
           <div class="with-button">
-            <select id="window"></select>
-            <button type="button" class="ibtn" id="refresh-windows" aria-label="Refresh window list" title="Refresh window list">
+            <select class="dd" id="window"></select>
+            <button type="button" class="ibtn sm" id="refresh-windows" aria-label="Refresh window list" title="Refresh window list">
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 6.5A6.5 6.5 0 1 0 16.4 12"/><path d="M16.5 2.5v4.5H12"/></svg>
             </button>
           </div>
@@ -71,11 +72,11 @@
       </div>
 
       <div class="rail" aria-hidden="true">
-        <button type="button" class="railbtn" data-source="desktop" tabindex="-1" title="Desktop">
-          <svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="11.5" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg>
+        <button type="button" class="railbtn" data-source="desktop" tabindex="-1" data-rail-tip="Desktop">
+          <span class="gav"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="11.5" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg></span>
         </button>
-        <button type="button" class="railbtn" data-source="window" tabindex="-1" title="One window">
-          <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M3.5 9h17"/></svg>
+        <button type="button" class="railbtn" data-source="window" tabindex="-1" data-rail-tip="One window">
+          <span class="gav"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M3.5 9h17"/></svg></span>
         </button>
       </div>
     </nav>
@@ -106,7 +107,7 @@
     <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <div class="dlg-head">
         <h2 id="settings-title">Settings</h2>
-        <button type="button" class="ibtn close" data-close aria-label="Close" title="Close (Esc)">
+        <button type="button" class="ibtn" data-close aria-label="Close" title="Close (Esc)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
         </button>
       </div>
@@ -115,14 +116,14 @@
           <h3>Video</h3>
           <div class="setcard">
             <label class="setrow"><span class="setname">Format</span>
-              <select id="codec" data-setting="codec">
+              <select class="dd" id="codec" data-setting="codec">
                 <option value="h264">H.264 (plays everywhere)</option>
                 <option value="hevc">HEVC (smaller files)</option>
                 <option value="av1">AV1 (smallest files)</option>
               </select>
             </label>
             <label class="setrow"><span class="setname">Frame rate</span>
-              <select id="fps" data-setting="fps" data-number>
+              <select class="dd" id="fps" data-setting="fps" data-number>
                 <option value="30">30 fps</option>
                 <option value="60">60 fps</option>
                 <option value="120">120 fps</option>
@@ -131,7 +132,7 @@
               </select>
             </label>
             <label class="setrow"><span class="setname">Resolution</span>
-              <select id="resolution" data-setting="resolution">
+              <select class="dd" id="resolution" data-setting="resolution">
                 <option value="native">Same as source</option>
                 <option value="1440p">1440p</option>
                 <option value="1080p">1080p</option>
@@ -139,7 +140,7 @@
               </select>
             </label>
             <label class="setrow"><span class="setname">Quality</span>
-              <select id="quality" data-setting="quality">
+              <select class="dd" id="quality" data-setting="quality">
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
                 <option value="low">Low (smaller files)</option>
@@ -155,14 +156,15 @@
           <h3>Audio</h3>
           <p class="setnote">Your game, music, browser and voice chat each get their own track, so you can turn them up or down when editing.</p>
           <div class="setcard">
-            <label class="setrow"><span class="setname">Everything you hear (Full mix)</span>
+            <label class="setrow"><span class="settext"><span class="setname">Desktop audio</span>
+                <span class="setsub">Everything your PC plays. The first track (Full mix) adds your microphone to it.</span></span>
               <input type="checkbox" id="audio-full" data-setting="audio_full_mix" class="toggle">
             </label>
             <label class="setrow"><span class="setname">Microphone</span>
               <input type="checkbox" id="audio-mic" data-setting="audio_mic" class="toggle">
             </label>
             <label class="setrow" id="mic-row"><span class="setname">Which microphone</span>
-              <select id="mic-device"></select>
+              <select class="dd" id="mic-device"></select>
             </label>
             <label class="setrow"><span class="setname">Separate track for each app</span>
               <input type="checkbox" id="audio-apps" data-setting="audio_app_tracks" class="toggle">
@@ -185,27 +187,29 @@
 
         <section class="setsec">
           <h3>Updates</h3>
-          <p class="setnote" id="version-note">You're on Encore (beta).</p>
+          <p class="setnote">New versions come from the GitHub releases page.</p>
           <div class="setcard" role="radiogroup" aria-label="How updates work">
             <button type="button" class="setrow setopt" role="radio" data-update-mode="manual">
               <span class="radio" aria-hidden="true"></span>
               <span class="settext"><span class="setname">Tell me when there's an update</span>
-                <span class="setsub">Nothing downloads until you choose to install it.</span></span>
+                <span class="setsub wrap">Nothing downloads until you choose to install it.</span></span>
             </button>
             <button type="button" class="setrow setopt" role="radio" data-update-mode="auto_download">
               <span class="radio" aria-hidden="true"></span>
               <span class="settext"><span class="setname">Download updates automatically</span>
-                <span class="setsub">Downloads in the background; you choose when to install.</span></span>
+                <span class="setsub wrap">Downloads in the background; you choose when to install.</span></span>
             </button>
             <button type="button" class="setrow setopt" role="radio" data-update-mode="never">
               <span class="radio" aria-hidden="true"></span>
               <span class="settext"><span class="setname">Never check for updates (not recommended)</span>
-                <span class="setsub">You'll miss fixes unless you check yourself.</span></span>
+                <span class="setsub wrap">You'll miss fixes unless you check yourself.</span></span>
             </button>
-          </div>
-          <div class="setbtns">
-            <button type="button" class="btn sm" id="check-updates">Check for updates</button>
-            <span id="update-status" class="setstatus" aria-live="polite"></span>
+            <div class="setrow">
+              <span class="settext"><span class="setname" id="version-line">Version</span>
+                <span class="setsub" id="update-status" aria-live="polite"></span></span>
+              <button type="button" class="btn sm ghost" id="check-updates">Check now</button>
+              <button type="button" class="btn sm ghost" data-open="changelog">Changelog</button>
+            </div>
           </div>
         </section>
       </div>
@@ -213,34 +217,25 @@
   </div>
 
   <!-- Changelog -->
-  <div id="changelog" class="overlay" hidden>
-    <div class="dlg narrow" role="dialog" aria-modal="true" aria-labelledby="changelog-title">
-      <div class="dlg-head">
-        <h2 id="changelog-title">Changelog</h2>
-        <button type="button" class="ibtn close" data-close aria-label="Close" title="Close (Esc)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
-        </button>
-      </div>
-      <div class="dlg-scroll" id="changelog-body"></div>
+  <div id="changelog" class="modal-ov" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="changelog-title">
+      <button type="button" class="modal-x" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
+      <h2 id="changelog-title">Changelog</h2>
+      <div class="modal-body" id="changelog-body"></div>
     </div>
   </div>
 
   <!-- About -->
-  <div id="about" class="overlay" hidden>
-    <div class="dlg narrow" role="dialog" aria-modal="true" aria-labelledby="about-title">
-      <div class="dlg-head">
-        <h2 id="about-title">About Encore</h2>
-        <button type="button" class="ibtn close" data-close aria-label="Close" title="Close (Esc)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
-        </button>
-      </div>
-      <div class="dlg-scroll about">
-        <img src="img/icon.png" alt="" width="64" height="64">
-        <p class="about-name">Encore</p>
-        <p class="about-version" id="about-version">Beta</p>
-        <p>A lightweight game recorder for Windows 11, with a separate audio track for every app.</p>
-        <p class="setnote">Open source under the MIT licence. Uses FFmpeg (LGPL) and Tauri; details are in the licence files installed with Encore.</p>
-        <button type="button" class="btn sm" id="about-source">Source code on GitHub</button>
+  <div id="about" class="modal-ov" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <button type="button" class="modal-x" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
+      <h2 id="about-title">Encore</h2>
+      <div class="modal-body">
+        <p>Records your games and desktop on Windows 11, with a separate audio track for every app.</p>
+        <p><button type="button" class="linkbtn" data-link="https://github.com/ancillaauri/Encore">github.com/ancillaauri/Encore</button></p>
+        <h3>Open-source parts</h3>
+        <p>FFmpeg (LGPL v2.1), used to capture and save videos. Source: <button type="button" class="linkbtn" data-link="https://ffmpeg.org/download.html">ffmpeg.org</button>, build: <button type="button" class="linkbtn" data-link="https://github.com/BtbN/FFmpeg-Builds">BtbN FFmpeg-Builds</button></p>
+        <p>Tauri (MIT / Apache 2.0). Full notices: <button type="button" class="linkbtn" data-link="https://github.com/ancillaauri/Encore/blob/main/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES</button></p>
       </div>
     </div>
   </div>

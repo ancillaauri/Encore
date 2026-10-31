@@ -102,7 +102,7 @@ Game detection (step 6):
 - The detected game names the file, the per-game folder, and its own audio track.
 
 Audio (steps 4 and 5) — built in batch 2:
-- Full mix: WASAPI loopback on the default output device.
+- Desktop audio: WASAPI loopback on the default output device.
 - Microphone: WASAPI capture on the default input device (selectable in settings).
 - Per app: WASAPI process loopback, "include process tree" on the app's top-level process
   (so Chrome's child processes count as Chrome).
@@ -118,7 +118,11 @@ Audio (steps 4 and 5) — built in batch 2:
   `video start - origin` when the file is assembled. A hidden `audio_offset_ms` setting allows
   fine adjustment if real-world tests show a constant offset.
 - B-frames are disabled: with them, joining segments shifts video 2 frames late.
-- Limit: 8 app tracks. Further apps are only in the Full mix (an "Other" track would need a
+- Output tracks are planned from the recorded sources (`audio::plan_output`) when the file is
+  saved: Full mix = desktop audio (or, if that is off, every app) plus the mic, mixed with FFmpeg's
+  `amix` at full level (`normalize=0`); then Microphone, Desktop audio (only when a mic is
+  recorded) and each app. A track that would only repeat another is left out.
+- Limit: 8 app tracks. Further apps are only in Desktop audio and the Full mix (an "Other" track would need a
   different capture method; not built). Per-app always/never lists: later.
 - Audio is encoded to AAC when the recording is saved, so saving a long recording with many
   tracks takes a little while. Encoding during recording is a later optimisation.
@@ -131,8 +135,11 @@ Instant replay (step 7):
 
 - Container: MP4. Video H.264 (HEVC/AV1 may be added later as options). Audio AAC, 48 kHz stereo.
 - Audio stream order (a track switched off in settings is simply absent, so identify tracks by name):
-  - `Full mix` first (the default track, so the file plays normally anywhere)
+  - `Full mix` first: everything, including the microphone (the default track, so the file plays
+    normally anywhere). Contains every other track.
   - `Microphone`
+  - `Desktop audio`: everything the PC played, without the mic (only present when there is a mic
+    track). Contains every app track.
   - then one per app, named from the app's file description (e.g. `Spotify`, `Google Chrome`,
     `Discord`, the game's name); duplicates become `Discord 2` etc.
 - The track name is stored in each audio stream's `handler_name` (the MP4 muxer does not keep a
@@ -150,7 +157,8 @@ Its `audioGroups()` in `main.js` currently treats any non-Discord, non-NVIDIA mu
 together (everything doubled). The change needed mirrors how it already handles Discord's "all" track:
 
 - If `comment` contains `rec-format:1`: one row per audio stream except `Full mix`, named from the
-  stream title (Microphone gets the mic icon).
+  stream's `handler_name` (Microphone gets the mic icon). `Desktop audio` gets a row only when the
+  file has no per-app tracks; otherwise it is hidden like `Full mix` (it already contains them).
 - When no slider has been touched, export using the `Full mix` stream only.
 
 ## Updates (shell)
