@@ -60,6 +60,8 @@ pub struct Settings {
     /// (download in the background; I choose when to install), or "never" (no checks).
     /// Read by the app shell, which owns updating.
     pub update_mode: String,
+    /// The first-run setup has been completed (or skipped).
+    pub setup_done: bool,
 }
 
 impl Default for Settings {
@@ -78,6 +80,7 @@ impl Default for Settings {
             audio_app_tracks: true,
             audio_offset_ms: 0,
             update_mode: "manual".into(),
+            setup_done: false,
         }
     }
 }
@@ -152,6 +155,11 @@ impl Settings {
         if !["manual", "auto_download", "never"].contains(&self.update_mode.as_str()) {
             self.update_mode = "manual".into();
         }
+        // Not set up yet and still on an old guessed default: use the real Videos folder (it may be
+        // on another drive or in OneDrive, where the guess made a new, empty folder).
+        if !self.setup_done && paths::legacy_default_dirs().iter().any(|d| d.to_string_lossy() == self.output_dir) {
+            self.output_dir = paths::default_output_dir().to_string_lossy().into_owned();
+        }
         // Before 0.5: "primary" (the old default) and "mouse" (chosen at start only).
         if !(self.monitor == "follow" || (self.monitor.starts_with("id:") && self.monitor.len() > 3)) {
             self.monitor = "follow".into();
@@ -214,5 +222,6 @@ mod tests {
         assert!(s.audio_full_mix && s.audio_mic && s.audio_app_tracks);
         assert_eq!(s.mic_device, "default");
         assert_eq!(s.update_mode, "manual"); // no background downloads unless chosen
+        assert!(!s.setup_done); // settings saved before the setup existed still show it once
     }
 }

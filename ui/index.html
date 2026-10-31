@@ -207,7 +207,8 @@
                 <span class="setsub wrap" id="output-note">Encore makes a folder called Encore here, with a folder inside for Desktop and each game or app.</span></span>
               <div class="with-button grow">
                 <input id="output" type="text" spellcheck="false" data-setting="output_dir">
-                <button type="button" class="btn sm" id="open-output">Open</button>
+                <button type="button" class="btn sm" id="browse-output">Browse…</button>
+                <button type="button" class="btn sm ghost" id="open-output">Open</button>
               </div>
             </div>
           </div>
@@ -264,6 +265,83 @@
         <h3>Open-source parts</h3>
         <p>FFmpeg (LGPL v2.1), used to capture and save videos. Source: <button type="button" class="linkbtn" data-link="https://ffmpeg.org/download.html">ffmpeg.org</button>, build: <button type="button" class="linkbtn" data-link="https://github.com/BtbN/FFmpeg-Builds">BtbN FFmpeg-Builds</button></p>
         <p>Tauri (MIT / Apache 2.0). Full notices: <button type="button" class="linkbtn" data-link="https://github.com/ancillaauri/Encore/blob/main/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES</button></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- First-run setup -->
+  <div id="setup" class="modal-ov" hidden>
+    <div class="modal setup" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+      <button type="button" class="modal-x" id="setup-skip" aria-label="Skip setup" title="Skip (you can change everything later in Settings)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
+      <h2 id="setup-title">Welcome to Encore</h2>
+      <p class="updsub" id="setup-step">Step 1 of 3</p>
+
+      <div class="sstep" data-step="1">
+        <p class="slead">Where should your recordings go?</p>
+        <div class="with-button">
+          <input id="setup-folder" type="text" spellcheck="false" readonly>
+          <button type="button" class="btn sm" id="setup-browse">Browse…</button>
+        </div>
+        <p class="snote" id="setup-folder-note"></p>
+      </div>
+
+      <div class="sstep" data-step="2" hidden>
+        <p class="slead">How should recordings look?</p>
+        <div class="setcard" role="radiogroup" aria-label="Quality">
+          <button type="button" class="setrow setopt" role="radio" data-quality="high">
+            <span class="radio" aria-hidden="true"></span>
+            <span class="settext"><span class="setname">High</span><span class="setsub" data-size="high"></span></span>
+          </button>
+          <button type="button" class="setrow setopt" role="radio" data-quality="medium">
+            <span class="radio" aria-hidden="true"></span>
+            <span class="settext"><span class="setname">Medium</span><span class="setsub" data-size="medium"></span></span>
+          </button>
+          <button type="button" class="setrow setopt" role="radio" data-quality="low">
+            <span class="radio" aria-hidden="true"></span>
+            <span class="settext"><span class="setname">Low</span><span class="setsub" data-size="low"></span></span>
+          </button>
+        </div>
+        <div class="setcard spaced">
+          <label class="setrow"><span class="setname">Frame rate</span>
+            <select class="dd" id="setup-fps" data-setting="fps" data-number>
+              <option value="30">30 fps</option>
+              <option value="60">60 fps</option>
+              <option value="120">120 fps</option>
+              <option value="144">144 fps</option>
+              <option value="240">240 fps</option>
+            </select>
+          </label>
+          <label class="setrow"><span class="setname">Resolution</span>
+            <select class="dd" id="setup-resolution" data-setting="resolution">
+              <option value="native">Same as source</option>
+              <option value="1440p">1440p</option>
+              <option value="1080p">1080p</option>
+              <option value="720p">720p</option>
+            </select>
+          </label>
+        </div>
+        <p class="snote">Tip: if a game uses all of your graphics card, recordings can stutter. Capping the game's frame rate a little below your screen's (for example 120 on a 144 Hz screen) keeps them smooth.</p>
+      </div>
+
+      <div class="sstep" data-step="3" hidden>
+        <p class="slead">What should Encore record?</p>
+        <div class="setcard">
+          <label class="setrow"><span class="settext"><span class="setname">Desktop audio</span>
+            <span class="setsub">Everything your PC plays</span></span>
+            <input type="checkbox" class="toggle" data-setting="audio_full_mix"></label>
+          <label class="setrow"><span class="settext"><span class="setname">Microphone</span>
+            <span class="setsub">Your voice, on its own track</span></span>
+            <input type="checkbox" class="toggle" data-setting="audio_mic"></label>
+          <label class="setrow"><span class="settext"><span class="setname">A track for each app</span>
+            <span class="setsub">Turn your game, music or voice chat up or down when editing</span></span>
+            <input type="checkbox" class="toggle" data-setting="audio_app_tracks"></label>
+        </div>
+        <p class="snote">You can change all of this later in Settings.</p>
+      </div>
+
+      <div class="modal-btns">
+        <button type="button" class="mbtn" id="setup-back">Back</button>
+        <button type="button" class="mbtn primary" id="setup-next">Next</button>
       </div>
     </div>
   </div>

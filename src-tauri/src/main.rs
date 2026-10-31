@@ -55,6 +55,20 @@ fn open_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Windows' folder picker. Returns the chosen folder, or None if cancelled.
+#[tauri::command]
+async fn pick_folder(app: tauri::AppHandle, start: Option<String>) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let mut dialog = app.dialog().file().set_title("Choose where to save recordings");
+    if let Some(dir) = start.filter(|d| std::path::Path::new(d).is_dir()) {
+        dialog = dialog.set_directory(dir);
+    }
+    if let Some(win) = app.get_webview_window("main") {
+        dialog = dialog.set_parent(&win);
+    }
+    dialog.blocking_pick_folder().and_then(|p| p.into_path().ok()).map(|p| p.display().to_string())
+}
+
 /// Opens a web link in the default browser. Only the project's own GitHub pages are allowed.
 #[tauri::command]
 fn open_link(url: String) -> Result<(), String> {
@@ -90,6 +104,7 @@ fn fit_to_screen(app: &tauri::AppHandle) {
 fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         // Reopens at the size and place it was closed at, like the companion editor.
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .manage(updater::UpdateState::default())
@@ -105,6 +120,7 @@ fn main() {
             reveal_in_folder,
             open_folder,
             open_link,
+            pick_folder,
             updater::get_update,
             updater::check_for_updates,
             updater::install_update

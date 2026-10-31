@@ -1,6 +1,14 @@
-## Encore 0.5.2 (beta), test build 6: smoother game recordings, Encore folder, smaller files
+## Encore 0.5.3 (beta), test build 6: setup on first start, smoother game recordings, Encore folder
 
-### What's new in 0.5.2
+### What's new
+- **Setup on first start.** Three short steps: where to save recordings (with a Browse button),
+  video quality (with an estimate of how big a minute of recording will be on your screen) and
+  frame rate, then sound. Everyone sees it once, including people updating. Run it again any
+  time from ≡ → Help → Run Setup Again.
+- **Finds your real Videos folder.** Encore now asks Windows where your Videos folder is (it can
+  be on another drive or in OneDrive) instead of assuming `C:\Users\<you>\Videos`, which made a
+  new, empty folder for some people.
+- **Browse button** next to "Save recordings to" in Settings.
 - **Smoother recordings while a game uses the whole graphics card.** Tests showed that with the
   game in front, the capture got as few as 0–10 new frames a second (Task Manager: game at 90 %
   GPU). Encore now asks Windows to give its capture priority on the graphics card and processor
@@ -21,11 +29,13 @@
   program file instead of "App 24720".
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.5.2). Otherwise download
-`Encore_0.5.2_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
+Update from inside Encore (≡ → Help → Update to 0.5.3). Otherwise download
+`Encore_0.5.3_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
 **More info**, then **Run anyway**.
 
 ### Test checklist
+0. **Setup.** It should open by itself. Check the folder it suggests is your real Videos folder,
+   try Browse, look at the size estimates, finish. Reopen Encore: it shouldn't show again.
 1. **Game stutter.** Record 20 seconds of Warframe gameplay, uncapped, the normal way. Then run
    Encore as administrator and record 20 seconds again. Send both: I'll count the real frames.
 2. **Encore folder.** In Settings → Saving, choose another folder (e.g. `D:\Clips`). Record: the

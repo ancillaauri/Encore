@@ -462,6 +462,7 @@
     renderInputs();
     renderCodecs();
     renderOutputNote();
+    if (!$('setup').hidden) renderSetup();
   }
 
   function renderInputs() {
@@ -746,6 +747,8 @@
         u.status === 'none'
           ? { text: 'Check for Updates...', run: checkForUpdates }
           : { text: `${u.status === 'ready' ? 'Restart to Update' : 'Update to'} ${u.version}...`, run: installUpdate },
+        { text: 'Run Setup Again...', run: openSetup },
+        '-',
         { text: 'Changelog', run: () => openDialog('changelog') },
         { text: 'About Encore', run: () => openDialog('about') },
       ] },
@@ -769,6 +772,7 @@
   }
   function closeDialog(ov) {
     if (ov.hidden) return false;
+    if (ov.id === 'setup') finishSetup(); // finished or skipped: don't show it again
     ov.classList.remove('on');
     setTimeout(() => { if (!ov.classList.contains('on')) ov.hidden = true; }, 160);
     return true;
@@ -791,6 +795,7 @@
       return;
     }
     // small dialogs also close with Enter
+    if (e.key === 'Enter' && !$('setup').hidden) { if (!e.target.closest('button')) { e.preventDefault(); $('setup-next').click(); } return; }
     if (e.key === 'Enter' && [...document.querySelectorAll('.modal-ov')].some((o) => !o.hidden)) { e.preventDefault(); closeTopDialog(); return; }
     if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === ',') { e.preventDefault(); openDialog('settings'); }
     if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'b' || e.key === 'B')) {
@@ -858,6 +863,76 @@
   } catch (e) { /* not running in the app */ }
   renderMaximized();
 
+  // ---------- first-run setup ----------
+  const BPP = { high: 0.30, medium: 0.18, low: 0.10 }; // same as the engine (ffmpeg::bitrate_kbps)
+  const CODEC_FACTOR = { h264: 1, hevc: 0.7, av1: 0.6 };
+  // Output size for the main monitor at a resolution setting (never upscaled), like the engine.
+  function outputSize(res) {
+    const m = state.monitors.find((x) => x.primary) || state.monitors[0] || { width: 1920, height: 1080 };
+    const target = { native: m.height, '1440p': 1440, '1080p': 1080, '720p': 720 }[res] || m.height;
+    const h = Math.min(m.height, target);
+    const w = Math.round((m.width * h) / m.height);
+    return { w: w & ~1, h: h & ~1 };
+  }
+  function mbPerMinute(quality) {
+    const s = state.settings;
+    if (!s) return 0;
+    const { w, h } = outputSize(s.resolution);
+    let kbps = (w * h * s.fps * BPP[quality] * (CODEC_FACTOR[s.codec] || 1)) / 1000;
+    kbps = Math.min(150000, Math.max(2000, kbps)) + 600; // plus audio
+    return (kbps * 60) / 8 / 1000;
+  }
+  function sizeText(mb) {
+    const r = Math.round(mb / 10) * 10;
+    return r >= 1000 ? `${(r / 1000).toFixed(1)} GB` : `${r} MB`;
+  }
+
+  let setupStep = 1;
+  function renderSetup() {
+    const s = state.settings;
+    if (!s) return;
+    document.querySelectorAll('#setup .sstep').forEach((el) => (el.hidden = Number(el.dataset.step) !== setupStep));
+    $('setup-step').textContent = `Step ${setupStep} of 3`;
+    $('setup-title').textContent = setupStep === 1 ? 'Welcome to Encore' : setupStep === 2 ? 'Video' : 'Sound';
+    $('setup-back').disabled = setupStep === 1;
+    $('setup-next').textContent = setupStep === 3 ? 'Start using Encore' : 'Next';
+    $('setup-folder').value = s.output_dir;
+    const root = encoreRoot();
+    $('setup-folder-note').textContent = `Encore makes a folder called Encore here, with a folder inside for Desktop and each game or app: ${root}\\Desktop, ${root}\\Warframe…`;
+    const { w, h } = outputSize(s.resolution);
+    document.querySelectorAll('#setup [data-quality]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.quality === s.quality)));
+    document.querySelectorAll('#setup [data-size]').forEach((el) => {
+      const q = el.dataset.size;
+      const what = { high: 'Best for clips you\u2019ll share', medium: 'Good quality, smaller files', low: 'Smallest files' }[q];
+      el.textContent = `${what}. About ${sizeText(mbPerMinute(q))} per minute at ${h}p ${s.fps} fps.`;
+    });
+  }
+  function openSetup() {
+    setupStep = 1;
+    renderSetup();
+    openDialog('setup');
+  }
+  async function finishSetup() {
+    if (state.settings && !state.settings.setup_done) await saveSetting('setup_done', true);
+  }
+  async function browseFolder() {
+    try {
+      const dir = await bridge.pickFolder(state.settings ? state.settings.output_dir : '');
+      if (dir) await saveSetting('output_dir', dir);
+    } catch (e) { toast(String(e), 'error'); }
+    renderSetup();
+  }
+  $('setup-browse').addEventListener('click', browseFolder);
+  $('browse-output').addEventListener('click', browseFolder);
+  $('setup-back').addEventListener('click', () => { if (setupStep > 1) { setupStep--; renderSetup(); } });
+  $('setup-next').addEventListener('click', async () => {
+    if (setupStep < 3) { setupStep++; renderSetup(); return; }
+    closeDialog($('setup'));
+  });
+  $('setup-skip').addEventListener('click', () => closeDialog($('setup')));
+  document.querySelectorAll('#setup [data-quality]').forEach((b) =>
+    b.addEventListener('click', async () => { await saveSetting('quality', b.dataset.quality); renderSetup(); }));
+
   // ---------- start-up ----------
   async function init() {
     renderStage();
@@ -875,6 +950,7 @@
     }
     await refreshMonitors();
     await refreshInputs();
+    if (state.settings && !state.settings.setup_done && state.phase === 'idle') openSetup();
     // Capabilities arrive as an event, but may have been sent before we were listening.
     for (let i = 0; i < 40 && !(state.caps && state.caps.probed); i++) {
       try { state.caps = await bridge.getCapabilities(); } catch (e) { /* engine still starting */ }

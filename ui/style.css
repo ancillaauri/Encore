@@ -319,7 +319,7 @@ input[type="text"] {
   user-select: text;
 }
 input[type="text"]:focus { border-color: var(--acc); }
-.with-button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.with-button { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-auto-flow: column; gap: 6px; align-items: center; }
 
 .btn {
   display: inline-flex;
@@ -574,6 +574,21 @@ body.recording .pick:not(.rec), body.saving .pick { opacity: .55; }
 .modal-body p { margin: 0 0 10px; user-select: text; }
 .modal-body h3 { color: #fff; font-size: 14px; margin: 16px 0 8px; }
 .modal-body .linkbtn { font-size: 14px; padding: 0; }
+.updsub { color: var(--dim); font-size: 13px; margin: -2px 0 14px; }
+.modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mbtn { height: 42px; border: 0; border-radius: 8px; background: #2a292e; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s ease; }
+.mbtn:hover:not(:disabled) { background: #343338; }
+.mbtn.primary { background: var(--acc); }
+.mbtn.primary:hover:not(:disabled) { background: var(--acc2); }
+.mbtn:disabled { opacity: .45; cursor: default; }
+.mbtn:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+/* first-run setup */
+.modal.setup { width: 560px; }
+.sstep { margin-bottom: 20px; }
+.slead { margin: 4px 0 12px; font-size: 15px; color: var(--text); font-weight: 600; }
+.snote { margin: 10px 0 0; font-size: 12.5px; color: var(--mute); line-height: 1.45; user-select: text; }
+.setcard.spaced { margin-top: 12px; }
+.modal.setup .setrow .sortbtn { margin-left: auto; }
 .updnotes h3.relhead { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 6px; font-size: 15px; }
 .updnotes h3.relhead:first-child { margin-top: 0; }
 .updnotes h3.relhead small { color: var(--dim); font-size: 12px; font-weight: 500; }

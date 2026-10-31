@@ -21,6 +21,7 @@
     openFolder: (path) => T.core.invoke('open_folder', { path }),
     revealFile: (path) => T.core.invoke('reveal_in_folder', { path }),
     openLink: (url) => T.core.invoke('open_link', { url }),
+    pickFolder: (start) => T.core.invoke('pick_folder', { start: start || null }),
     appVersion: () => T.app.getVersion(),
     // Updates: { status: 'none' | 'available' | 'ready', version, current }
     getUpdate: () => T.core.invoke('get_update'),

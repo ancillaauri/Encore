@@ -126,6 +126,9 @@ mod other {
     pub fn boost_capture_priority(_pid: u32) -> String {
         "not on Windows".into()
     }
+    pub fn videos_folder() -> Option<std::path::PathBuf> {
+        None
+    }
     pub fn window_exists(_handle: u64) -> bool {
         false
     }
@@ -500,6 +503,32 @@ mod win {
             stem = processes().get(&pid).map(|p| exe_stem(&p.exe)).unwrap_or_default();
         }
         if stem.is_empty() { format!("App {pid}") } else { stem }
+    }
+
+    /// The person's real Videos folder, wherever Windows keeps it (it can be moved to another
+    /// drive or into OneDrive, so it isn't always %USERPROFILE%\Videos).
+    pub fn videos_folder() -> Option<std::path::PathBuf> {
+        use windows_sys::core::GUID;
+        use windows_sys::Win32::System::Com::CoTaskMemFree;
+        use windows_sys::Win32::UI::Shell::SHGetKnownFolderPath;
+        const FOLDERID_VIDEOS: GUID = GUID::from_u128(0x18989b1d_99b5_455b_841c_ab7c74e4ddfc);
+        unsafe {
+            let mut p: *mut u16 = null_mut();
+            let hr = SHGetKnownFolderPath(&FOLDERID_VIDEOS, 0, null_mut(), &mut p);
+            if hr < 0 || p.is_null() {
+                if !p.is_null() {
+                    CoTaskMemFree(p as *const c_void);
+                }
+                return None;
+            }
+            let mut len = 0;
+            while *p.add(len) != 0 {
+                len += 1;
+            }
+            let s = String::from_utf16_lossy(std::slice::from_raw_parts(p, len));
+            CoTaskMemFree(p as *const c_void);
+            if s.is_empty() { None } else { Some(std::path::PathBuf::from(s)) }
+        }
     }
 
     /// Gives a capture process (FFmpeg) priority on the graphics card and the processor, so a

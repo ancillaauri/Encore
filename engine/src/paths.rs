@@ -40,7 +40,13 @@ pub fn log_dir() -> PathBuf {
 /// Where recordings go by default: the Videos folder (Encore adds its own folder inside, see
 /// `encore_root`).
 pub fn default_output_dir() -> PathBuf {
-    home().join("Videos")
+    crate::platform::videos_folder().unwrap_or_else(|| home().join("Videos"))
+}
+
+/// Defaults used before Encore asked Windows for the real Videos folder. A setting still on one of
+/// these (and never confirmed in the setup) is moved to the real Videos folder.
+pub fn legacy_default_dirs() -> [PathBuf; 2] {
+    [home().join("Videos"), home().join("Videos").join("Encore")]
 }
 
 /// The Encore folder inside the chosen save folder: `D:\Clips` -> `D:\Clips\Encore`. A folder

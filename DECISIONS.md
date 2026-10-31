@@ -179,6 +179,17 @@ place it was closed at, as the editor does. The monitor picker stays on one line
   128 kbps (Full mix stays 192). Bigger savings: custom bitrate, HEVC/AV1.
 - Apps whose details can't be read are named after their program file instead of "App <number>".
 
+## 2026-10-31: First-run setup and the real Videos folder (0.5.3)
+- Setup on first start (three steps: save folder, video, sound) in the editor's small-dialog style.
+  Closing it counts as done; Help → Run Setup Again reopens it. `setup_done` in settings; files
+  saved before it existed show it once.
+- Tests: Warframe capped at 30 fps captured every frame (30 new a second); capped at 120 with no
+  V-Sync, the capture froze for 9 s. Confirms GPU starvation; the setup's video step tells people
+  that capping the game's frame rate keeps recordings smooth.
+- Default save folder is Windows' real Videos folder (known-folder lookup), not
+  %USERPROFILE%\Videos, which may not exist when Videos was moved. A setting still on an old guessed
+  default is moved to it once, before setup is done.
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.
