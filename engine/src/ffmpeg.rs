@@ -214,18 +214,19 @@ pub fn concat_list(files: &[PathBuf]) -> String {
     s
 }
 
-/// An audio track to attach: raw 48 kHz stereo s16le PCM aligned to the session origin.
+/// An audio track for the saved file: one or more recorded PCM files (raw 48 kHz stereo s16le,
+/// aligned to the session origin). Several files are mixed together into the one track.
 #[derive(Debug, Clone)]
-pub struct AudioInput {
-    pub path: PathBuf,
+pub struct AudioOut {
     pub title: String,
+    pub files: Vec<PathBuf>,
 }
 
 /// Joins video segments (listed in `list_file`) without re-encoding them, and attaches the audio
 /// tracks in order (encoded to AAC). `audio_skip` seconds are cut from the start of every audio
 /// file so audio and video start at the same moment. The first audio track is the default one
 /// players use.
-pub fn finalise_args(list_file: &Path, audio: &[AudioInput], audio_skip: f64, out: &Path) -> Vec<String> {
+pub fn finalise_args(list_file: &Path, audio: &[AudioOut], audio_skip: f64, out: &Path) -> Vec<String> {
     let mut a: Vec<String> = vec![
         "-hide_banner".into(),
         "-loglevel".into(),
@@ -237,7 +238,16 @@ pub fn finalise_args(list_file: &Path, audio: &[AudioInput], audio_skip: f64, ou
         "-i".into(),
         list_file.to_string_lossy().into_owned(),
     ];
+    // Each recorded file is opened once, even if it feeds several tracks.
+    let mut files: Vec<&PathBuf> = Vec::new();
     for t in audio {
+        for f in &t.files {
+            if !files.contains(&f) {
+                files.push(f);
+            }
+        }
+    }
+    for f in &files {
         a.extend([
             "-ss".into(),
             format!("{audio_skip:.6}"),
@@ -248,12 +258,53 @@ pub fn finalise_args(list_file: &Path, audio: &[AudioInput], audio_skip: f64, ou
             "-ac".into(),
             "2".into(),
             "-i".into(),
-            t.path.to_string_lossy().into_owned(),
+            f.to_string_lossy().into_owned(),
         ]);
     }
+    let input_of = |f: &PathBuf| files.iter().position(|x| *x == f).unwrap() + 1;
+    // Mixed tracks: a file used by more than one track has to be split before mixing.
+    let mut uses: Vec<usize> = vec![0; files.len()];
+    for t in audio {
+        for f in &t.files {
+            uses[input_of(f) - 1] += 1;
+        }
+    }
+    let mut graph: Vec<String> = Vec::new();
+    let mut taken: Vec<usize> = vec![0; files.len()];
+    let mut label = |f: &PathBuf, graph: &mut Vec<String>| -> String {
+        let i = input_of(f);
+        if uses[i - 1] <= 1 {
+            return format!("[{i}:a]");
+        }
+        if taken[i - 1] == 0 {
+            let outs: String = (0..uses[i - 1]).map(|n| format!("[s{i}_{n}]")).collect();
+            graph.push(format!("[{i}:a]asplit={}{outs}", uses[i - 1]));
+        }
+        let l = format!("[s{i}_{}]", taken[i - 1]);
+        taken[i - 1] += 1;
+        l
+    };
+    let mut maps: Vec<String> = Vec::new();
+    for (n, t) in audio.iter().enumerate() {
+        if t.files.len() == 1 && uses[input_of(&t.files[0]) - 1] <= 1 {
+            maps.push(format!("{}:a:0", input_of(&t.files[0])));
+            continue;
+        }
+        let ins: String = t.files.iter().map(|f| label(f, &mut graph)).collect();
+        if t.files.len() == 1 {
+            graph.push(format!("{ins}anull[t{n}]"));
+        } else {
+            // normalize=0: sources keep their own volume rather than being turned down.
+            graph.push(format!("{ins}amix=inputs={}:duration=longest:dropout_transition=0:normalize=0[t{n}]", t.files.len()));
+        }
+        maps.push(format!("[t{n}]"));
+    }
+    if !graph.is_empty() {
+        a.extend(["-filter_complex".into(), graph.join(";")]);
+    }
     a.extend(["-map".into(), "0:v:0".into()]);
-    for i in 0..audio.len() {
-        a.extend(["-map".into(), format!("{}:a:0", i + 1)]);
+    for m in maps {
+        a.extend(["-map".into(), m]);
     }
     a.extend(["-c:v".into(), "copy".into()]);
     if !audio.is_empty() {
@@ -448,19 +499,40 @@ mod tests {
 
     #[test]
     fn finalise_attaches_titled_audio_tracks_in_order() {
+        let p = |s: &str| PathBuf::from(s);
         let audio = vec![
-            AudioInput { path: PathBuf::from("a00_full.pcm"), title: "Full mix".into() },
-            AudioInput { path: PathBuf::from("a01_mic.pcm"), title: "Microphone".into() },
-            AudioInput { path: PathBuf::from("a02_app.pcm"), title: "Spotify".into() },
+            AudioOut { title: "Full mix".into(), files: vec![p("a00_full.pcm"), p("a01_mic.pcm")] },
+            AudioOut { title: "Microphone".into(), files: vec![p("a01_mic.pcm")] },
+            AudioOut { title: "Desktop audio".into(), files: vec![p("a00_full.pcm")] },
+            AudioOut { title: "Spotify".into(), files: vec![p("a02_app.pcm")] },
         ];
         let a = finalise_args(Path::new("list.txt"), &audio, 0.3125, Path::new("out.mp4"));
         let j = a.join(" ");
+        // each file opened once
+        assert_eq!(a.iter().filter(|x| x.ends_with(".pcm")).count(), 3);
         assert!(j.contains("-ss 0.312500 -f s16le -ar 48000 -ac 2 -i a00_full.pcm"));
-        assert!(j.contains("-map 0:v:0 -map 1:a:0 -map 2:a:0 -map 3:a:0"));
+        // desktop and mic each feed two tracks, so they are split, then mixed for Full mix
+        assert!(j.contains("[1:a]asplit=2[s1_0][s1_1]"));
+        assert!(j.contains("[2:a]asplit=2[s2_0][s2_1]"));
+        assert!(j.contains("[s1_0][s2_0]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[t0]"));
+        assert!(j.contains("[s2_1]anull[t1]"));
+        assert!(j.contains("[s1_1]anull[t2]"));
+        assert!(j.contains("-map 0:v:0 -map [t0] -map [t1] -map [t2] -map 3:a:0"));
         assert!(j.contains("-metadata:s:a:0 title=Full mix"));
-        assert!(j.contains("-metadata:s:a:2 title=Spotify -metadata:s:a:2 handler_name=Spotify"));
+        assert!(j.contains("-metadata:s:a:3 title=Spotify -metadata:s:a:3 handler_name=Spotify"));
         assert!(j.contains("-disposition:a:0 default"));
         assert!(j.contains("-disposition:a:1 0"));
         assert!(j.contains("-shortest"));
+    }
+
+    #[test]
+    fn finalise_simple_tracks_need_no_filter() {
+        let audio = vec![
+            AudioOut { title: "Full mix".into(), files: vec![PathBuf::from("a.pcm")] },
+            AudioOut { title: "Spotify".into(), files: vec![PathBuf::from("b.pcm")] },
+        ];
+        let a = finalise_args(Path::new("l"), &audio, 0.0, Path::new("o.mp4"));
+        assert!(!a.contains(&"-filter_complex".to_string()));
+        assert!(a.join(" ").contains("-map 0:v:0 -map 1:a:0 -map 2:a:0"));
     }
 }

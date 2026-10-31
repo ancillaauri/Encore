@@ -84,10 +84,59 @@ pub struct AudioApp {
     pub exe: String,
 }
 
+/// One audio track in the saved file, built from one or more recorded sources (indices into
+/// `Manifest::tracks`). Several sources are mixed together.
+#[derive(Debug, Clone, PartialEq)]
+pub struct OutTrack {
+    pub title: String,
+    pub sources: Vec<usize>,
+}
+
+/// Which tracks the saved file gets, in order. Players use the first one, so it is everything:
+/// - `Full mix`: system sound (or, if that is off, every app) plus the microphone, mixed
+/// - `Microphone` on its own
+/// - `Desktop audio`: system sound without the mic (only when there is a mic to leave out)
+/// - one track per app
+/// A track that would just repeat another (e.g. Full mix with nothing to mix in) is left out.
+pub fn plan_output(tracks: &[TrackInfo]) -> Vec<OutTrack> {
+    let idx = |k: TrackKind| tracks.iter().position(|t| t.kind == k);
+    let apps: Vec<usize> = (0..tracks.len()).filter(|&i| tracks[i].kind == TrackKind::App).collect();
+    let desktop = idx(TrackKind::FullMix);
+    let mic = idx(TrackKind::Mic);
+    let mut mix: Vec<usize> = match desktop {
+        Some(d) => vec![d],
+        None => apps.clone(),
+    };
+    if let Some(m) = mic {
+        mix.push(m);
+    }
+    let mut out = Vec::new();
+    if !mix.is_empty() {
+        out.push(OutTrack { title: "Full mix".into(), sources: mix.clone() });
+    }
+    if let Some(m) = mic {
+        if mix.len() > 1 {
+            out.push(OutTrack { title: "Microphone".into(), sources: vec![m] });
+        }
+    }
+    if let (Some(d), Some(_)) = (desktop, mic) {
+        out.push(OutTrack { title: "Desktop audio".into(), sources: vec![d] });
+    }
+    // Apps are separate tracks unless one of them is already the whole Full mix on its own.
+    if !(desktop.is_none() && mic.is_none() && apps.len() == 1) {
+        for &a in &apps {
+            out.push(OutTrack { title: tracks[a].title.clone(), sources: vec![a] });
+        }
+    }
+    out
+}
+
 /// Gives each new app track a unique title ("Discord", "Discord 2", ...).
 pub fn unique_title(existing: &[TrackInfo], wanted: &str) -> String {
     let taken = |t: &str| existing.iter().any(|x| x.title.eq_ignore_ascii_case(t));
-    let reserved = |t: &str| t.eq_ignore_ascii_case("Full mix") || t.eq_ignore_ascii_case("Microphone");
+    let reserved = |t: &str| {
+        ["Full mix", "Microphone", "Desktop audio"].iter().any(|r| t.eq_ignore_ascii_case(r))
+    };
     let base = if wanted.trim().is_empty() { "App" } else { wanted.trim() };
     if !taken(base) && !reserved(base) {
         return base.to_string();
@@ -110,8 +159,9 @@ impl AudioSession {
         self.manifest.clone()
     }
 
+    /// The tracks the saved file will have, as things stand.
     pub fn track_titles(&self) -> Vec<String> {
-        self.manifest.lock().unwrap().tracks.iter().map(|t| t.title.clone()).collect()
+        plan_output(&self.manifest.lock().unwrap().tracks).into_iter().map(|t| t.title).collect()
     }
 
     /// Stops every source at `end_hns`, pads all tracks to that moment, and returns the manifest.
@@ -382,7 +432,7 @@ mod win {
         let threads: Arc<Mutex<Vec<JoinHandle<()>>>> = Arc::new(Mutex::new(Vec::new()));
 
         if opts.full_mix {
-            let (file, title) = add_track(dir, &manifest, "Full mix".into(), TrackKind::FullMix);
+            let (file, title) = add_track(dir, &manifest, "Desktop audio".into(), TrackKind::FullMix);
             spawn(&threads, Source::FullMix, file, title, origin_hns, &stop, &stop_at);
         }
         if opts.mic {
@@ -450,6 +500,51 @@ mod tests {
         TrackInfo { file: "x".into(), title: title.into(), kind: TrackKind::App }
     }
 
+    fn k(title: &str, kind: TrackKind) -> TrackInfo {
+        TrackInfo { file: "x".into(), title: title.into(), kind }
+    }
+
+    fn titles(p: &[OutTrack]) -> Vec<&str> {
+        p.iter().map(|t| t.title.as_str()).collect()
+    }
+
+    #[test]
+    fn plan_with_everything_on() {
+        let tr = vec![k("Desktop audio", TrackKind::FullMix), k("Microphone", TrackKind::Mic), k("Spotify", TrackKind::App), k("Microsoft Edge", TrackKind::App)];
+        let p = plan_output(&tr);
+        assert_eq!(titles(&p), ["Full mix", "Microphone", "Desktop audio", "Spotify", "Microsoft Edge"]);
+        assert_eq!(p[0].sources, vec![0, 1]); // desktop + mic mixed
+        assert_eq!(p[2].sources, vec![0]);
+    }
+
+    #[test]
+    fn plan_without_mic_has_no_duplicate_desktop_track() {
+        let tr = vec![k("Desktop audio", TrackKind::FullMix), k("Spotify", TrackKind::App)];
+        let p = plan_output(&tr);
+        assert_eq!(titles(&p), ["Full mix", "Spotify"]);
+        assert_eq!(p[0].sources, vec![0]);
+    }
+
+    #[test]
+    fn plan_without_desktop_mixes_apps_and_mic() {
+        let tr = vec![k("Microphone", TrackKind::Mic), k("Spotify", TrackKind::App), k("Game", TrackKind::App)];
+        let p = plan_output(&tr);
+        assert_eq!(titles(&p), ["Full mix", "Microphone", "Spotify", "Game"]);
+        assert_eq!(p[0].sources, vec![1, 2, 0]);
+    }
+
+    #[test]
+    fn plan_edge_cases() {
+        assert!(plan_output(&[]).is_empty());
+        let mic_only = plan_output(&[k("Microphone", TrackKind::Mic)]);
+        assert_eq!(titles(&mic_only), ["Full mix"]); // no separate mic copy
+        let one_app = plan_output(&[k("Spotify", TrackKind::App)]);
+        assert_eq!(titles(&one_app), ["Full mix"]);
+        // older recordings named the desktop track "Full mix": plan by kind, not name
+        let old = plan_output(&[k("Full mix", TrackKind::FullMix), k("Microphone", TrackKind::Mic)]);
+        assert_eq!(titles(&old), ["Full mix", "Microphone", "Desktop audio"]);
+    }
+
     #[test]
     fn unique_titles() {
         let tracks = vec![t("Full mix"), t("Microphone"), t("Discord")];
@@ -458,6 +553,7 @@ mod tests {
         assert_eq!(unique_title(&tracks, "Microphone"), "Microphone 2");
         assert_eq!(unique_title(&[], "Full mix"), "Full mix 2");
         assert_eq!(unique_title(&[], "  "), "App");
+        assert_eq!(unique_title(&[], "Desktop audio"), "Desktop audio 2");
     }
 
     #[test]
@@ -465,10 +561,10 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("encore-man-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let m = Arc::new(Mutex::new(Manifest { origin_hns: 42, ..Default::default() }));
-        let (p0, t0) = add_track(&dir, &m, "Full mix".into(), TrackKind::FullMix);
+        let (p0, t0) = add_track(&dir, &m, "Desktop audio".into(), TrackKind::FullMix);
         let (p1, _) = add_track(&dir, &m, "Microphone".into(), TrackKind::Mic);
         let (p2, t2) = add_track(&dir, &m, "Microphone".into(), TrackKind::App);
-        assert_eq!(t0, "Full mix");
+        assert_eq!(t0, "Desktop audio");
         assert_eq!(t2, "Microphone 2");
         assert!(p0.ends_with("a00_full.pcm") && p1.ends_with("a01_mic.pcm") && p2.ends_with("a02_app.pcm"));
         let loaded = Manifest::load(&dir).unwrap();

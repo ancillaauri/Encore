@@ -2,7 +2,7 @@
 //! Segments mean a crash or power cut loses seconds, not the recording.
 
 use crate::audio::{self, AudioOptions, AudioSession, Manifest};
-use crate::ffmpeg::{self, AudioInput, CaptureSpec, Encoder, Pipeline};
+use crate::ffmpeg::{self, AudioOut, CaptureSpec, Encoder, Pipeline};
 use crate::log::{log, tail};
 use crate::platform::{self, LocalTime};
 use crate::timeline::{self, VideoClock};
@@ -334,17 +334,20 @@ pub fn finalise(ffmpeg_path: &Path, seg_dir: &Path, out_path: &Path, duration_ms
     Ok(Saved { path: out_path.to_path_buf(), duration_ms, size_bytes: size })
 }
 
-/// The audio tracks recorded in `seg_dir` (from its manifest) and how much to trim from their start.
-fn audio_inputs(seg_dir: &Path) -> (Vec<AudioInput>, f64) {
+/// The audio tracks for the saved file (planned from the session's manifest) and how much to trim
+/// from the start of the recorded audio.
+fn audio_inputs(seg_dir: &Path) -> (Vec<AudioOut>, f64) {
     let Some(m) = Manifest::load(seg_dir) else { return (Vec::new(), 0.0) };
-    let tracks: Vec<AudioInput> = m
-        .tracks
-        .iter()
-        .map(|t| AudioInput { path: seg_dir.join(&t.file), title: t.title.clone() })
-        .filter(|t| std::fs::metadata(&t.path).map(|md| md.len() > 0).unwrap_or(false))
+    let present = |i: usize| std::fs::metadata(seg_dir.join(&m.tracks[i].file)).map(|md| md.len() > 0).unwrap_or(false);
+    // Only plan with sources whose files actually have audio in them.
+    let kept: Vec<usize> = (0..m.tracks.len()).filter(|&i| present(i)).collect();
+    let tracks: Vec<audio::TrackInfo> = kept.iter().map(|&i| m.tracks[i].clone()).collect();
+    let out = audio::plan_output(&tracks)
+        .into_iter()
+        .map(|t| AudioOut { title: t.title, files: t.sources.iter().map(|&i| seg_dir.join(&tracks[i].file)).collect() })
         .collect();
     let skip = timeline::audio_skip_seconds(m.origin_hns, m.video_start_hns, m.audio_offset_ms);
-    (tracks, skip)
+    (out, skip)
 }
 
 /// Recordings left behind by a crash (temp folders with segments). Used to recover on start-up.
@@ -417,5 +420,45 @@ mod tests {
         let err = finalise(Path::new("ffmpeg"), &dir, &dir.join("out.mp4"), 0).err().unwrap();
         assert!(err.starts_with("No video was captured."));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod e2e {
+    use super::*;
+    use crate::audio::{Manifest, TrackInfo, TrackKind};
+
+    /// Needs FFmpeg on PATH; run with `cargo test -- --ignored`.
+    #[test]
+    #[ignore]
+    fn full_mix_contains_mic_and_stays_in_sync() {
+        let dir = std::env::temp_dir().join(format!("encore-e2e-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let run = |args: &[&str]| {
+            let st = std::process::Command::new("ffmpeg").args(["-hide_banner", "-loglevel", "error", "-y"]).args(args).status().unwrap();
+            assert!(st.success());
+        };
+        // 4 s of black with a white flash at 2.000 s, in 2 s segments.
+        run(&["-f", "lavfi", "-i", "color=black:s=320x180:r=60:d=4", "-vf", "drawbox=c=white:t=fill:enable='between(t,2,2.1)'",
+            "-c:v", "libx264", "-bf", "0", "-g", "120", "-force_key_frames", "expr:gte(t,n_forced*2)",
+            "-f", "segment", "-segment_time", "2", "-segment_format", "matroska", "-reset_timestamps", "1",
+            dir.join("seg_%06d.mkv").to_str().unwrap()]);
+        // Audio starts 0.35 s before video. Desktop: quiet 220 Hz hum. Mic: silence with a beep at 2.35 s.
+        run(&["-f", "lavfi", "-i", "sine=f=220:d=4.35:r=48000,volume=0.1", "-ac", "2", "-f", "s16le", dir.join("a00_full.pcm").to_str().unwrap()]);
+        run(&["-f", "lavfi", "-i", "aevalsrc='if(between(t,2.35,2.45),0.8*sin(2*PI*1000*t),0)':d=4.35:s=48000", "-ac", "2", "-f", "s16le", dir.join("a01_mic.pcm").to_str().unwrap()]);
+        let m = Manifest {
+            origin_hns: 10_000_000,
+            video_start_hns: Some(13_500_000),
+            audio_offset_ms: 0,
+            tracks: vec![
+                TrackInfo { file: "a00_full.pcm".into(), title: "Desktop audio".into(), kind: TrackKind::FullMix },
+                TrackInfo { file: "a01_mic.pcm".into(), title: "Microphone".into(), kind: TrackKind::Mic },
+            ],
+        };
+        m.save(&dir);
+        let out = std::env::temp_dir().join(format!("encore-e2e-{}.mp4", std::process::id()));
+        finalise(Path::new("ffmpeg"), &dir, &out, 4000).unwrap();
+        println!("OUT {}", out.display());
     }
 }
