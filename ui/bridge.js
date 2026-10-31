@@ -20,6 +20,9 @@
     listWindows: () => call('list_windows'),
     openFolder: (path) => T.core.invoke('open_folder', { path }),
     revealFile: (path) => T.core.invoke('reveal_in_folder', { path }),
+    getUpdate: () => T.core.invoke('get_update'),
+    installUpdate: () => T.core.invoke('install_update'),
+    onUpdateReady: (callback) => T.event.listen('update-ready', (e) => callback(e.payload || {})),
     onEvent: (callback) =>
       T.event.listen('engine-event', (e) => callback(e.payload.event, e.payload.data || {})),
   };

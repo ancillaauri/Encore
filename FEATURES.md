@@ -26,7 +26,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Multiple save hotkeys (e.g. last 30 s / 2 min / full buffer) | 7 | [ ] |
 | Auto-start replay when a game is detected, stop when it closes | 7 | [ ] |
 | Storage: estimated disk use beside replay length, max library size + auto-delete oldest, low-disk warning | 7 | [ ] |
-| Installer + auto-updates | 8 | [ ] |
+| Installer + auto-updates | 8 | [~] |
 | Companion editor reads our per-app tracks (change on the editor side) | 9 | [ ] |
 
 ## Later (agreed, after core works)

@@ -44,6 +44,10 @@ button, input, select { font: inherit; color: inherit; }
 .brand { display: flex; align-items: center; gap: 10px; }
 .mark { width: 26px; height: 26px; }
 .name { font-weight: 600; font-size: 16px; letter-spacing: .01em; }
+.top-right { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.btn.update { background: var(--ok); border-color: var(--ok); color: #fff; font-weight: 600; }
+.btn.update:hover:not(:disabled) { background: #1f9550; border-color: #1f9550; }
+.btn.update:disabled { opacity: .6; cursor: progress; }
 .engine-line { margin: 0; color: var(--dim); font-size: 12.5px; text-align: right; }
 .engine-line.bad { color: var(--warn); }
 

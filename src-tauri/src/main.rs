@@ -5,6 +5,7 @@
 //! Keep this thin: no recording logic here (see ARCHITECTURE.md).
 
 mod engine_link;
+mod updater;
 
 use engine_link::EngineLink;
 use serde_json::Value;
@@ -56,12 +57,21 @@ fn open_folder(path: String) -> Result<(), String> {
 
 fn main() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(updater::UpdateState::default())
         .setup(|app| {
             let link = EngineLink::start(app.handle())?;
             app.manage(Arc::new(link));
+            updater::start(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![engine_call, reveal_in_folder, open_folder])
+        .invoke_handler(tauri::generate_handler![
+            engine_call,
+            reveal_in_folder,
+            open_folder,
+            updater::get_update,
+            updater::install_update
+        ])
         .build(tauri::generate_context!())
         .expect("Encore failed to start");
 

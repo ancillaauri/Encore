@@ -390,6 +390,33 @@
   });
   window.addEventListener('focus', () => { if (state.phase === 'idle') { refreshMonitors(); refreshInputs(); } });
 
+  // ---------- updates ----------
+  function showUpdate(info) {
+    if (!info) return;
+    const b = $('update');
+    b.hidden = false;
+    b.disabled = false;
+    b.textContent = 'Update ready';
+    b.title = `Install Encore ${info.version} and restart`;
+  }
+  bridge.onUpdateReady(showUpdate);
+  $('update').addEventListener('click', async () => {
+    if (state.phase !== 'idle') {
+      toast('Stop the recording first, then install the update.', 'warning');
+      return;
+    }
+    const b = $('update');
+    b.disabled = true;
+    b.textContent = 'Installing…';
+    try {
+      await bridge.installUpdate(); // Encore closes and reopens on the new version
+    } catch (e) {
+      b.disabled = false;
+      b.textContent = 'Update ready';
+      toast(String(e), 'error', 15000);
+    }
+  });
+
   // ---------- start-up ----------
   async function init() {
     renderSource();
@@ -417,6 +444,7 @@
     }
     renderCodecs();
     renderStage();
+    try { showUpdate(await bridge.getUpdate()); } catch (e) { /* no update info yet */ }
   }
   init();
 })();

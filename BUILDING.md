@@ -11,7 +11,16 @@ Every push to `main` runs the Windows build in GitHub Actions (`.github/workflow
 4. Runs the engine self-test on the build machine (diagnostic only: build machines have no GPU).
 5. Uploads the installer as a build artifact.
 
-Pushing a tag like `v0.1.0` does the same and publishes the installer on the Releases page.
+A release is published by running the workflow manually with a `release_tag` (e.g. `v0.2.2`).
+It is published as the latest release, with `latest.json`, which installed copies check for updates.
+
+## Update signing
+
+Automatic updates only accept builds signed with Encore's update key. The private key lives only in
+the repository secret `TAURI_SIGNING_PRIVATE_KEY` (Settings → Secrets and variables → Actions). It has
+no password. The matching public key is `plugins.updater.pubkey` in `src-tauri/tauri.conf.json`.
+If the private key is ever lost, generate a new pair (`npx tauri signer generate`), update both, and
+reinstall Encore manually once, since old installs only trust the old key.
 
 ## Testing
 

@@ -61,15 +61,40 @@ jobs:
       - name: Install app build tools
         run: npm ci
 
+      - name: Update signing check
+        id: signing
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ($env:TAURI_SIGNING_PRIVATE_KEY) {
+            "enabled=true" >> $env:GITHUB_OUTPUT
+          } else {
+            # Without the key, build anyway but without update files (auto-update needs signed builds).
+            $c = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+            $c.bundle.createUpdaterArtifacts = $false
+            $c | ConvertTo-Json -Depth 20 | Set-Content src-tauri/tauri.conf.json -Encoding utf8NoBOM
+            "enabled=false" >> $env:GITHUB_OUTPUT
+            Write-Host "::warning title=Updates not signed::The TAURI_SIGNING_PRIVATE_KEY secret is missing, so this build cannot be delivered as an automatic update."
+          }
+
       - name: Build app and installer
         shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         run: ./scripts/ci-step.ps1 -Lines 80 -Title "App build" -Run "npx tauri build"
+
+      - name: Update manifest (latest.json)
+        if: steps.signing.outputs.enabled == 'true' && github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+        shell: pwsh
+        run: ./scripts/ci-step.ps1 -Always -Lines 20 -Title "Update manifest" -Run "./scripts/make-latest-json.ps1 -Tag ${{ inputs.release_tag }} -Repo ${{ github.repository }}"
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
           name: Encore-installer
-          path: target/release/bundle/nsis/*.exe
+          path: target/release/bundle/nsis/*-setup.exe
           if-no-files-found: error
 
       - name: Publish release (tags, or a manual run with a release tag)
@@ -79,6 +104,11 @@ jobs:
           tag_name: ${{ inputs.release_tag || github.ref_name }}
           name: Encore ${{ inputs.release_tag || github.ref_name }} (test build)
           target_commitish: ${{ github.sha }}
-          files: target/release/bundle/nsis/*.exe
-          prerelease: true
+          files: |
+            target/release/bundle/nsis/*-setup.exe
+            target/release/bundle/nsis/*-setup.exe.sig
+            target/release/bundle/nsis/latest.json
+          # Published as the latest release so installed copies can find the update.
+          prerelease: false
+          make_latest: true
           body_path: RELEASE_NOTES.md
