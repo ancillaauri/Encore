@@ -190,6 +190,12 @@ place it was closed at, as the editor does. The monitor picker stays on one line
   %USERPROFILE%\Videos, which may not exist when Videos was moved. A setting still on an old guessed
   default is moved to it once, before setup is done.
 
+## 2026-10-31: Folder check creates nothing; menus above dialogs (0.5.4)
+Picking a save folder only tests a write in the nearest existing folder and removes the test file;
+the Encore folder is made when setup finishes or at the first recording. Menus sit above every
+dialog (dropdowns in the setup opened behind it). The top bar names the encoder actually used
+(NVIDIA, then AMD, then Intel), since PCs with a processor's built-in graphics list two.
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.

@@ -505,14 +505,18 @@
     if (!c.ffmpeg_found) { line.textContent = 'FFmpeg is missing. Reinstall Encore.'; line.classList.add('bad'); return; }
     if (!c.capture_supported) { line.textContent = 'Screen capture is unavailable in this build.'; line.classList.add('bad'); return; }
     if (!c.encoders.length) { line.textContent = 'No graphics card encoder found. Try updating your graphics driver.'; line.classList.add('bad'); return; }
-    const vendors = [...new Set(c.encoders.map((e) => VENDOR[e.vendor]))];
-    line.textContent = `Encoding on your ${vendors.join(' and ')} graphics card`;
+    // The card that will actually be used (same order as the engine: NVIDIA, AMD, Intel).
+    const codec = state.settings ? state.settings.codec : 'h264';
+    const used = ['nvidia', 'amd', 'intel'].find((v) => c.encoders.some((e) => e.vendor === v && e.codec === codec))
+      || ['nvidia', 'amd', 'intel'].find((v) => c.encoders.some((e) => e.vendor === v));
+    line.textContent = `Encoding on your ${VENDOR[used]} graphics card`;
   }
 
   async function saveSetting(key, value) {
     try {
       state.settings = await bridge.setSettings({ [key]: value });
       if (key === 'audio_mic') renderInputs();
+      if (key === 'codec') renderEngineLine();
       renderSettings();
       renderStage();
       renderUpdate();

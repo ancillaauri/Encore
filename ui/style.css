@@ -46,7 +46,7 @@ kbd { background: var(--panel2); border: 1px solid var(--line2); border-radius: 
 /* tooltips (the app's own controls; see app.js) */
 #tip {
   position: fixed;
-  z-index: 60;
+  z-index: 80;
   background: #2a292e;
   color: #fff;
   font-size: 13px;
@@ -154,7 +154,7 @@ body.inactive .wc:not(:hover) { color: rgba(181, 180, 185, .45); }
 /* ---------- menus (the app menu and dropdowns) ---------- */
 #ctxmenu, #ctxsub {
   position: fixed;
-  z-index: 30;
+  z-index: 70; /* above every dialog, so dropdowns inside them open in front */
   background: #1a191c;
   border: 1px solid var(--line2);
   border-radius: 9px;
@@ -162,7 +162,7 @@ body.inactive .wc:not(:hover) { color: rgba(181, 180, 185, .45); }
   min-width: 220px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
 }
-#ctxsub { z-index: 31; min-width: 250px; padding: 6px; }
+#ctxsub { z-index: 71; min-width: 250px; padding: 6px; }
 #ctxmenu button, #ctxsub button {
   display: flex;
   gap: 10px;

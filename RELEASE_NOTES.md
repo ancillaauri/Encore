@@ -1,4 +1,11 @@
-## Encore 0.5.3 (beta), test build 6: setup on first start, smoother game recordings, Encore folder
+## Encore 0.5.4 (beta), test build 6: setup on first start, smoother game recordings, Encore folder
+
+**0.5.4 fixes:**
+- Choosing folders in the setup no longer leaves empty folders behind. Encore only checks it
+  could save there; the Encore folder is made when you finish the setup (or on your first
+  recording).
+- The frame rate and resolution dropdowns in the setup now open (they were opening behind it).
+- The top bar names the graphics card Encore actually uses, not every one it found.
 
 ### What's new
 - **Setup on first start.** Three short steps: where to save recordings (with a Browse button),
@@ -29,8 +36,8 @@
   program file instead of "App 24720".
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.5.3). Otherwise download
-`Encore_0.5.3_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
+Update from inside Encore (≡ → Help → Update to 0.5.4). Otherwise download
+`Encore_0.5.4_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
 **More info**, then **Run anyway**.
 
 ### Test checklist

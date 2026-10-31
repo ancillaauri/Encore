@@ -85,18 +85,24 @@ pub struct Engine {
 /// How long the focus must stay on another monitor before the recording moves there.
 const SWITCH_SETTLE: Duration = Duration::from_millis(300);
 
-/// Makes sure recordings can be saved in `dir` (creating it), before the setting is accepted.
+/// Makes sure recordings could be saved in `dir` without creating anything: tests a write in the
+/// nearest folder that already exists (the folder itself, or the one it would be made in), then
+/// removes the test file. The Encore folder is made later (setup finished, or first recording).
 fn check_writable(dir: &std::path::Path) -> Result<(), String> {
-    let test = dir.join(".encore-write-test");
-    std::fs::create_dir_all(dir)
-        .and_then(|_| std::fs::write(&test, b"ok"))
-        .and_then(|_| std::fs::remove_file(&test))
-        .map_err(|e| {
-            format!(
-                "Encore can't save recordings in {} ({e}). Pick another folder: some, like C:\\Program Files, need administrator rights.",
-                dir.display()
-            )
-        })
+    let existing = dir.ancestors().find(|p| p.is_dir()).map(|p| p.to_path_buf());
+    let result = match &existing {
+        None => Err(std::io::Error::new(std::io::ErrorKind::NotFound, "the drive or folder doesn't exist")),
+        Some(p) => {
+            let test = p.join(format!(".encore-write-test-{}", std::process::id()));
+            std::fs::write(&test, b"ok").and_then(|_| std::fs::remove_file(&test))
+        }
+    };
+    result.map_err(|e| {
+        format!(
+            "Encore can't save recordings in {} ({e}). Pick another folder: some, like C:\\Program Files, need administrator rights.",
+            dir.display()
+        )
+    })
 }
 
 /// The stable id of the monitor with this handle (what the interface knows monitors by).
@@ -217,6 +223,13 @@ impl Engine {
         let updated = self.settings.apply_patch(patch)?;
         if updated.output_dir != self.settings.output_dir {
             check_writable(&paths::encore_root(&PathBuf::from(&updated.output_dir)))?;
+        }
+        // Setup finished: now make the Encore folder where they chose.
+        if updated.setup_done && !self.settings.setup_done {
+            let root = paths::encore_root(&PathBuf::from(&updated.output_dir));
+            if let Err(e) = std::fs::create_dir_all(&root) {
+                log(&format!("could not create {}: {e}", root.display()));
+            }
         }
         updated.save()?;
         self.settings = updated;
@@ -460,5 +473,22 @@ impl Engine {
             log("shutting down while recording: saving first");
             self.stop_recording();
         }
+    }
+}
+
+#[cfg(test)]
+mod folder_tests {
+    use super::*;
+
+    #[test]
+    fn checking_a_save_folder_creates_nothing() {
+        let base = std::env::temp_dir().join(format!("encore-wtest-{}", std::process::id()));
+        std::fs::create_dir_all(&base).unwrap();
+        let chosen = base.join("Clips"); // doesn't exist yet
+        let root = paths::encore_root(&chosen);
+        assert!(check_writable(&root).is_ok());
+        assert!(!chosen.exists() && !root.exists(), "no folders made by the check");
+        assert_eq!(std::fs::read_dir(&base).unwrap().count(), 0, "no test file left behind");
+        let _ = std::fs::remove_dir_all(&base);
     }
 }
