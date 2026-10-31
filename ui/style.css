@@ -195,7 +195,7 @@ input[type="text"] { user-select: text; }
   cursor: pointer;
 }
 .seg button[aria-checked="true"] { background: var(--panel2); color: var(--text); }
-.seg button:disabled { cursor: default; }
+.seg button:disabled { cursor: default; opacity: .5; }
 
 .btn {
   display: inline-flex;

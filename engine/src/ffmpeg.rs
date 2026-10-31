@@ -162,6 +162,7 @@ pub fn record_args(
     let gop = spec.fps * SEGMENT_SECONDS;
     let mut a: Vec<String> = vec![
         "-hide_banner".into(),
+        "-nostats".into(),
         "-loglevel".into(),
         "warning".into(),
         "-filter_complex".into(),

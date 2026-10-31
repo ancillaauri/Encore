@@ -64,8 +64,18 @@ Hitch at the swap point to be measured in batch 3.
 - Minimised game window: black frames for that stretch. Freezing the last frame could suggest the
   game was still being played.
 
+## 2026-10-31: Batch 1 findings
+- Segment files must reset their timestamps (`-reset_timestamps 1`). Keeping the originals made a
+  7-second test recording join into a 342-second file full of gaps. With the reset: 7.03 s, 60 fps,
+  no gaps across joins, decodes cleanly.
+- Crash recovery tested: leftover segments are joined into a "Recovered" file on the next start.
+- The Windows build machine found an LGPL FFmpeg 8.1+ build with `gfxcapture` (BtbN).
+- "Show mouse cursor", quality and resolution settings apply per recording; locked while recording.
+- The source picker offers Desktop or One window for now. The Auto / Game / Desktop toggle needs
+  game detection and arrives in batch 3.
+
 ## Open items
-- Confirm our FFmpeg build has `gfxcapture` and the GPU encoders (checked in CI, batch 1).
+- Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.
 - Default hotkeys: pick ones that do not clash with NVIDIA ShadowPlay (Alt+F9 / Alt+F10).
 - Audio temp format (raw PCM vs encoded) to be chosen in batch 2 based on disk use and CPU.
