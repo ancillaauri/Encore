@@ -1,6 +1,7 @@
-## Encore 0.2.0, test build 2: audio
+## Encore 0.2.1, test build 2: audio and new icon
 
 ### What's new
+- **New icon**: a glowing E over a waveform, in the same style as the companion clip editor.
 - **Sound.** Every recording now has separate audio tracks:
   - **Full mix**: everything you hear (the track players use by default)
   - **Microphone**
@@ -21,7 +22,7 @@ Hotkeys, tray icon, instant replay, game detection, switching monitor mid-record
 - Saving takes a little longer than before, because the audio tracks are encoded when you stop.
 
 ### Install
-Download `Encore_0.2.0_x64-setup.exe` below and run it (it updates 0.1.0 in place). Windows may say
+Download `Encore_0.2.1_x64-setup.exe` below and run it (it updates earlier versions in place). Windows may say
 "Windows protected your PC": click **More info**, then **Run anyway**.
 
 ### Test checklist (about 15 minutes)
