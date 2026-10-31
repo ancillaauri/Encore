@@ -1,0 +1,8 @@
+/target
+/node_modules
+/src-tauri/target
+/src-tauri/binaries/*.exe
+/src-tauri/resources/ffmpeg.exe
+/src-tauri/resources/FFMPEG-LICENSE.txt
+/src-tauri/gen
+*.log

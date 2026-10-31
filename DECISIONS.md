@@ -1,0 +1,78 @@
+# DECISIONS.md
+
+Dated log of decisions and why. Newest at the bottom. Never delete entries; mark them superseded.
+
+## 2026-10-31: Separate app, own repo
+Encore is its own app, separate from the companion clip editor. The two connect through the file
+format and a shared folder first; an API only if a real use appears.
+
+## 2026-10-31: Features in scope
+Manual recording and instant replay (ShadowPlay-style). Separate audio tracks: full mix, mic,
+one per app. Target: Windows 11 only (per-app audio needs it).
+
+## 2026-10-31: Three-layer architecture
+Interface / shell / engine with fixed contracts (ARCHITECTURE.md). Reason: lets us change the shell
+or capture method later after measuring real performance, without rebuilding the app. Cost is one
+extra small process and a few MB of RAM; no measurable CPU or FPS cost because video never crosses layers.
+
+## 2026-10-31: Shell = Tauri 2 (provisional, review after batch 1)
+Over Electron: much smaller install and idle RAM, which matters for an app that runs in the
+background during games. Over C#/.NET: Tauri keeps a web interface, matching the companion editor's
+style. Electron remains a fallback; switching means rewriting the shell and bridge.js only.
+
+## 2026-10-31: Engine = Rust + FFmpeg + WASAPI
+FFmpeg for GPU encoding and building the MP4. FFmpeg cannot capture per-app audio, so audio capture
+is native WASAPI in Rust.
+
+## 2026-10-31: Track layout
+Full mix, then Microphone, then one track per app (named). Full mix first so files play normally
+everywhere (players and Discord use the first audio track).
+
+## 2026-10-31: Design
+Own stylesheet in the Discord "Midnight" style used by the companion editor, so the two look like
+a set. No code copied from the editor.
+
+## 2026-10-31: Capture modes, Game window or Desktop
+Users can record only the detected game's window or the whole desktop. Capture uses FFmpeg's
+`gfxcapture` source (Windows Graphics Capture, FFmpeg 8.1+), which handles both a single window
+and a whole monitor, keeping frames on the GPU. Supersedes the earlier `ddagrab` (desktop-only) plan.
+No game injection/hooking (OBS-style game capture) because of anti-cheat risk.
+Consequence: we bundle our own FFmpeg 8.1+ build (the companion editor bundles FFmpeg 6.1.1, which lacks `gfxcapture`).
+
+## 2026-10-31: Feature backlog agreed
+All "core" features and all "later" features from the competitor review accepted, except HDR
+recording (not wanted). Full list and build-step slots in FEATURES.md.
+
+## 2026-10-31: Monitor selection and mid-recording swaps
+Desktop mode offers Follow the game (default) / Follow the mouse / Primary / Named monitor.
+Monitors tracked by stable ID, shown by name. Mid-recording swaps (monitor, mode, Auto fallback)
+work by overlapping the new capture and cutting over at a segment boundary, with fixed output size.
+Hitch at the swap point to be measured in batch 3.
+
+## 2026-10-31: Name, builds and licence
+- Name: Encore (a moment played again).
+- Builds: GitHub Actions on Windows produces the installer; nobody needs a local toolchain to test.
+  CI cannot test capture (no GPU/monitor/audio), so each batch ends with a hands-on test.
+- Licence: MIT for Encore's own code.
+- FFmpeg: use an LGPL build (we only need hardware encoders, not GPL-only ones like x264), run as a
+  separate program, with its licence text and source link shipped in THIRD_PARTY_NOTICES.md.
+- Build notes, commits and docs do not name individuals or the tools used to write the code.
+
+## 2026-10-31: Mode toggle and minimised windows (defaults, can be revisited after testing)
+- Toggle has three positions: Auto (default) / Game / Desktop. Auto records the game if one is
+  detected, otherwise the desktop.
+- Minimised game window: black frames for that stretch. Freezing the last frame could suggest the
+  game was still being played.
+
+## Open items
+- Confirm our FFmpeg build has `gfxcapture` and the GPU encoders (checked in CI, batch 1).
+- Test exclusive-fullscreen games for black capture; define the fallback.
+- Default hotkeys: pick ones that do not clash with NVIDIA ShadowPlay (Alt+F9 / Alt+F10).
+- Audio temp format (raw PCM vs encoded) to be chosen in batch 2 based on disk use and CPU.
+- Installer is not code-signed: Windows SmartScreen will warn on first run.
+
+## Performance log
+Record idle RAM, CPU while recording, and game FPS (with and without recording) after batches 1, 2 and 3.
+
+| Date | Batch | Game / test | Idle RAM | CPU recording | FPS off / on | Notes |
+|---|---|---|---|---|---|---|
