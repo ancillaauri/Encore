@@ -30,6 +30,15 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Settings dialog, ≡ menu, collapsible "What to record" panel, About, changelog skeleton | 6 | [~] |
 | Companion editor reads our per-app tracks (change on the editor side) | 9 | [ ] |
 
+## Found in testing (0.3.0 desktop test, 2026-10-31)
+
+| Issue | Finding | Status |
+|---|---|---|
+| Raw file in VLC has no mic | Works as built: first track "Full mix" = what the PC plays, which excludes the mic. Players use the first track, so people expect it to include the mic. Proposed: first track = everything including mic; add "Desktop audio" (without mic). Awaiting decision. | [ ] |
+| Companion editor shows only "Game / Desktop" + "Microphone", audio doubled | Encore's file was correct (Full mix, Microphone, Spotify, Microsoft Edge). The editor doesn't read per-app tracks yet and lumps Full mix + app tracks together. Needs the "Companion editor change" in ARCHITECTURE.md (editor side). | [ ] |
+| Mic track "had everything" in the editor | Measured: Encore's Microphone track contains only the voice (no correlation with any app audio). Cause is the editor's lumping/preview; fixed by the same editor change. | [ ] |
+| Per-app split | Confirmed working: Spotify and Edge on separate tracks, fully separated; all tracks within 5 ms of each other, no drift over 63 s. | [x] |
+
 ## Match the editor exactly (design rule; next UI pass)
 
 | Difference | Status |

@@ -125,7 +125,14 @@ Encore and the companion clip editor are made as a pair, so Encore must look exa
 not just similar. Recorded as a hard rule in DEVELOPMENT.md. First known gap: the editor's custom
 merged title bar (backlogged, not started yet at the owner's request).
 
+## 2026-10-31: First real audio test (0.3.0)
+Desktop recording, 2560x1440 at 120 fps, Spotify and YouTube (Edge) playing, mic on. File had the
+expected tracks; per-app separation and mic isolation confirmed by measurement; inter-track offset
+1.5–4.2 ms, constant. Issues were in playback: VLC plays Full mix (no mic, by design), and the
+companion editor doesn't yet read per-app tracks. See FEATURES.md "Found in testing".
+
 ## Open items
+- Should the first (default) track include the mic? Proposed yes, with a separate "Desktop audio" track.
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.
 - Default hotkeys: pick ones that do not clash with NVIDIA ShadowPlay (Alt+F9 / Alt+F10).
