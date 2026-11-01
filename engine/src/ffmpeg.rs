@@ -67,6 +67,8 @@ pub struct CaptureSpec {
     /// Output size (always even). Set once at the start; the source is scaled to fit it.
     pub width: u32,
     pub height: u32,
+    /// The quality preset: sets the encoder's quality target (the bitrate is its ceiling).
+    pub quality: Quality,
 }
 
 /// Output size for a source of `src_w` x `src_h`. Never upscales. Always even, aspect kept.
@@ -128,17 +130,38 @@ width={w}:height={h}:resize_mode=scale_aspect,fps={fps}",
     f
 }
 
-fn encoder_args(enc: Encoder, kbps: u32) -> Vec<String> {
+/// NVIDIA's quality target for each preset (lower is better; 0 to 51).
+pub fn nvenc_cq(quality: Quality) -> u32 {
+    match quality {
+        Quality::Ultra => 19,
+        Quality::High => 21,
+        Quality::Medium => 24,
+        Quality::Low => 27,
+    }
+}
+
+fn encoder_args(enc: Encoder, kbps: u32, quality: Quality) -> Vec<String> {
     let b = format!("{kbps}k");
     let max = format!("{}k", kbps * 3 / 2);
     let buf = format!("{}k", kbps * 2);
     let mut a: Vec<String> = Vec::new();
     match enc.vendor {
         Vendor::Nvidia => {
+            // Aim for a quality level, with the preset's bitrate as the ceiling: with only an
+            // average to aim for, the encoder spent half of it in simple scenes (Low at 1440p 60
+            // used 11 of 22 Mbps) and starved the frames between keyframes. Spatial AQ spends
+            // bits where the eye notices (dark areas, gradients, edges); every NVIDIA encoder
+            // generation supports it.
             a.extend(["-preset", "p4", "-tune", "hq", "-rc", "vbr"].map(String::from));
+            a.extend(["-cq".into(), nvenc_cq(quality).to_string(), "-spatial-aq".into(), "1".into()]);
             if enc.codec != Codec::Av1 {
                 a.extend(["-forced-idr", "1"].map(String::from));
             }
+            // Ceiling only: the average comes from the quality target.
+            let cap = format!("{}k", kbps * 5 / 4);
+            a.extend(["-b:v".into(), "0".into(), "-maxrate".into(), cap, "-bufsize".into(), buf]);
+            a.extend(["-bf".into(), "0".into()]);
+            return a;
         }
         Vendor::Amd => {
             a.extend(["-usage", "transcoding", "-quality", "balanced", "-rc", "vbr_peak"].map(String::from));
@@ -183,7 +206,7 @@ pub fn record_args(
         "-c:v".into(),
         enc.name().into(),
     ];
-    a.extend(encoder_args(enc, kbps));
+    a.extend(encoder_args(enc, kbps, spec.quality));
     a.extend([
         "-g".into(),
         gop.to_string(),
@@ -453,7 +476,7 @@ mod tests {
     use super::*;
 
     fn spec() -> CaptureSpec {
-        CaptureSpec { target: Target::Monitor { handle: 65537 }, fps: 60, cursor: true, width: 1920, height: 1080 }
+        CaptureSpec { target: Target::Monitor { handle: 65537 }, fps: 60, cursor: true, width: 1920, height: 1080, quality: Quality::Ultra }
     }
 
     #[test]
@@ -517,7 +540,13 @@ mod tests {
         let a = record_args(&spec(), enc, Pipeline::ZeroCopy, 37_000, Path::new("/tmp/seg"), "seg_");
         let joined = a.join(" ");
         assert!(joined.contains("-c:v h264_nvenc"));
-        assert!(joined.contains("-b:v 37000k -maxrate 55500k -bufsize 74000k"));
+        // NVIDIA: a quality target, with the preset's bitrate (plus a quarter) as the ceiling.
+        assert!(joined.contains("-rc vbr -cq 19 -spatial-aq 1"));
+        assert!(joined.contains("-b:v 0 -maxrate 46250k -bufsize 74000k"));
+        let amd = Encoder { codec: Codec::H264, vendor: Vendor::Amd };
+        assert!(record_args(&spec(), amd, Pipeline::ZeroCopy, 37_000, Path::new("x"), "seg_").join(" ").contains("-b:v 37000k -maxrate 55500k -bufsize 74000k"));
+        let low = CaptureSpec { quality: Quality::Low, ..spec() };
+        assert!(record_args(&low, enc, Pipeline::ZeroCopy, 22_000, Path::new("x"), "seg_").join(" ").contains("-cq 27"));
         assert!(joined.contains("-g 120"));
         assert!(joined.contains("-forced-idr 1"));
         assert!(joined.contains("-bf 0"));

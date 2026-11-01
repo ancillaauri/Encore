@@ -46,12 +46,12 @@
       <div class="side-body">
         <section class="sec" id="quick">
           <h2 class="lab">Video</h2>
-          <label class="srow"><span>Quality</span>
+          <label class="srow"><span>Quality <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Quality sets how much detail every frame keeps. Encore works out the bitrate for you from your resolution and frame rate, so Ultra looks just as sharp at 120 fps as at 60, but 120 fps uses about twice the space. The number next to each option is what it uses right now.">i</span></span>
             <select class="dd" id="q-quality" data-setting="quality">
               <option value="ultra">Ultra</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
-              <option value="low">Low (smaller files)</option>
+              <option value="low">Low</option>
             </select>
           </label>
           <label class="srow"><span>Frame rate</span>
@@ -244,12 +244,13 @@
                 <option value="720p">720p</option>
               </select>
             </label>
-            <label class="setrow"><span class="setname">Quality</span>
+            <label class="setrow"><span class="settext"><span class="setname">Quality <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Quality sets how much detail every frame keeps. Encore works out the bitrate for you from your resolution and frame rate, so Ultra looks just as sharp at 120 fps as at 60, but 120 fps uses about twice the space. The number next to each option is what it uses right now.">i</span></span>
+              <span class="setsub" id="quality-line"></span></span>
               <select class="dd" id="quality" data-setting="quality">
                 <option value="ultra">Ultra</option>
               <option value="high">High</option>
                 <option value="medium">Medium</option>
-                <option value="low">Low (smaller files)</option>
+                <option value="low">Low</option>
               </select>
             </label>
             <label class="setrow"><span class="setname">Show mouse cursor</span>
@@ -667,6 +668,7 @@
             <span class="settext"><span class="setname">Low</span><span class="setsub" data-size="low"></span></span>
           </button>
         </div>
+        <p class="snote">Higher resolution or frame rate uses more space, so every frame stays just as sharp.</p>
         <div class="setcard spaced">
           <label class="setrow"><span class="setname">Frame rate</span>
             <select class="dd" id="setup-fps" data-setting="fps" data-number>

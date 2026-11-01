@@ -641,3 +641,24 @@ Agreed design for game detection (to build next):
   and a Problems notification. The (i), Settings and the first-time dialog say so.
 - Turning it on or off now changes the running capture's priority in place
   (`Active::reprioritise`), so Echoes no longer restarts and keeps what it had.
+
+## 2026-11-01: Better use of the bitrate, and saying what Quality does (0.9.19)
+- Back on driver 617.42 (621.01 broke drawing in Chromium-based apps on this PC and has known
+  problems), with Discord Clips and Steam recording off and Warframe capped: Priority Capture
+  off, High quality, the capture never fell behind and Echoes were full length.
+- Tests at several qualities: Low at 1440p 60 aimed for 22 Mbps but used 11.4 (52 %), Medium 71 %,
+  High at 30 fps 100 %. Low's keyframes were about 685 KB and the frames between about 18 KB, so the
+  picture turned smeary between keyframes; it looked "barely watchable" in motion.
+- NVIDIA encoding now aims for a quality level per preset (`-cq`: Ultra 19, High 21, Medium 24,
+  Low 27) with the preset's bitrate (plus a quarter) as the ceiling (`-b:v 0 -maxrate`), and
+  spatial adaptive quantisation (`-spatial-aq 1`; every NVIDIA generation has it; temporal AQ
+  left out because older cards refuse it). AMD and Intel are unchanged. The quality is set per
+  capture (`CaptureSpec::quality`).
+- Presets are detail per pixel per frame (0.30 / 0.24 / 0.18 / 0.10 bits), so their bitrate
+  follows resolution and frame rate; this wasn't obvious, so: each Quality option shows its
+  bitrate right now ("Ultra: 66 Mbps"), an (i) explains it, Settings shows "Ultra at 1440p 60 fps:
+  66 Mbps, about 500 MB per minute", changing frame rate or resolution says the new bitrate and
+  size, and setup notes that more resolution or frame rate uses more space so every frame stays as
+  sharp. Low's "(smaller files)" label went (the number says it).
+- Next: a Low against Medium test in motion to decide whether Low stays (maybe as "Small files"),
+  then a "Set the bitrate myself" slider with the presets marked on it.

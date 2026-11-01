@@ -472,7 +472,7 @@ impl Engine {
         };
 
         let (width, height) = ffmpeg::output_size(src_w, src_h, self.settings.resolution);
-        let spec = CaptureSpec { target, fps: self.settings.fps, cursor: self.settings.capture_cursor, width, height };
+        let spec = CaptureSpec { target, fps: self.settings.fps, cursor: self.settings.capture_cursor, width, height, quality: self.settings.quality };
         let kbps = ffmpeg::bitrate_kbps(width, height, spec.fps, self.settings.quality, codec);
         let out_dir = PathBuf::from(&self.settings.output_dir);
         let out_path = recorder::output_path(&out_dir, &label, platform::local_time());

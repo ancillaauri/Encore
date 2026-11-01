@@ -143,6 +143,7 @@ fn test_capture(ffmpeg_path: &std::path::Path, m: &platform::Monitor, out: &std:
         cursor: true,
         width: w,
         height: h,
+        quality: settings::Quality::Medium,
     };
     let filter = format!(
         "{},format=yuv420p[v]",

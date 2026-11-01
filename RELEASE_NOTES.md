@@ -1,3 +1,17 @@
+## Encore 0.9.19 (beta), test build 40: sharper video for the same space
+
+### Changed
+- **NVIDIA graphics cards: better picture for the same file size,** especially on Medium and Low.
+  Encore now aims for a quality level, with each preset's bitrate as the most it can use, and
+  spends more of it where your eyes notice (dark areas, edges, movement). Low no longer goes
+  smeary between sharp moments.
+- **Quality shows its bitrate:** each option shows what it uses at your resolution and frame rate
+  (for example "Ultra: 66 Mbps"), with an (i) explaining it. Settings shows the size per minute,
+  and changing frame rate or resolution tells you the new bitrate.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.19).
+
 ## Encore 0.9.18 (beta), test build 39: Priority Capture made safe
 
 ### Changed

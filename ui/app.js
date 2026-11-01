@@ -608,6 +608,7 @@
     renderGames();
     renderGameSettings();
     renderNotify();
+    renderQualityLabels();
     $('gpu-realtime').checked = !!s.gpu_realtime;
     if (!$('setup').hidden) renderSetup();
   }
@@ -660,8 +661,17 @@
   }
 
   async function saveSetting(key, value) {
+    const before = (key === 'fps' || key === 'resolution') && state.settings ? presetKbps(state.settings.quality) : 0;
     try {
       state.settings = await bridge.setSettings({ [key]: value });
+      if (before) {
+        // Changing frame rate or resolution changes the preset's bitrate: say so, with the size.
+        const after = presetKbps(state.settings.quality);
+        if (Math.round(after / 1000) !== Math.round(before / 1000)) {
+          const at = key === 'fps' ? `${state.settings.fps} fps` : `${outputSize(state.settings.resolution).h}p`;
+          toast(`${QUALITY_NAMES[state.settings.quality]} now uses ${mbpsText(after)} (was ${Math.round(before / 1000)}) to keep the same detail at ${at}. That's about ${sizeText(mbPerMinute(state.settings.quality))} per minute.`, 'info', 7000);
+        }
+      }
       if (key === 'audio_mic') renderInputs();
       if (key === 'codec') renderEngineLine();
       if (CAPTURE_KEYS.includes(key) || key === 'desktop_capture' || (key === 'game_detection' && state.replay.waiting)) restartReplay();
@@ -676,6 +686,7 @@
 
   async function refreshMonitors() {
     try { state.monitors = await bridge.listMonitors(); } catch (e) { state.monitors = []; }
+    renderQualityLabels(); // the bitrates depend on the screen's size
     renderStage();
   }
 
@@ -1383,6 +1394,26 @@
     let kbps = (w * h * s.fps * BPP[quality] * (CODEC_FACTOR[s.codec] || 1)) / 1000;
     kbps = Math.min(150000, Math.max(2000, kbps)) + 600; // plus audio
     return (kbps * 60) / 8 / 1000;
+  }
+  // The bitrate a preset uses right now (kbit/s), as the engine works it out.
+  function presetKbps(quality) {
+    const s = state.settings;
+    if (!s) return 0;
+    const { w, h } = outputSize(s.resolution);
+    const kbps = (w * h * s.fps * BPP[quality] * (CODEC_FACTOR[s.codec] || 1)) / 1000;
+    return Math.min(150000, Math.max(2000, kbps));
+  }
+  const mbpsText = (kbps) => `${Math.round(kbps / 1000)} Mbps`;
+  const QUALITY_NAMES = { ultra: 'Ultra', high: 'High', medium: 'Medium', low: 'Low' };
+  // Each option shows the bitrate it uses at the current resolution and frame rate.
+  function renderQualityLabels() {
+    const s = state.settings;
+    if (!s) return;
+    for (const id of ['q-quality', 'quality']) {
+      for (const o of $(id).options) o.textContent = `${QUALITY_NAMES[o.value]}: ${mbpsText(presetKbps(o.value))}`;
+    }
+    const { h } = outputSize(s.resolution);
+    $('quality-line').textContent = `${QUALITY_NAMES[s.quality]} at ${h}p ${s.fps} fps: ${mbpsText(presetKbps(s.quality))}, about ${sizeText(mbPerMinute(s.quality))} per minute`;
   }
   function sizeText(mb) {
     const r = Math.round(mb / 10) * 10;
