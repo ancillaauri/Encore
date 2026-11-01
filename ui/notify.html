@@ -135,7 +135,11 @@
     const n = make(item);
     live.push(n);
     layout(p);
-    requestAnimationFrame(() => requestAnimationFrame(() => n.el.classList.remove('in')));
+    const arrived = performance.now();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      n.el.classList.remove('in');
+      tauri.core.invoke('notification_drawn', { kind: String(item.kind || '?'), waitedMs: Math.round(performance.now() - arrived) }).catch(() => {});
+    }));
     n.timer = setTimeout(() => remove(n), n.secs * 1000);
   }
 

@@ -89,17 +89,27 @@ pub fn show_notification(app: AppHandle, device: Option<String>, pos: String, it
         .map(|m| m.scale_factor())
         .unwrap_or(1.0);
     let (x, y, w, h) = place(&screen, &pos, scale);
+    let started = std::time::Instant::now();
     #[cfg(windows)]
     {
         let hwnd = win.hwnd().map_err(|e| e.to_string())?;
         win::show_at(hwnd.0 as _, x, y, w, h);
     }
+    let kind = item.get("kind").and_then(|k| k.as_str()).unwrap_or("?").to_string();
+    crate::hotkeys::note(&app, format!("notification {kind}: window shown at {x},{y} {w}x{h} ({pos}, scale {scale}) in {} ms", started.elapsed().as_millis()));
     win.emit_to(LABEL, "notify", serde_json::json!({ "pos": pos, "item": item })).map_err(|e| e.to_string())
+}
+
+/// Called by the page when a notification has been drawn, for the log.
+#[tauri::command]
+pub fn notification_drawn(app: AppHandle, kind: String, waited_ms: u64) {
+    crate::hotkeys::note(&app, format!("notification {kind}: drawn {waited_ms} ms after it arrived"));
 }
 
 /// Called by the page when its last notification has faded.
 #[tauri::command]
 pub fn notifications_idle(app: AppHandle) {
+    crate::hotkeys::note(&app, "notifications: window hidden".into());
     if let Some(win) = app.get_webview_window(LABEL) {
         #[cfg(windows)]
         if let Ok(hwnd) = win.hwnd() {

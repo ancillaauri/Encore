@@ -31,6 +31,32 @@ pub fn wanted() -> bool {
     marker().map(|m| m.exists()).unwrap_or(false)
 }
 
+/// Written just before handing over to the task, so the copy the task starts can tell it came
+/// from a hand-over a moment ago. The flag alone isn't enough: the updater restarts Encore with
+/// the arguments the old copy had, so an updated Encore can carry the flag without having been
+/// started by the task (and so without administrator rights).
+fn handover_file() -> Option<PathBuf> {
+    data_dir().map(|d| d.join("admin-handover"))
+}
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+}
+
+fn mark_handover() {
+    if let Some(f) = handover_file() {
+        let _ = std::fs::write(f, now_secs().to_string());
+    }
+}
+
+fn handed_over_recently() -> bool {
+    handover_file()
+        .and_then(|f| std::fs::read_to_string(f).ok())
+        .and_then(|t| t.trim().parse::<u64>().ok())
+        .map(|t| now_secs().saturating_sub(t) <= 20)
+        .unwrap_or(false)
+}
+
 #[cfg(windows)]
 mod win {
     use super::*;
@@ -202,16 +228,20 @@ mod win {
 pub fn hand_over_if_wanted() -> bool {
     #[cfg(windows)]
     {
-        if std::env::args().any(|a| a == FROM_TASK_ARG) {
+        let elevated = win::is_elevated();
+        if std::env::args().any(|a| a == FROM_TASK_ARG) && (elevated || handed_over_recently()) {
             // Started by the task: give the copy that started it a moment to close, so the
-            // one-copy-only check doesn't mistake it for an Encore that's already open.
+            // one-copy-only check doesn't mistake it for an Encore that's already open. (Not
+            // elevated after a hand-over means the task couldn't raise it: carry on as it is
+            // rather than handing over again and again.)
             std::thread::sleep(std::time::Duration::from_millis(400));
             return false;
         }
-        if !wanted() || win::is_elevated() {
+        if !wanted() || elevated {
             return false;
         }
         crate::startup::remember_hidden_for_handover();
+        mark_handover();
         win::run_task()
     }
     #[cfg(not(windows))]

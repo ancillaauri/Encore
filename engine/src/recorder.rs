@@ -680,6 +680,33 @@ pub fn window_plan(seg_dir: &Path, parts: &[VideoPart], from: u64, to: u64) -> O
     video_start.map(|v| (out, v))
 }
 
+/// The end of the newest finished segment (times on the shared clock). The newest file of all may
+/// still be being written, so it doesn't count.
+fn newest_end(seg_dir: &Path, parts: &[VideoPart]) -> Option<u64> {
+    parts
+        .iter()
+        .filter(|p| !p.dropped)
+        .filter_map(|p| {
+            let s = p.start_hns?;
+            let k = indexed_segments(seg_dir, &p.prefix).into_iter().map(|(k, _)| k).max()?;
+            (k > 0).then(|| s + k * SEGMENT_HNS)
+        })
+        .max()
+}
+
+/// What to save for `from..to`. If the capture has fallen behind (a game that stalled, say),
+/// the last moments aren't written yet: the newest moments that are written are saved instead,
+/// the same length. The second value is how far behind that was, in seconds (0 if not).
+pub fn plan_or_newest(seg_dir: &Path, parts: &[VideoPart], from: u64, to: u64) -> Option<((Vec<PartFiles>, u64), u64)> {
+    if let Some(plan) = window_plan(seg_dir, parts, from, to) {
+        return Some((plan, 0));
+    }
+    let end = newest_end(seg_dir, parts)?.min(to);
+    let behind = to.saturating_sub(end);
+    let start = end.saturating_sub(to.saturating_sub(from));
+    window_plan(seg_dir, parts, start, end).map(|p| (p, behind / 10_000_000))
+}
+
 /// Saves the moments `from..to` of a running instant-replay session to `out_path`, without
 /// stopping it: the matching video segments, and each audio track cut from its 10-second pieces.
 pub fn save_window(
@@ -690,8 +717,13 @@ pub fn save_window(
     to: u64,
     out_path: &Path,
 ) -> Result<Saved, String> {
-    let (plan, video_start) =
-        window_plan(seg_dir, &manifest.parts, from, to).ok_or("Nothing has been recorded for that moment yet.")?;
+    let ((plan, video_start), behind) = plan_or_newest(seg_dir, &manifest.parts, from, to)
+        .ok_or("Nothing has been recorded for that moment yet.")?;
+    if behind > 0 {
+        crate::log::log(&format!("capture was {behind} s behind: saved the newest moments written"));
+    }
+    // The audio follows the video actually saved.
+    let to = to.saturating_sub(behind * 10_000_000);
     let work = seg_dir.join(format!("save-{}", unix_ms()));
     std::fs::create_dir_all(&work).map_err(|e| format!("Could not create temp folder: {e}"))?;
     let result = (|| {
@@ -1045,5 +1077,25 @@ mod e2e_replay {
         assert_eq!(saved.duration_ms, 7000);
         assert!(dir.join("seg_000004.mkv").exists(), "the session's files are left alone");
         println!("OUT {}", out.display());
+    }
+
+    #[test]
+    fn a_capture_that_fell_behind_still_saves() {
+        let dir = std::env::temp_dir().join(format!("encore-behind-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for k in 0..10u64 {
+            std::fs::write(dir.join(format!("p001_{k:06}.mkv")), b"x").unwrap();
+        }
+        let s0 = 1_000_000_000u64;
+        let parts = vec![VideoPart { prefix: "p001_".into(), start_hns: Some(s0), dropped: false, label: None }];
+        // Wanted: 60..90 s in, but only 0..18 s has been written (segment 9 still being written).
+        let (from, to) = (s0 + 600_000_000, s0 + 900_000_000);
+        assert!(window_plan(&dir, &parts, from, to).is_none());
+        let ((plan, start), behind) = plan_or_newest(&dir, &parts, from, to).unwrap();
+        assert_eq!(behind, 72);
+        assert_eq!(start, s0); // the 18 s written, from the start
+        assert_eq!(plan[0].first_index, 0);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -1,3 +1,17 @@
+## Encore 0.9.9 (beta), test build 30: admin after updates, Echoes that fell behind
+
+### Fixed
+- **Encore lost administrator rights after every update.** With "Start Encore as administrator"
+  on, an updated Encore now comes back as administrator. This update is the last one that
+  arrives without it: start Encore again once afterwards, or use File → Restart as Administrator.
+- **Echoes failing with "Nothing has been recorded for that moment yet".** When the game stalls
+  and the capture falls behind, saving an Echo now saves the newest moments recorded instead of
+  failing.
+- Encore's log now notes when notifications appear and disappear, to track down the lag.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.9).
+
 ## Encore 0.9.8 (beta), test build 29: notifications
 
 ### What's new

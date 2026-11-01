@@ -141,8 +141,8 @@ pub fn start(app: AppHandle) {
     let _ = app;
 }
 
-/// Writes a line to the engine's log (on another thread, so key reading never waits).
-fn note(app: &AppHandle, message: String) {
+/// Writes a line to the engine's log (on another thread, so the caller never waits).
+pub fn note(app: &AppHandle, message: String) {
     let link = app.state::<Arc<EngineLink>>().inner().clone();
     std::thread::spawn(move || {
         let _ = link.call("note", json!({ "message": message }), Duration::from_secs(5));

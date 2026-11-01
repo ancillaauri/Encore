@@ -160,6 +160,7 @@ fn main() {
             tray::set_tray_games,
             notify::show_notification,
             notify::notifications_idle,
+            notify::notification_drawn,
             admin::admin_status,
             admin::set_start_as_admin,
             startup::autostart_status,

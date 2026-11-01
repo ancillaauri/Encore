@@ -524,3 +524,16 @@ Agreed design for game detection (to build next):
 - Games in exclusive fullscreen draw over every window, so they can't show there. No warning:
   Settings and setup say so instead.
 - Defaults: on, top right, 5 seconds, the screen in use, every event.
+- 0.9.9, from the first test (Warframe): one Echo saved, then every save failed with "Nothing has
+  been recorded for that moment yet", and the game lagged as notifications came and went.
+  - Encore was not running as administrator: after every update it came back without it. The
+    updater restarts Encore with the old copy's arguments, so the new copy carried
+    `--from-admin-task` and skipped the hand-over. Now the flag only counts when the copy is
+    elevated or a hand-over happened in the last 20 seconds (`admin-handover` file); otherwise it
+    hands over as usual.
+  - The game capture fell behind (the game stalled): segments were written up to about 100 s
+    late, then in a burst. A save looks up segments by time, found none for the last 30 s, and
+    failed. Now it saves the newest moments that are written, the same length, and logs how far
+    behind the capture was.
+  - Notifications now log when the window is shown (where, and how long it took), when each one
+    is drawn, and when the window hides, to see whether they line up with the stalls.
