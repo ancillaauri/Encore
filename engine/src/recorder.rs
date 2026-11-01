@@ -34,6 +34,8 @@ pub struct Active {
     roll: Option<Arc<std::sync::atomic::AtomicU64>>,
     /// A part on another monitor that is starting up; it takes over once FFmpeg reports progress.
     pending: Option<Proc>,
+    /// A switch whose FFmpeg couldn't even be started (reported by the next `poll`).
+    failed_start: Option<(Target, String)>,
     /// Parts that were taken over and are finishing their last segment.
     retiring: Vec<JoinHandle<()>>,
     /// Every part's clock, by index (to record when each one started).
@@ -300,6 +302,7 @@ pub fn start(
                     proc,
                     roll,
                     pending: None,
+                    failed_start: None,
                     retiring: Vec::new(),
                     clocks,
                     spec: *spec,
@@ -386,8 +389,8 @@ fn watch_progress(
 pub enum SwitchEvent {
     /// The new monitor's capture took over.
     Switched(Target),
-    /// The new monitor's capture failed to start; recording carries on where it was.
-    Failed(String),
+    /// The new capture (monitor or window) failed to start; recording carries on where it was.
+    Failed(Target, String),
 }
 
 impl Active {
@@ -440,6 +443,7 @@ impl Active {
                 log(&format!("switch failed to start: {e}"));
                 self.clocks.push(Arc::new(Mutex::new(VideoClock::default())));
                 self.drop_part(index);
+                self.failed_start = Some((target, e));
             }
         }
     }
@@ -454,13 +458,16 @@ impl Active {
 
     /// Moves a switch along. Called regularly by the engine.
     pub fn poll(&mut self) -> Option<SwitchEvent> {
+        if let Some((target, e)) = self.failed_start.take() {
+            return Some(SwitchEvent::Failed(target, e));
+        }
         let pending = self.pending.as_mut()?;
         if let Ok(Some(status)) = pending.child.try_wait() {
             let p = self.pending.take().unwrap();
-            let detail = tail(&p.log_path, 4);
-            log(&format!("switch part {} exited ({status}): {detail}", p.index));
+            let detail = tail(&p.log_path, 12);
+            log(&format!("switch part {} to {:?} exited ({status}): {detail}", p.index, p.target));
             self.drop_part(p.index);
-            return Some(SwitchEvent::Failed(detail));
+            return Some(SwitchEvent::Failed(p.target, detail));
         }
         // Half a second of progress reports: video is flowing and its start time is pinned down.
         if pending.clock.lock().unwrap().samples() < 10 {

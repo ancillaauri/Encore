@@ -450,3 +450,21 @@ Agreed design for game detection (to build next):
   on for new installs), Echoes (switch and length), You're all set (the main hotkeys, the tray,
   Do not disturb, and a Start with Windows switch). Every page fits the minimum window. Settings →
   Games wording simplified (no bracketed asides; "The game I'm playing" explained plainly).
+
+## 2026-11-01: PC freeze while recording Warframe; Lightshot taken for a game (0.9.4)
+- Report: Warframe recorded by game detection (realtime graphics priority, GPU scheduling off),
+  an Echo saved, the editor opened, and about a minute later the whole PC froze. The log just stops,
+  so the cause can't be proven, but realtime graphics priority can let the capture crowd out
+  everything else, including the desktop. Encore now asks for **high** only (never realtime). To
+  confirm in testing that games stay smooth with high.
+- The log also showed realtime priority being granted without administrator rights, so 0.7.1's
+  refusal was only the timing problem fixed in 0.7.2.
+- Lightshot (a screenshot tool) was detected as a game: it covers the screen while you pick an
+  area. Screenshot and screen tools are now on the not-a-game list, and a window that only looks
+  like a game because it fills the screen must stay 4 seconds before it counts.
+- The "Couldn't switch…" warning came from those Lightshot switches. Failed switches now wait
+  before trying that target again (10 s, doubling, up to 2 minutes), so a window that can't be
+  captured can't set off a stream of FFmpeg starts; the warning is plain ("Couldn't start
+  recording Warframe, so Encore carried on…") and shown once; FFmpeg's full reason goes to the log.
+- A recording made while Echoes is on picks its file name when saved (it could, rarely, take the
+  name of an Echo saved in the same second and overwrite it).

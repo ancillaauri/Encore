@@ -97,6 +97,13 @@ pub struct Engine {
     session_source: String,
     /// Instant replay is on but only keeps games, and no game is open: waiting for one.
     replay_waiting: bool,
+    /// Captures that failed to start, by what they were for: (failures, when the last one was).
+    /// A failed target waits before it's tried again (10 s, then longer), so a window that
+    /// can't be captured never sets off a stream of FFmpeg starts.
+    switch_fails: HashMap<String, (u32, Instant)>,
+    /// Windows that only look like games because they fill the screen, and when they were first
+    /// seen: they count once they've stayed a few seconds (screenshot tools and pop-ups don't).
+    fullscreen_seen: HashMap<u64, Instant>,
 }
 
 /// A recording taken from the instant-replay capture: from `from` until it is stopped.
@@ -106,6 +113,9 @@ struct Clip {
     label: String,
     local: platform::LocalTime,
 }
+
+/// How long a full screen window that isn't otherwise known as a game must stay before it counts.
+const FULLSCREEN_SETTLE: Duration = Duration::from_secs(4);
 
 /// How long the focus must stay on another monitor before the recording moves there.
 const SWITCH_SETTLE: Duration = Duration::from_millis(300);
@@ -169,6 +179,8 @@ impl Engine {
             games_sent: String::new(),
             session_source: "desktop".into(),
             replay_waiting: false,
+            switch_fails: HashMap::new(),
+            fullscreen_seen: HashMap::new(),
         }
     }
 
@@ -727,11 +739,70 @@ impl Engine {
                 if since.elapsed() >= SWITCH_SETTLE {
                     self.focus_candidate = None;
                     log(&format!("focus moved to monitor {want}: switching"));
-                    active.switch_to(&self.ffmpeg, Target::Monitor { handle: want }, "Desktop");
+                    self.switch_capture(Target::Monitor { handle: want }, "Desktop");
                 }
             }
             _ => self.focus_candidate = Some((want, Instant::now())),
         }
+    }
+
+    fn target_key(t: Target) -> String {
+        match t {
+            Target::Monitor { handle } => format!("m{handle}"),
+            Target::Window { handle } => format!("w{handle}"),
+        }
+    }
+
+    /// False while a target that failed recently is waiting before the next try.
+    fn may_switch_to(&self, t: Target) -> bool {
+        match self.switch_fails.get(&Self::target_key(t)) {
+            None => true,
+            Some((n, at)) => at.elapsed() >= Duration::from_secs((10u64 << (n.saturating_sub(1)).min(4)).min(120)),
+        }
+    }
+
+    /// Starts a switch unless that target is waiting after failing.
+    fn switch_capture(&mut self, t: Target, label: &str) -> bool {
+        if !self.may_switch_to(t) {
+            return false;
+        }
+        match self.active.as_mut() {
+            Some(a) => {
+                a.switch_to(&self.ffmpeg, t, label);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// A switch didn't start: wait before trying that target again, and say so once, plainly.
+    fn switch_failed(&mut self, target: Target, detail: &str) {
+        let key = Self::target_key(target);
+        let n = self.switch_fails.get(&key).map(|(n, _)| n + 1).unwrap_or(1);
+        self.switch_fails.insert(key, (n, Instant::now()));
+        // FFmpeg's own reason, without the start-up notices that aren't errors.
+        let reason: Vec<&str> = detail
+            .lines()
+            .filter(|l| !l.contains("minimum update interval") && !l.trim().is_empty())
+            .collect();
+        log(&format!("switch to {target:?} failed (attempt {n}): {}", reason.join(" / ")));
+        if n > 1 {
+            return; // told them the first time
+        }
+        let what = match target {
+            Target::Window { handle } => self
+                .watch
+                .games
+                .iter()
+                .find(|g| g.handle == handle)
+                .map(|g| g.name.clone())
+                .unwrap_or_else(|| "that window".into()),
+            Target::Monitor { .. } => "the other monitor".into(),
+        };
+        send_event(
+            "warning",
+            json!({ "message": format!("Couldn't start recording {what}, so Encore carried on with what it was recording. It will try again in a little while.") }),
+        );
     }
 
     fn pick(&self) -> Pick {
@@ -760,8 +831,17 @@ impl Engine {
         }
         self.last_game_scan = Some(Instant::now());
         let mut found = Vec::new();
+        let mut still_fullscreen = Vec::new();
         for w in platform::top_windows() {
             let Some(why) = games::classify(&w, &self.settings.games_always, &self.settings.games_never) else { continue };
+            if why == games::Why::Fullscreen {
+                // Only a guess: it has to stay for a few seconds first.
+                still_fullscreen.push(w.handle);
+                let since = *self.fullscreen_seen.entry(w.handle).or_insert_with(Instant::now);
+                if since.elapsed() < FULLSCREEN_SETTLE {
+                    continue;
+                }
+            }
             let name = match self.game_names.get(&w.pid) {
                 Some(n) => n.clone(),
                 None => {
@@ -773,6 +853,7 @@ impl Engine {
             };
             found.push((w, name, why));
         }
+        self.fullscreen_seen.retain(|h, _| still_fullscreen.contains(h));
         let alive: Vec<u32> = found.iter().map(|f| f.0.pid).collect();
         self.game_names.retain(|p, _| alive.contains(p));
         self.watch.update(found, platform::foreground_window());
@@ -832,12 +913,11 @@ impl Engine {
         match (self.current_game(), current) {
             (Some(g), Target::Window { handle }) if handle == g.handle => {}
             (Some(g), _) => {
-                log(&format!("game: recording {}", g.name));
-                self.focus_candidate = None;
-                if let Some(a) = self.active.as_mut() {
-                    a.switch_to(&self.ffmpeg, Target::Window { handle: g.handle }, &g.name);
+                if self.switch_capture(Target::Window { handle: g.handle }, &g.name) {
+                    log(&format!("game: recording {}", g.name));
+                    self.focus_candidate = None;
+                    send_event("game_switched", json!({ "name": g.name }));
                 }
-                send_event("game_switched", json!({ "name": g.name }));
             }
             (None, Target::Window { .. }) => self.leave_game(),
             (None, Target::Monitor { .. }) => {}
@@ -873,9 +953,9 @@ impl Engine {
             Ok((target, ..)) => {
                 log("game closed: back to the chosen screen");
                 self.focus_candidate = None;
-                if let Some(a) = self.active.as_mut() {
-                    a.switch_to(&self.ffmpeg, target, "Desktop");
-                }
+                // Always allowed: the game's capture has ended, so the screen is the way out.
+                self.switch_fails.remove(&Self::target_key(target));
+                self.switch_capture(target, "Desktop");
                 send_event("game_switched", json!({ "name": null }));
             }
             Err(e) => log(&format!("game closed, but no screen to go back to: {e}")),
@@ -889,14 +969,14 @@ impl Engine {
         self.follow_focus();
         if let Some(event) = self.active.as_mut().and_then(|a| a.poll()) {
             match event {
-                recorder::SwitchEvent::Switched(Target::Monitor { handle }) => {
+                recorder::SwitchEvent::Switched(t @ Target::Monitor { handle }) => {
+                    self.switch_fails.remove(&Self::target_key(t));
                     send_event("monitor_switched", json!({ "monitor": monitor_id(handle) }))
                 }
-                recorder::SwitchEvent::Switched(_) => {}
-                recorder::SwitchEvent::Failed(detail) => send_event(
-                    "warning",
-                    json!({ "message": format!("Couldn't switch what's being recorded, so it carries on where it was. FFmpeg said: {detail}") }),
-                ),
+                recorder::SwitchEvent::Switched(t) => {
+                    self.switch_fails.remove(&Self::target_key(t));
+                }
+                recorder::SwitchEvent::Failed(target, detail) => self.switch_failed(target, &detail),
             }
         }
         self.prune_replay();

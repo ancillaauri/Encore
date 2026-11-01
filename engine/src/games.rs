@@ -45,6 +45,11 @@ const NOT_GAMES: &[&str] = &[
     "acrord32.exe", "photos.exe", "snippingtool.exe", "screenclippinghost.exe", "wallpaper64.exe",
     "wallpaper32.exe", "lively.exe", "rainmeter.exe", "steelseriesgg.exe", "lghub.exe", "icue.exe",
     "windowsterminal.exe", "cmd.exe", "powershell.exe", "pwsh.exe",
+    // Screenshot and screen tools (they cover the screen for a moment while you pick an area)
+    "lightshot.exe", "sharex.exe", "greenshot.exe", "snagit32.exe", "snagiteditor.exe",
+    "picpick.exe", "flameshot.exe", "screenpresso.exe", "gyazo.exe", "gyazowin.exe",
+    "screentogif.exe", "powertoys.exe", "powertoys.screenruler.exe", "powertoys.colorpickerui.exe",
+    "magnify.exe", "osk.exe",
 ];
 
 /// Well-known games, by program file name (some protect their process, so their install folder
@@ -404,6 +409,9 @@ mod tests {
         let mut photos = win(4, 4, "SomeViewer.exe", r"C:\Windows\System32\SomeViewer.exe");
         photos.covers_monitor = true;
         assert_eq!(classify(&photos, &[], &[]), None);
+        let mut shot = win(5, 5, "Lightshot.exe", r"C:\Program Files (x86)\Skillbrains\lightshot\Lightshot.exe");
+        shot.covers_monitor = true;
+        assert_eq!(classify(&shot, &[], &[]), None, "a screenshot tool covering the screen isn't a game");
     }
 
     #[test]

@@ -686,7 +686,11 @@ mod win {
                 None => Err(format!("GPU priority unavailable ({admin}, {privilege})")),
                 Some(f) => {
                     let set: SetGpuPriority = std::mem::transmute(f);
-                    let rt = if hags { -1 } else { set(hp as *mut c_void, GPU_REALTIME) };
+                    // Realtime is no longer used: at that level the capture can starve the rest
+                    // of the system (a full PC freeze was reported with it on). High is enough to
+                    // keep the capture fed without taking over.
+                    let _ = (hags, GPU_REALTIME);
+                    let rt = -1;
                     if rt >= 0 {
                         Ok(format!("GPU priority realtime ({admin}, {privilege}, {sched})"))
                     } else {
