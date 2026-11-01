@@ -662,3 +662,19 @@ Agreed design for game detection (to build next):
   sharp. Low's "(smaller files)" label went (the number says it).
 - Next: a Low against Medium test in motion to decide whether Low stays (maybe as "Small files"),
   then a "Set the bitrate myself" slider with the presets marked on it.
+
+## 2026-11-01: Clips: rename and delete with undo; "Saving an Echo…"; side panel scrolling (0.9.20)
+- Saved this session: right-click a clip for Show in folder, Rename and Delete; a small bin in
+  each clip's bottom right corner (shown on hover) deletes it. Deleting dims the clip, shows Undo in
+  its middle and a 5-second timer line; each clip has its own timer, so several can be on their way
+  out at once. After 5 seconds the clip goes to the Recycle Bin (engine `delete_clip`, Windows'
+  undoable delete), so it can still be got back. Rename edits the name in place (Enter saves,
+  Escape cancels, clicking away saves), cleans characters Windows doesn't allow, and refuses a
+  name already taken (engine `rename_clip`). Both only touch .mp4 files inside Encore's folder.
+  A clip still counting down when Encore closes is kept.
+- The notification used to arrive 4–5 seconds after the save sound (it waited for the file). Now
+  "Saving an Echo…" shows the moment the save starts (no timer line), and turns into "Echo saved"
+  (or the error) in the same place when the file is done: notifications with the same id replace
+  each other in place.
+- The side panel's scrollbar ran past Priority Capture and Do not disturb: now only the middle of
+  the panel scrolls; the top and the bottom row stay put.

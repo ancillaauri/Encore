@@ -226,7 +226,7 @@ body.side-collapsed .layout { grid-template-columns: 80px minmax(0, 1fr); }
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-  overflow-y: auto;
+  overflow: hidden; /* the middle scrolls; the top and the bottom row stay put */
 }
 .sidehead { display: flex; align-items: center; padding: 12px 10px 6px; min-height: 54px; }
 .sidetoggle {
@@ -251,7 +251,7 @@ body.side-collapsed .layout { grid-template-columns: 80px minmax(0, 1fr); }
 .side:hover .sidetoggle .tg-collapse, .sidetoggle:focus-visible .tg-collapse { width: 25px; margin-right: 0; opacity: 1; }
 .sidetoggle .tg-open { display: none; }
 
-.side-body { padding: 0 0 20px; display: flex; flex-direction: column; flex: 1 0 auto; }
+.side-body { padding: 0 0 20px; display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .sec { padding: 4px 18px 0; display: flex; flex-direction: column; }
 .lab { font-size: 12px; font-weight: 600; color: var(--mute); margin: 10px 0 4px; }
 .srow { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; font-size: 13px; }
@@ -266,7 +266,7 @@ body.side-collapsed .layout { grid-template-columns: 80px minmax(0, 1fr); }
 .replay-live { color: #9aa3ff; }
 .sdiv { height: 1px; background: var(--line); margin: 14px 18px 0; }
 .recent { list-style: none; margin: 0 -8px; padding: 0; }
-.recent li { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; cursor: pointer; }
+.recent li { position: relative; display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; cursor: pointer; }
 .recent li:hover { background: #121114; }
 .thumb { width: 64px; height: 36px; border-radius: 6px; background: linear-gradient(135deg, #1b1a24, #2a2838); flex: none; display: flex; align-items: center; justify-content: center; color: #6b6a6f; }
 .thumb svg { width: 16px; height: 16px; }
@@ -719,7 +719,7 @@ input[type="range"].vol { width: 120px; flex: none; accent-color: var(--acc); cu
 }
 
 /* ---------- Do not disturb: bottom of the side panel ---------- */
-.side-foot { position: sticky; bottom: 0; margin-top: auto; background: var(--side); border-top: 1px solid var(--line2); padding: 8px 10px; }
+.side-foot { flex: none; margin-top: auto; background: var(--side); border-top: 1px solid var(--line2); padding: 8px 10px; }
 .dnd { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .dnd:hover { background: #17161a; }
 .dnd svg, .dndrail svg { width: 22px; height: 22px; flex: none; fill: none; stroke: #8e8d93; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s ease, filter .25s ease; }
@@ -950,3 +950,18 @@ body.gd-wait .ps.rec-tag { color: #8fdca5; }
 .pcap[aria-pressed="true"] .dnd-sub { color: #ffd27a; }
 .understand { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(240, 178, 50, .45); background: rgba(240, 178, 50, .07); color: var(--text); font-weight: 600; cursor: pointer; }
 .understand input { width: 18px; height: 18px; accent-color: #f0b232; margin: 0; }
+
+/* ---------- saved this session: delete button, undo, rename ---------- */
+.rbin { position: absolute; right: 6px; bottom: 6px; width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--dim); cursor: pointer; opacity: 0; transition: opacity .15s ease, color .15s ease, background .15s ease; }
+.rbin svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.recent li:hover .rbin, .rbin:focus-visible { opacity: 1; }
+.rbin:hover { color: #ff8a8e; background: rgba(242, 63, 67, .12); }
+.recent li.deleting { cursor: default; }
+.recent li.deleting > .thumb, .recent li.deleting > .rtext, .recent li.deleting > .rbin { opacity: .25; filter: grayscale(1); }
+.recent li.deleting:hover { background: transparent; }
+.rundo { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 8px; overflow: hidden; }
+.rundo .btn { position: relative; z-index: 1; }
+.rtimer { position: absolute; left: 8px; right: 8px; bottom: 3px; height: 2px; border-radius: 1px; background: #ff8a8e; box-shadow: 0 0 6px rgba(242, 63, 67, .6); transform-origin: left; animation: rdrain linear forwards; }
+@keyframes rdrain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .rtimer { animation: none; } }
+.rinput { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--acc); background: var(--panel2); color: var(--text); outline: none; }

@@ -728,22 +728,111 @@
     return n.replace(today, '');
   }
 
+  // ---------- saved this session: show, rename, delete (with 5 seconds to undo) ----------
+  const TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5.2c0-.7.5-1.2 1.2-1.2h2.6c.7 0 1.2.5 1.2 1.2V7M6.5 7l.8 11.6c.1 1 .9 1.9 2 1.9h5.4c1.1 0 1.9-.9 2-1.9L17.5 7"/><path d="M10.2 11v5.5M13.8 11v5.5"/></svg>';
+  function renderClipName(li, d) {
+    const name = li.querySelector('.rname');
+    name.replaceChildren(shortName(d.path));
+    if (d.recovered) name.append(h('span', 'tag', 'recovered'));
+    if (d.replay) name.append(h('span', 'tag replay-live', 'Echo'));
+    li.title = `${d.path}\nClick to show in folder. Right-click for more`;
+  }
   function addRecent(d) {
     state.recent.unshift(d);
     const li = h('li');
-    li.title = `${d.path}\nClick to show in folder`;
     const thumb = h('span', 'thumb');
     thumb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor" stroke="none"/></svg>';
     const text = h('div', 'rtext');
-    const name = h('div', 'rname', shortName(d.path));
-    if (d.recovered) name.append(h('span', 'tag', 'recovered'));
-    if (d.replay) name.append(h('span', 'tag replay-live', 'Echo'));
-    text.append(name, h('div', 'rmeta', d.duration_ms ? `${clock(d.duration_ms)} · ${size(d.size_bytes)}` : size(d.size_bytes)));
-    li.append(thumb, text);
-    li.onclick = () => bridge.revealFile(d.path).catch((e) => toast(String(e), 'error'));
+    text.append(h('div', 'rname'), h('div', 'rmeta', d.duration_ms ? `${clock(d.duration_ms)} · ${size(d.size_bytes)}` : size(d.size_bytes)));
+    const bin = h('button', 'rbin');
+    bin.type = 'button';
+    bin.innerHTML = TRASH;
+    bin.setAttribute('aria-label', 'Delete this clip');
+    bin.dataset.tip = 'Delete (you have 5 seconds to undo)';
+    bin.addEventListener('click', (e) => { e.stopPropagation(); startDelete(li, d); });
+    li.append(thumb, text, bin);
+    renderClipName(li, d);
+    li.onclick = () => { if (!li.classList.contains('deleting') && !li.querySelector('input')) bridge.revealFile(d.path).catch((e) => toast(String(e), 'error')); };
+    li.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (li.classList.contains('deleting')) return;
+      openMenu(e.clientX, e.clientY, [
+        { text: 'Show in folder', run: () => bridge.revealFile(d.path).catch((err) => toast(String(err), 'error')) },
+        { text: 'Rename', run: () => startRename(li, d) },
+        '-',
+        { text: 'Delete', run: () => startDelete(li, d) },
+      ]);
+    });
     $('recent').prepend(li);
     $('recent-empty').hidden = true;
   }
+  // Each clip has its own 5 seconds: several can be on their way out at once.
+  const UNDO_MS = 5000;
+  function startDelete(li, d) {
+    if (li.classList.contains('deleting')) return;
+    li.classList.add('deleting');
+    const box = h('div', 'rundo');
+    const undo = h('button', 'btn sm', 'Undo');
+    undo.type = 'button';
+    const bar = h('span', 'rtimer');
+    bar.style.animationDuration = `${UNDO_MS}ms`;
+    box.append(undo, bar);
+    li.append(box);
+    const timer = setTimeout(async () => {
+      try {
+        await bridge.deleteClip(d.path);
+        state.recent = state.recent.filter((x) => x !== d);
+        li.remove();
+        $('recent-empty').hidden = $('recent').children.length > 0;
+      } catch (e) {
+        toast(String(e).replace(/^Error: ?/, ''), 'error', 8000);
+        box.remove();
+        li.classList.remove('deleting');
+      }
+    }, UNDO_MS);
+    undo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearTimeout(timer);
+      box.remove();
+      li.classList.remove('deleting');
+    });
+  }
+  function startRename(li, d) {
+    const name = li.querySelector('.rname');
+    const input = h('input', 'rinput');
+    input.type = 'text';
+    input.value = fileName(d.path).replace(/\.mp4$/i, '');
+    input.setAttribute('aria-label', 'New name for the clip');
+    name.replaceChildren(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const finish = async (save) => {
+      if (done) return;
+      done = true;
+      const wanted = input.value.trim();
+      if (!save || !wanted || wanted === fileName(d.path).replace(/\.mp4$/i, '')) { renderClipName(li, d); return; }
+      try {
+        const r = await bridge.renameClip(d.path, wanted);
+        d.path = r.path;
+        toast(`Renamed to ${fileName(r.path)}`, 'ok', 3000);
+      } catch (e) {
+        toast(String(e).replace(/^Error: ?/, ''), 'error', 8000);
+      }
+      renderClipName(li, d);
+    };
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') finish(true);
+      if (e.key === 'Escape') finish(false);
+    });
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('blur', () => finish(true));
+  }
+
+  // "Saving an Echo…" notifications waiting for their file, oldest first (saves finish in order).
+  let echoSeq = 0;
+  const echoIds = [];
 
   // ---------- engine events ----------
   bridge.onEvent((event, data) => {
@@ -778,15 +867,22 @@
         renderReplay();
         renderStage();
         break;
-      case 'replay_saving':
-        toast(`Saving the last ${data.seconds ? lengthText(data.seconds) : replayLength()}…`, 'info', 3000);
+      case 'replay_saving': {
+        const what = data.seconds ? lengthText(data.seconds) : replayLength();
+        toast(`Saving the last ${what}…`, 'info', 3000);
+        // Shown straight away; it turns into "Echo saved" in the same place when the file's done.
+        const id = `echo-${++echoSeq}`;
+        echoIds.push(id);
+        notify('echo', 'Saving an Echo…', `The last ${what}`, false, { id, seconds: 30, timer: false });
+        break;
+      }
         break;
       case 'replay_saved': {
         addRecent({ ...data, replay: true });
         const len = data.duration_ms ? ` (${lengthText(Math.round(data.duration_ms / 1000))})` : '';
         toast(`Saved an Echo${len}: ${fileName(data.path)}`, 'ok', 5000);
         const of = /^(Game|Window): /.test(data.label || '') ? ` of ${labelName(data.label)}` : '';
-        notify('echo', 'Echo saved', data.duration_ms ? `Last ${lengthText(Math.round(data.duration_ms / 1000))}${of}` : `Saved${of}`);
+        notify('echo', 'Echo saved', data.duration_ms ? `Last ${lengthText(Math.round(data.duration_ms / 1000))}${of}` : `Saved${of}`, false, { id: echoIds.shift() });
         break;
       }
       case 'games':
@@ -834,7 +930,8 @@
       case 'error':
         if (state.phase === 'saving') state.phase = 'idle';
         toast(data.message, 'error', 20000);
-        notify('problem', 'Something went wrong', data.message);
+        // A failed Echo replaces its "Saving an Echo…" card.
+        notify('problem', 'Something went wrong', data.message, false, { id: /^Couldn.t save the Echo/.test(data.message || '') ? echoIds.shift() : null });
         renderStage();
         break;
       case 'engine_exited':
@@ -1685,14 +1782,15 @@
 
   // Shows one, unless it's switched off, Do not disturb is on, or Encore's own window is in front
   // (its own messages show there). A test always shows.
-  function notify(kind, title, text, test = false) {
+  // opts: id (a later one with the same id replaces it in place), seconds, timer (false: no timer line).
+  function notify(kind, title, text, test = false, opts = {}) {
     const s = state.settings;
     if (!s) return;
     if (!test && (!s.notifications || s.do_not_disturb || !s[NOTIFY_KEYS[kind]] || document.hasFocus())) return;
     const id = s.notify_screen.startsWith('id:') ? s.notify_screen.slice(3) : null;
     const m = id && monitorById(id);
     const g = gameActive();
-    bridge.showNotification(m ? m.device : null, g ? g.handle : null, s.notify_pos, { kind, title, text: text || '', seconds: s.notify_seconds, size: s.notify_size || 100 })
+    bridge.showNotification(m ? m.device : null, g ? g.handle : null, s.notify_pos, { kind, title, text: text || '', seconds: opts.seconds || s.notify_seconds, size: s.notify_size || 100, id: opts.id || null, timer: opts.timer !== false })
       .catch((e) => { if (test) toast(String(e), 'error'); });
   }
 

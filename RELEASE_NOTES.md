@@ -1,3 +1,18 @@
+## Encore 0.9.20 (beta), test build 41: tidy up your clips
+
+### What's new
+- **Rename and delete clips** under Saved this session: right-click a clip, or use the small bin
+  in its corner. A deleted clip dims with an **Undo** button and a 5-second timer; delete several
+  at once, each with its own timer. Deleted clips go to the Recycle Bin.
+- **"Saving an Echo…"** appears the moment you press the hotkey and turns into "Echo saved" when
+  the file is ready.
+
+### Fixed
+- The side panel's scrollbar no longer runs over Priority Capture and Do not disturb.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.20).
+
 ## Encore 0.9.19 (beta), test build 40: sharper video for the same space
 
 ### Changed

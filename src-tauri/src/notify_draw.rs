@@ -310,6 +310,13 @@ pub struct Shown {
     pub kind: Kind,
     pub sprite: Sprite,
     pub seconds: f32,
+    /// Notifications with the same id replace each other in place ("Saving an Echo…" turning
+    /// into "Echo saved").
+    pub id: Option<String>,
+    /// Whether the timer line shows (not while something is still being saved).
+    pub timer: bool,
+    /// When the timer started (a replacement starts it again).
+    timer_from: f32,
     /// When it arrived and (if going) when it started to go, in seconds on the stack's clock.
     pub born: f32,
     pub leaving: Option<f32>,
@@ -322,7 +329,13 @@ pub struct Shown {
 
 impl Shown {
     pub fn new(kind: Kind, sprite: Sprite, seconds: f32, now: f32) -> Shown {
-        Shown { kind, sprite, seconds, born: now, leaving: None, y: None, from_y: 0.0, to_y: 0.0, moved_at: now }
+        Shown { kind, sprite, seconds, id: None, timer: true, timer_from: now, born: now, leaving: None, y: None, from_y: 0.0, to_y: 0.0, moved_at: now }
+    }
+
+    pub fn with_id(mut self, id: Option<String>, timer: bool) -> Shown {
+        self.id = id;
+        self.timer = timer;
+        self
     }
 }
 
@@ -346,6 +359,17 @@ impl Stack {
     }
 
     pub fn add(&mut self, item: Shown, now: f32) {
+        // Same id as one still showing: it becomes the new one, where it is.
+        if let Some(id) = item.id.as_ref() {
+            if let Some(old) = self.items.iter_mut().find(|i| i.leaving.is_none() && i.id.as_ref() == Some(id)) {
+                old.kind = item.kind;
+                old.sprite = item.sprite;
+                old.seconds = item.seconds;
+                old.timer = item.timer;
+                old.timer_from = now;
+                return;
+            }
+        }
         // A fourth pushes the oldest still showing out.
         while self.items.iter().filter(|i| i.leaving.is_none()).count() >= MAX {
             if let Some(old) = self.items.iter_mut().find(|i| i.leaving.is_none()) {
@@ -358,7 +382,7 @@ impl Stack {
     /// Starts the fade of any whose time is up, and drops those that have faded.
     pub fn update(&mut self, now: f32) {
         for i in &mut self.items {
-            if i.leaving.is_none() && now - i.born >= i.seconds {
+            if i.leaving.is_none() && now - i.timer_from >= i.seconds {
                 i.leaving = Some(now);
             }
         }
@@ -452,8 +476,11 @@ impl Stack {
             let x = dx;
             let paint = PixmapPaint { opacity: alpha, ..PixmapPaint::default() };
             canvas.draw_pixmap((x * s).round() as i32, ((y + dy) * s).round() as i32, sp.pixmap.as_ref(), &paint, Transform::identity(), None);
+            if !item.timer {
+                continue;
+            }
             // The timer: how much of its time is left.
-            let left = (1.0 - (now - item.born) / item.seconds).clamp(0.0, 1.0);
+            let left = (1.0 - (now - item.timer_from) / item.seconds).clamp(0.0, 1.0);
             let (r, g, b) = item.kind.rgb();
             let (cx, cy) = (x + sp.card_x, y + dy + sp.card_y);
             let bars: Vec<Rect> = match self.spot {
@@ -541,5 +568,23 @@ mod tests {
         st.update(20.0);
         st.update(20.0 + OUT + 0.01);
         assert!(st.is_empty());
+    }
+
+    #[test]
+    fn a_saving_card_turns_into_the_saved_one_in_place() {
+        let mut st = Stack::new(Spot::Top, 1.0);
+        let saving = draw_item(Kind::Echo, "Saving an Echo…", "The last minute", Spot::Top, 1.0).unwrap();
+        st.add(Shown::new(Kind::Echo, saving, 30.0, 0.0).with_id(Some("e1".into()), false), 0.0);
+        let other = draw_item(Kind::Game, "Now following Warframe", "", Spot::Top, 1.0).unwrap();
+        st.add(Shown::new(Kind::Game, other, 5.0, 1.0), 1.0);
+        let saved = draw_item(Kind::Echo, "Echo saved", "Last 60 seconds", Spot::Top, 1.0).unwrap();
+        st.add(Shown::new(Kind::Echo, saved, 5.0, 4.0).with_id(Some("e1".into()), true), 4.0);
+        assert_eq!(st.items.len(), 2); // replaced, not added
+        assert!(st.items[0].timer && st.items[0].id.as_deref() == Some("e1"));
+        // Its timer started again when it was replaced.
+        st.update(8.0);
+        assert!(st.items[0].leaving.is_none());
+        st.update(9.1);
+        assert!(st.items[0].leaving.is_some());
     }
 }

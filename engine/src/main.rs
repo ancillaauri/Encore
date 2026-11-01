@@ -6,6 +6,7 @@
 //!       [--selftest-capture <file.mkv>]                also try a 3-second CPU-path capture
 
 mod audio;
+mod clips;
 mod engine;
 mod ffmpeg;
 mod games;

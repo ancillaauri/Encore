@@ -1,5 +1,6 @@
 //! Engine state and command handling. One command at a time, on the main thread.
 
+use crate::clips;
 use crate::audio::{self, AudioOptions};
 use crate::ffmpeg::{self, CaptureSpec, Encoder, Pipeline, Target, ALL_CODECS, VENDOR_ORDER};
 use crate::games::{self, Pick, Watch};
@@ -244,6 +245,24 @@ impl Engine {
                 Ok(self.status())
             }
             "save_replay" => self.save_replay(&c.args),
+            // A saved clip: rename it ({"path", "name"}) or send it to the Recycle Bin ({"path"}).
+            "rename_clip" => {
+                let path = PathBuf::from(c.args.get("path").and_then(|v| v.as_str()).unwrap_or(""));
+                let name = c.args.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                let root = paths::encore_root(&PathBuf::from(&self.settings.output_dir));
+                clips::rename(&root, &path, name).map(|p| {
+                    log(&format!("renamed clip {} to {}", path.display(), p.display()));
+                    json!({ "path": p.display().to_string() })
+                })
+            }
+            "delete_clip" => {
+                let path = PathBuf::from(c.args.get("path").and_then(|v| v.as_str()).unwrap_or(""));
+                let root = paths::encore_root(&PathBuf::from(&self.settings.output_dir));
+                clips::delete(&root, &path).map(|_| {
+                    log(&format!("deleted clip {} (to the Recycle Bin)", path.display()));
+                    json!({ "deleted": true })
+                })
+            }
             // Lock onto a game ({"pid": n}) or unlock ({"pid": null}).
             "lock_game" => {
                 let pid = c.args.get("pid").and_then(|v| v.as_u64()).map(|p| p as u32);

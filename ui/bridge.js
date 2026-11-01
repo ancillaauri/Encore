@@ -30,6 +30,9 @@
     showNotification: (device, window, pos, item) => T.core.invoke('show_notification', { device: device || null, window: window || null, pos, item }),
     openFolder: (path) => T.core.invoke('open_folder', { path }),
     revealFile: (path) => T.core.invoke('reveal_in_folder', { path }),
+    // Saved clips: rename (returns {path}) or send to the Recycle Bin.
+    renameClip: (path, name) => call('rename_clip', { path, name }),
+    deleteClip: (path) => call('delete_clip', { path }),
     openLink: (url) => T.core.invoke('open_link', { url }),
     pickFolder: (start) => T.core.invoke('pick_folder', { start: start || null }),
     // Tray, hotkeys and quitting (the shell owns these)

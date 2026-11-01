@@ -51,6 +51,9 @@ struct Request {
     title: String,
     text: String,
     seconds: f32,
+    /// Replaces a notification still showing with the same id.
+    id: Option<String>,
+    timer: bool,
 }
 
 static TX: OnceLock<Mutex<Sender<Request>>> = OnceLock::new();
@@ -96,7 +99,10 @@ pub fn show_notification(app: AppHandle, device: Option<String>, window: Option<
     let scale = scale * size;
     let on = if chosen.is_some() { "chosen screen" } else if window.is_some() { "game's screen" } else { "screen in use" };
     crate::hotkeys::note(&app, format!("notification {kind_name}: {pos} on the {on} ({},{} {}x{}, scale {scale})", screen.x, screen.y, screen.width, screen.height));
-    let req = Request { screen, pos, scale, kind: Kind::parse(&kind_name), title: get("title"), text: get("text"), seconds };
+    let id = item.get("id").and_then(|v| v.as_str()).map(String::from);
+    let timer = item.get("timer").and_then(|v| v.as_bool()).unwrap_or(true);
+    let seconds = if timer { seconds } else { item.get("seconds").and_then(|v| v.as_f64()).unwrap_or(30.0).clamp(2.0, 60.0) as f32 };
+    let req = Request { screen, pos, scale, kind: Kind::parse(&kind_name), title: get("title"), text: get("text"), seconds, id, timer };
     TX.get()
         .and_then(|t| t.lock().ok().map(|t| t.send(req).is_ok()))
         .filter(|ok| *ok)
@@ -170,7 +176,7 @@ fn run(app: AppHandle, rx: Receiver<Request>) {
                 match notify_draw::draw_item(req.kind, &req.title, &req.text, spot, req.scale as f32) {
                     Some(sprite) => {
                         if let Some(st) = stack.as_mut() {
-                            st.add(Shown::new(req.kind, sprite, req.seconds, now), now);
+                            st.add(Shown::new(req.kind, sprite, req.seconds, now).with_id(req.id, req.timer), now);
                         }
                         crate::hotkeys::note(&app, format!("notification drawn in {} ms", started.elapsed().as_millis()));
                     }
