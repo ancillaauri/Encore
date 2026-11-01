@@ -22,6 +22,11 @@
     revealFile: (path) => T.core.invoke('reveal_in_folder', { path }),
     openLink: (url) => T.core.invoke('open_link', { url }),
     pickFolder: (start) => T.core.invoke('pick_folder', { start: start || null }),
+    // Tray, hotkeys and quitting (the shell owns these)
+    setRecordingState: (recording, label) => T.core.invoke('set_recording_state', { recording, label: label || null }),
+    quitApp: () => T.core.invoke('quit_app'),
+    applyShellSettings: () => T.core.invoke('apply_shell_settings'),
+    onHotkey: (callback) => T.event.listen('hotkey', (e) => callback(e.payload)),
     appVersion: () => T.app.getVersion(),
     // Updates: { status: 'none' | 'available' | 'ready', version, current }
     getUpdate: () => T.core.invoke('get_update'),

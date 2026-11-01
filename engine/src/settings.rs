@@ -62,6 +62,12 @@ pub struct Settings {
     pub update_mode: String,
     /// The first-run setup has been completed (or skipped).
     pub setup_done: bool,
+    /// Closing the window keeps Encore running in the tray (so hotkeys work) instead of quitting.
+    pub close_to_tray: bool,
+    /// Global hotkey to start/stop recording, e.g. "Ctrl+Alt+R"; empty = none. Read by the shell.
+    pub hotkey_record: String,
+    /// Play a short sound when recording starts, stops and saves.
+    pub sounds: bool,
 }
 
 impl Default for Settings {
@@ -81,6 +87,10 @@ impl Default for Settings {
             audio_offset_ms: 0,
             update_mode: "manual".into(),
             setup_done: false,
+            close_to_tray: true,
+            // Not Alt+F9/F10 (NVIDIA's recorder) or Alt+Z/Alt+R (its overlay).
+            hotkey_record: "Ctrl+Alt+R".into(),
+            sounds: true,
         }
     }
 }
@@ -134,6 +144,9 @@ impl Settings {
         }
         if !["manual", "auto_download", "never"].contains(&updated.update_mode.as_str()) {
             return Err("Update mode must be manual, auto_download or never".into());
+        }
+        if updated.hotkey_record.len() > 64 {
+            return Err("Hotkey is too long".into());
         }
         if updated.mic_device.trim().is_empty() {
             return Err("Microphone cannot be empty".into());
@@ -223,5 +236,7 @@ mod tests {
         assert_eq!(s.mic_device, "default");
         assert_eq!(s.update_mode, "manual"); // no background downloads unless chosen
         assert!(!s.setup_done); // settings saved before the setup existed still show it once
+        assert!(s.close_to_tray && s.sounds);
+        assert_eq!(s.hotkey_record, "Ctrl+Alt+R");
     }
 }

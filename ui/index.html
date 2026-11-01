@@ -216,6 +216,40 @@
         </section>
 
         <section class="setsec">
+          <h3>General</h3>
+          <p class="setnote">When you close Encore's window:</p>
+          <div class="setcard" role="radiogroup" aria-label="When you close the window">
+            <button type="button" class="setrow setopt" role="radio" data-close-to-tray="true">
+              <span class="radio" aria-hidden="true"></span>
+              <span class="settext"><span class="setname">Keep running in the tray</span>
+                <span class="setsub wrap">Recommended. Hotkeys keep working. Quit from the tray icon by the clock, or ≡ → File → Exit.</span></span>
+            </button>
+            <button type="button" class="setrow setopt" role="radio" data-close-to-tray="false">
+              <span class="radio" aria-hidden="true"></span>
+              <span class="settext"><span class="setname">Quit Encore</span>
+                <span class="setsub wrap">Hotkeys stop working until you open Encore again.</span></span>
+            </button>
+          </div>
+          <div class="setcard spaced">
+            <label class="setrow"><span class="settext"><span class="setname">Play sounds</span>
+              <span class="setsub">A short sound when recording starts and stops</span></span>
+              <input type="checkbox" class="toggle" data-setting="sounds"></label>
+          </div>
+        </section>
+
+        <section class="setsec">
+          <h3>Hotkeys</h3>
+          <p class="setnote">These work anywhere, including in games. Click one, then press the keys you want.</p>
+          <div class="setcard">
+            <div class="setrow">
+              <span class="settext"><span class="setname">Start / stop recording</span></span>
+              <button type="button" class="hotkey" id="hotkey-record" data-hotkey="hotkey_record"></button>
+              <button type="button" class="btn sm ghost" id="hotkey-record-clear">Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="setsec">
           <h3>Updates</h3>
           <p class="setnote">New versions come from the GitHub releases page.</p>
           <div class="setcard" role="radiogroup" aria-label="How updates work">

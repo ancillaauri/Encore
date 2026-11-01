@@ -205,6 +205,15 @@ suited it). Discord user ID stays in the backlog until its purpose is confirmed.
 Three monitors shown in the right order and sizes, picker on one line with five tiles, and the
 real Videos folder found on another drive (F:\Videos\Encore).
 
+## 2026-11-01: Tray, hotkeys and sounds (0.6.0)
+- Closing the window keeps Encore in the tray by default (like other game recorders), so hotkeys
+  and later instant replay keep working; a setting switches it to quitting. Exit and the tray's
+  Quit always quit. One Windows notification the first time it hides.
+- Default record hotkey Ctrl+Alt+R: clear of NVIDIA's Alt+F9/F10 and overlay keys. Editable in
+  Settings → Hotkeys (press the keys); plain letters and digits need a modifier.
+- Short start/stop sounds (on by default) confirm a hotkey worked without looking.
+- Single instance: launching Encore again brings the running one back.
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.

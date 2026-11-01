@@ -16,7 +16,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Full desktop audio + microphone tracks | 4 | [x] |
 | Microphone choice (push-to-talk comes with hotkeys) | 4 | [~] |
 | Split App Tracks: one audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [x] |
-| Global hotkeys, tray icon, settings screen | 6 | [ ] |
+| Global hotkeys (start/stop recording; more with replay), tray icon, close to tray, sounds | 6 | [~] 0.6.0 |
 | Game detection (auto + always/never list + pick a window) | 6 | [ ] |
 | Recording moves to the monitor you click on, mid-recording, with no gap | 6 | [x] 0.5 |
 | Switch Game ↔ Desktop mid-recording (reuses the same mechanism) | 6 | [ ] |

@@ -433,6 +433,7 @@
     $('lock-note').hidden = !locked;
     document.querySelectorAll('#quick select, #quick input').forEach((el) => (el.disabled = locked));
     fitPicks();
+    syncTray();
   }
 
   function encoderLabel(name) {
@@ -462,6 +463,7 @@
     renderInputs();
     renderCodecs();
     renderOutputNote();
+    renderHotkeys();
     if (!$('setup').hidden) renderSetup();
   }
 
@@ -742,7 +744,7 @@
         { text: 'Settings', hint: 'Ctrl+Comma', run: () => openDialog('settings') },
         { text: 'Open Recordings Folder', run: () => { if (state.settings) bridge.openFolder(encoreRoot()).catch((e) => toast(String(e), 'error')); } },
         '-',
-        { text: 'Exit', hint: 'Alt+F4', run: () => bridge.win.close() },
+        { text: 'Exit', run: () => bridge.quitApp() },
       ] },
       { text: 'View', sub: [
         { text: 'What to Record', hint: 'Ctrl+B', check: !collapsed, run: () => setSideCollapsed(!collapsed) },
@@ -866,6 +868,119 @@
     bridge.win.onFocusChanged((focused) => document.body.classList.toggle('inactive', !focused));
   } catch (e) { /* not running in the app */ }
   renderMaximized();
+
+  // ---------- tray, hotkeys, sounds ----------
+  // A short tone pair: rising when recording starts, falling when it stops.
+  let audioCtx = null;
+  function playCue(kind) {
+    if (!state.settings || !state.settings.sounds) return;
+    try {
+      audioCtx = audioCtx || new AudioContext();
+      const notes = kind === 'start' ? [660, 880] : [880, 587];
+      notes.forEach((f, i) => {
+        const t = audioCtx.currentTime + i * 0.11;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.12, t + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(t);
+        o.stop(t + 0.11);
+      });
+    } catch (e) { /* no sound device: not important */ }
+  }
+
+  let trayRecording = false;
+  function syncTray() {
+    const rec = state.phase === 'recording';
+    if (rec === trayRecording) return;
+    trayRecording = rec;
+    playCue(rec ? 'start' : 'stop');
+    const label = rec && state.recording ? (state.recording.label || '') : '';
+    bridge.setRecordingState(rec, label).catch(() => {});
+  }
+
+  // Hotkey settings: click the button, then press the keys.
+  function hotkeyText(v) { return v ? v.replace(/\+/g, ' + ') : 'None'; }
+  function renderHotkeys() {
+    const s = state.settings;
+    if (!s) return;
+    document.querySelectorAll('[data-hotkey]').forEach((b) => {
+      if (b.classList.contains('listening')) return;
+      const v = s[b.dataset.hotkey] || '';
+      b.textContent = hotkeyText(v);
+      b.classList.toggle('empty', !v);
+    });
+    document.querySelectorAll('[data-close-to-tray]').forEach((o) =>
+      o.setAttribute('aria-checked', String((o.dataset.closeToTray === 'true') === !!s.close_to_tray)));
+  }
+  const KEY_NAMES = { ' ': 'Space', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Escape: 'Esc' };
+  function comboFrom(e) {
+    const mods = [];
+    if (e.ctrlKey) mods.push('Ctrl');
+    if (e.altKey) mods.push('Alt');
+    if (e.shiftKey) mods.push('Shift');
+    if (e.metaKey) mods.push('Super');
+    let key = null;
+    if (/^Key[A-Z]$/.test(e.code)) key = e.code.slice(3);
+    else if (/^Digit\d$/.test(e.code)) key = e.code.slice(5);
+    else if (/^F\d{1,2}$/.test(e.code)) key = e.code;
+    else if (/^Numpad\d$/.test(e.code)) key = e.code;
+    else if (['Home', 'End', 'Insert', 'Delete', 'PageUp', 'PageDown', 'Pause', 'ScrollLock'].includes(e.code)) key = e.code;
+    if (!key) return null; // a modifier on its own, or a key we don't support yet
+    // Plain letters and numbers would fire while typing: they need a modifier. F-keys etc. don't.
+    if (!mods.length && /^[A-Z0-9]$/.test(key)) return { error: 'Add Ctrl, Alt or Shift to that key, so it doesn\u2019t go off while you type.' };
+    return { combo: [...mods, key].join('+') };
+  }
+  async function saveHotkey(setting, combo) {
+    await saveSetting(setting, combo);
+    try {
+      const problems = await bridge.applyShellSettings();
+      for (const p of problems || []) toast(p, 'error', 12000);
+    } catch (e) { toast(String(e), 'error'); }
+    renderHotkeys();
+  }
+  let listening = null;
+  function stopListening() {
+    if (!listening) return;
+    listening.classList.remove('listening');
+    listening = null;
+    renderHotkeys();
+  }
+  document.querySelectorAll('[data-hotkey]').forEach((b) => b.addEventListener('click', () => {
+    if (listening === b) { stopListening(); return; }
+    stopListening();
+    listening = b;
+    b.classList.add('listening');
+    b.textContent = 'Press the keys\u2026';
+  }));
+  document.addEventListener('keydown', (e) => {
+    if (!listening) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'Escape') { stopListening(); return; }
+    const r = comboFrom(e);
+    if (!r) return; // still holding modifiers
+    if (r.error) { toast(r.error, 'warning', 5000); return; }
+    const b = listening;
+    stopListening();
+    saveHotkey(b.dataset.hotkey, r.combo);
+  }, true);
+  window.addEventListener('blur', stopListening);
+  document.addEventListener('pointerdown', (e) => { if (listening && e.target !== listening) stopListening(); }, true);
+  $('hotkey-record-clear').addEventListener('click', () => { stopListening(); saveHotkey('hotkey_record', ''); });
+  document.querySelectorAll('[data-close-to-tray]').forEach((o) => o.addEventListener('click', async () => {
+    await saveSetting('close_to_tray', o.dataset.closeToTray === 'true');
+    bridge.applyShellSettings().catch(() => {});
+    renderHotkeys();
+  }));
+  bridge.onHotkey((action) => {
+    if (action !== 'toggle_record') return;
+    if (state.phase === 'idle' || state.phase === 'recording') toggleRecording();
+  });
 
   // ---------- first-run setup ----------
   const BPP = { high: 0.30, medium: 0.18, low: 0.10 }; // same as the engine (ffmpeg::bitrate_kbps)

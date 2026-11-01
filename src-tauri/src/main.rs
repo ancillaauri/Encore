@@ -5,6 +5,7 @@
 //! Keep this thin: no recording logic here (see ARCHITECTURE.md).
 
 mod engine_link;
+mod tray;
 mod updater;
 
 use engine_link::EngineLink;
@@ -103,8 +104,14 @@ fn fit_to_screen(app: &tauri::AppHandle) {
 
 fn main() {
     let app = tauri::Builder::default()
+        // Must be first: opening Encore while it's already running (e.g. hidden in the tray)
+        // brings the existing window back instead of starting a second copy.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_window(app)))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .manage(tray::ShellState::default())
         // Reopens at the size and place it was closed at, like the companion editor.
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .manage(updater::UpdateState::default())
@@ -113,7 +120,17 @@ fn main() {
             app.manage(Arc::new(link));
             updater::start(app.handle().clone());
             fit_to_screen(app.handle());
+            tray::setup(app.handle())?;
+            tray::start(app.handle().clone());
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            // The close button hides Encore to the tray (if set), so hotkeys keep working.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" && tray::hide_instead_of_close(window.app_handle()) {
+                    api.prevent_close();
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             engine_call,
@@ -121,6 +138,9 @@ fn main() {
             open_folder,
             open_link,
             pick_folder,
+            tray::set_recording_state,
+            tray::quit_app,
+            tray::apply_shell_settings,
             updater::get_update,
             updater::check_for_updates,
             updater::install_update

@@ -178,6 +178,16 @@ together (everything doubled). The change needed mirrors how it already handles 
 - A `rec-format:1` file that has a `Desktop audio` track was made by 0.4.0 (new layout, old
   marker): treat it as `rec-format:2`.
 
+## Tray, hotkeys, closing (shell, 0.6)
+
+`src-tauri/src/tray.rs`. A tray icon (red dot while recording) with Open / Start-Stop / Quit.
+Closing the window hides it to the tray when `close_to_tray` is on (default), so hotkeys keep
+working; the first time, a Windows notification says where Encore went. ≡ → File → Exit and the
+tray's Quit really quit (the engine saves any recording first). A second launch shows the existing
+window (single instance). Global hotkeys are registered by the shell from the engine's settings
+(`hotkey_record`); a press is sent to the interface as a `hotkey` event, and the interface does
+what clicking the record button would, so the hotkey records whatever is selected.
+
 ## Updates (shell)
 
 `src-tauri/src/updater.rs`. Checks `releases/latest/download/latest.json` on GitHub according to
