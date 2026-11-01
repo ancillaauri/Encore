@@ -537,7 +537,8 @@
       else add('good', 'Game detection', 'Scanning for games');
     }
     // Instant replay
-    if (state.replay && state.replay.on && state.replay.waiting) add('', 'Echoes', 'Waiting for a game');
+    if (state.replayRestarting) add('warn', 'Echoes', 'Restarting with your new settings');
+    else if (state.replay && state.replay.on && state.replay.waiting) add('', 'Echoes', 'Waiting for a game');
     else if (state.replay && state.replay.on) add('good', 'Echoes', `Keeping the last ${replayLength()}`);
     else add('', 'Echoes', 'Off');
     // Audio tracks while recording
@@ -545,7 +546,6 @@
     if (tracks.length) add('', `${tracks.length} audio track${tracks.length === 1 ? '' : 's'}`, tracks.join(', '));
     // Where files go
     if (s) add('', 'Saving to', encoreRoot());
-    if (s && s.do_not_disturb) add('quiet', 'Do not disturb', 'Notifications paused');
     list.textContent = '';
     for (const r of rows) {
       const li = h('li', r.kind);
@@ -1032,7 +1032,7 @@
     const s = state.settings;
     if (!s) return;
     const on = !!state.replay.on;
-    $('replay-on').checked = on;
+    $('replay-on').checked = on || !!state.replayRestarting;
     $('replay-on').disabled = state.replayBusy || (state.phase !== 'idle' && !on);
     $('save-replay').disabled = !on || state.replayBusy;
     const key = s.hotkey_save_replay ? s.hotkey_save_replay.replace(/\+/g, ' + ') : '';
@@ -1043,7 +1043,9 @@
       : 'Echoes: Off. Click to keep the last few minutes, so you can save great moments after they happen.';
     $('q-replay').closest('.hrow').dataset.tip = `Uses about ${disk} of disk space while Echoes is on (at your video settings).`;
     $('replay-sec').classList.toggle('lit', on);
-    $('qs-replay-sub').textContent = state.replay.waiting ? 'Waiting for a game'
+    $('replay-sec').classList.toggle('restarting', !!state.replayRestarting);
+    $('qs-replay-sub').textContent = state.replayRestarting ? 'Restarting with your new settings\u2026'
+      : state.replay.waiting ? 'Waiting for a game'
       : on ? `On \u00b7 keeping the last ${replayLength()}`
       : 'Off \u00b7 save great moments after they happen';
     renderStatus();
@@ -1074,12 +1076,20 @@
   // Settings that change what's captured restart the buffer (it starts again from now).
   const CAPTURE_KEYS = ['work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks'];
   let replayRestart = null;
+  // Shown in amber while Echoes restarts for a settings change (it starts again from now).
   function restartReplay() {
     if (!state.replay.on || state.phase !== 'idle') return;
     clearTimeout(replayRestart);
+    state.replayRestarting = true;
+    renderReplay();
     replayRestart = setTimeout(async () => {
-      await setReplay(false, false);
-      await setReplay(true, false);
+      try {
+        await setReplay(false, false);
+        await setReplay(true, false);
+      } finally {
+        state.replayRestarting = false;
+        renderReplay();
+      }
     }, 400);
   }
   async function saveReplay(seconds) {

@@ -1,15 +1,11 @@
-## Encore 0.9.1 (beta), test build 22: Echoes
+## Encore 0.9.2 (beta), test build 23: Echoes restart shown in amber
 
 ### What's changed
-- **Instant replay is now Echoes.** Encore quietly keeps the last few minutes, and **Save an Echo**
-  keeps a great moment after it happens. Saved clips are tagged *Echo*.
-- **A calmer Echoes panel** (top left): click the glowing icon to turn Echoes on or off, pick how
-  much to keep, and Save an Echo (the hotkey is shown on the button). Hover the length to see how
-  much disk space it uses.
-- **"Only keep Echoes while a game is running"** is now in Settings → Games (it used to sit under
-  the switch as "Also when no game is open").
-- **First-run setup** has a new last step introducing Echoes.
-- From 0.9.0: game detection. If you haven't tested it yet, the 0.9.0 checklist still applies.
+- Changing a video or audio setting restarts Echoes (it starts again from now). That's now shown in
+  **amber**, in the status panel and the Echoes panel ("Restarting with your new settings"), instead
+  of Echoes looking like it switched off.
+- Do not disturb is no longer listed in the status panel; its button in the bottom left shows it.
+- From 0.9.1: instant replay is now **Echoes**. From 0.9.0: game detection.
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.9.1).
+Update from inside Encore (≡ → Help → Update to 0.9.2).

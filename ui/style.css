@@ -712,7 +712,8 @@ input[type="range"].vol { width: 120px; flex: none; accent-color: var(--acc); cu
 .status .acc .sd { background: var(--acc); box-shadow: 0 0 6px rgba(88, 101, 242, .8); }
 .status .rec .sd { background: var(--red); box-shadow: 0 0 6px rgba(242, 63, 67, .8); animation: blink 1.6s ease-in-out infinite; }
 .status .rec .st { color: #ff9a9d; }
-.status .quiet .sd { background: #ff7a7e; box-shadow: 0 0 6px rgba(255, 92, 97, .7); }
+.status .warn .sd { background: var(--warn); box-shadow: 0 0 6px rgba(240, 178, 50, .75); animation: blink 1.2s ease-in-out infinite; }
+.status .warn .sv { color: #f3c96b; }
 @keyframes blink { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .status .rec .sd { animation: none; } }
 .divider { width: 100%; max-width: 1060px; height: 1px; margin: 30px 0 4px; flex: none; background: linear-gradient(90deg, transparent, var(--line2) 18%, var(--line2) 70%, transparent); }
@@ -838,3 +839,5 @@ body.gd-game:not(.recording) #picks .pick.on, body.gd-game:not(.recording) #pick
 .sbody .kbd, .snote .kbd { font-size: 12px; font-weight: 600; color: #c9ceff; padding: 1px 6px; border-radius: 4px; background: rgba(138, 150, 255, .14); white-space: nowrap; }
 .hrow > span { white-space: nowrap; }
 .hrow .sortbtn { flex: 0 1 auto; min-width: 0; }
+#replay-sec.restarting .esub { color: #f3c96b; }
+#replay-sec.restarting .echo-btn svg { stroke: #f6cf7a; filter: drop-shadow(0 0 2px rgba(240, 178, 50, .9)) drop-shadow(0 0 7px rgba(240, 178, 50, .5)); }

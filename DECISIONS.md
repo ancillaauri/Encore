@@ -442,3 +442,6 @@ Agreed design for game detection (to build next):
   running" (the opposite way round, so it says what it limits); same setting underneath.
 - First-run setup gets a fourth step introducing Echoes ("Never miss a moment"), with a switch
   (on) and the length.
+- 0.9.2: while Echoes restarts for a settings change, its status line and panel turn amber
+  ("Restarting with your new settings"), and the icon stays on. Do not disturb is no longer in the
+  status panel (its button is always visible); it may come back in a small always-on-top remote.
