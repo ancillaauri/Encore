@@ -780,24 +780,6 @@ mod win {
         unsafe { h2u(GetForegroundWindow()) }
     }
 
-    /// Full path of a process's program file ("" if Windows won't say, e.g. some protected games).
-    fn process_path(pid: u32) -> String {
-        unsafe {
-            let hp = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION as _, 0, pid);
-            if hp.is_null() {
-                return String::new();
-            }
-            let mut buf = vec![0u16; 1024];
-            let mut size = buf.len() as u32;
-            let ok = QueryFullProcessImageNameW(hp, 0, buf.as_mut_ptr(), &mut size);
-            CloseHandle(hp);
-            if ok == 0 {
-                return String::new();
-            }
-            String::from_utf16_lossy(&buf[..size as usize])
-        }
-    }
-
     /// Visible top-level windows of other programs, for game detection. Same filters as
     /// `list_windows`, plus where each one sits and whether it fills its monitor.
     pub fn top_windows() -> Vec<TopWindow> {
