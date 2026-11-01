@@ -30,6 +30,8 @@ struct Proc {
 
 pub struct Active {
     proc: Proc,
+    /// Instant replay: audio pieces before this frame may be deleted (None: a normal recording).
+    roll: Option<Arc<std::sync::atomic::AtomicU64>>,
     /// A part on another monitor that is starting up; it takes over once FFmpeg reports progress.
     pending: Option<Proc>,
     /// Parts that were taken over and are finishing their last segment.
@@ -209,8 +211,12 @@ pub fn start(
     preferred: Option<Pipeline>,
     audio_opts: &AudioOptions,
     audio_offset_ms: i32,
+    replay: bool,
 ) -> Result<Active, String> {
-    let session = format!("rec-{}", unix_ms());
+    // Replay sessions keep only the last few minutes and are never saved whole.
+    let session = format!("{}-{}", if replay { "replay" } else { "rec" }, unix_ms());
+    let roll = if replay { Some(Arc::new(std::sync::atomic::AtomicU64::new(0))) } else { None };
+    let audio_opts = &AudioOptions { roll_keep_from: roll.clone(), ..audio_opts.clone() };
     let seg_dir = temp_root.join(&session);
     let order: Vec<Pipeline> = match preferred {
         Some(Pipeline::Download) => vec![Pipeline::Download],
@@ -250,6 +256,7 @@ pub fn start(
                 let clocks = vec![proc.clock.clone()];
                 return Ok(Active {
                     proc,
+                    roll,
                     pending: None,
                     retiring: Vec::new(),
                     clocks,
@@ -421,6 +428,52 @@ impl Active {
         log(&format!("switched to part {} ({:?})", self.proc.index, self.proc.target));
         self.retiring.push(std::thread::spawn(move || finish_proc(old)));
         Some(SwitchEvent::Switched(self.proc.target))
+    }
+
+    pub fn is_replay(&self) -> bool {
+        self.roll.is_some()
+    }
+
+    /// The session's manifest as it stands, with each part's latest start time.
+    pub fn snapshot(&self) -> Manifest {
+        let mut m = self.manifest.lock().unwrap().clone();
+        for (i, c) in self.clocks.iter().enumerate() {
+            if let (Some(p), Some(start)) = (m.parts.get_mut(i), c.lock().unwrap().start_hns()) {
+                p.start_hns = Some(start);
+            }
+        }
+        m
+    }
+
+    /// Instant replay: deletes video and audio from before `keep_from` (a time on the shared clock).
+    pub fn prune(&self, keep_from: u64) {
+        let Some(roll) = &self.roll else { return };
+        let m = self.snapshot();
+        for p in m.parts.iter() {
+            let Some(start) = p.start_hns else { continue };
+            for (k, path) in indexed_segments(&self.seg_dir, &p.prefix) {
+                if start + (k + 1) * SEGMENT_HNS < keep_from {
+                    let _ = std::fs::remove_file(path);
+                }
+            }
+        }
+        let frames = timeline::hns_to_frames(keep_from as i64 - m.origin_hns as i64).max(0) as u64;
+        roll.store(frames, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Stops everything and deletes the session (turning instant replay off).
+    pub fn discard(mut self) {
+        let end = platform::now_hns();
+        let mut procs: Vec<Proc> = self.pending.take().into_iter().collect();
+        procs.push(self.proc);
+        let handles: Vec<JoinHandle<()>> = procs.into_iter().map(|p| std::thread::spawn(move || finish_proc(p))).collect();
+        for t in handles.into_iter().chain(self.retiring.drain(..)) {
+            let _ = t.join();
+        }
+        if let Some(a) = self.audio.take() {
+            a.stop(end);
+        }
+        let _ = std::fs::remove_dir_all(&self.seg_dir);
     }
 
     /// Asks FFmpeg to finish cleanly, waits, then joins the segments into the final file.
@@ -661,7 +714,15 @@ pub fn leftover_sessions(temp_root: &Path) -> Vec<PathBuf> {
         .map(|rd| {
             rd.filter_map(|e| e.ok())
                 .map(|e| e.path())
-                .filter(|p| p.is_dir() && !segments(p).is_empty())
+                .filter(|p| {
+                    // An instant replay buffer left by a crash is just deleted: nobody asked to keep it.
+                    let replay = p.file_name().map(|n| n.to_string_lossy().starts_with("replay-")).unwrap_or(false);
+                    if replay && p.is_dir() {
+                        let _ = std::fs::remove_dir_all(p);
+                        return false;
+                    }
+                    p.is_dir() && !segments(p).is_empty()
+                })
                 .collect()
         })
         .unwrap_or_default()

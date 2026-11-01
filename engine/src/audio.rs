@@ -83,6 +83,9 @@ pub struct AudioOptions {
     pub mic_device: String,
     pub app_tracks: bool,
     pub max_app_tracks: usize,
+    /// Instant replay: write each track in 10-second pieces, deleting pieces that end before this
+    /// frame position (kept up to date by the engine). None: one plain file per track.
+    pub roll_keep_from: Option<Arc<AtomicU64>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -290,14 +293,25 @@ mod win {
     }
 
     /// Captures one source until told to stop, writing it onto its timeline.
-    fn capture(source: Source, file: PathBuf, title: String, origin: u64, stop: Arc<AtomicBool>, stop_at: Arc<AtomicU64>) {
+    fn capture(
+        source: Source,
+        file: PathBuf,
+        title: String,
+        origin: u64,
+        stop: Arc<AtomicBool>,
+        stop_at: Arc<AtomicU64>,
+        roll: Option<Arc<AtomicU64>>,
+    ) {
         let _ = initialize_mta();
-        let out = match std::fs::File::create(&file) {
-            Ok(f) => BufWriter::with_capacity(256 * 1024, f),
-            Err(err) => {
-                log(&format!("audio {title}: cannot create {}: {err}", file.display()));
-                return;
-            }
+        let out: Box<dyn std::io::Write + Send> = match roll {
+            Some(keep_from) => Box::new(crate::timeline::ChunkedWriter::new(file.clone(), keep_from)),
+            None => match std::fs::File::create(&file) {
+                Ok(f) => Box::new(BufWriter::with_capacity(256 * 1024, f)),
+                Err(err) => {
+                    log(&format!("audio {title}: cannot create {}: {err}", file.display()));
+                    return;
+                }
+            },
         };
         let mut timeline = Timeline::new(origin, out);
         let result = (|| -> Result<(), String> {
@@ -358,10 +372,11 @@ mod win {
         origin: u64,
         stop: &Arc<AtomicBool>,
         stop_at: &Arc<AtomicU64>,
+        roll: &Option<Arc<AtomicU64>>,
     ) {
-        let (stop, stop_at) = (stop.clone(), stop_at.clone());
+        let (stop, stop_at, roll) = (stop.clone(), stop_at.clone(), roll.clone());
         let name = format!("audio-{title}");
-        match std::thread::Builder::new().name(name).spawn(move || capture(source, file, title, origin, stop, stop_at)) {
+        match std::thread::Builder::new().name(name).spawn(move || capture(source, file, title, origin, stop, stop_at, roll)) {
             Ok(h) => threads.lock().unwrap().push(h),
             Err(err) => log(&format!("could not start audio thread: {err}")),
         }
@@ -449,11 +464,11 @@ mod win {
 
         if opts.full_mix {
             let (file, title) = add_track(dir, &manifest, "Desktop audio".into(), TrackKind::FullMix);
-            spawn(&threads, Source::FullMix, file, title, origin_hns, &stop, &stop_at);
+            spawn(&threads, Source::FullMix, file, title, origin_hns, &stop, &stop_at, &opts.roll_keep_from);
         }
         if opts.mic {
             let (file, title) = add_track(dir, &manifest, "Microphone".into(), TrackKind::Mic);
-            spawn(&threads, Source::Mic(opts.mic_device.clone()), file, title, origin_hns, &stop, &stop_at);
+            spawn(&threads, Source::Mic(opts.mic_device.clone()), file, title, origin_hns, &stop, &stop_at, &opts.roll_keep_from);
         }
 
         // Watches for apps making sound and gives each its own track (checked every half second).
@@ -461,6 +476,7 @@ mod win {
             let (dir, manifest, threads, stop2, stop_at2) =
                 (dir.to_path_buf(), manifest.clone(), threads.clone(), stop.clone(), stop_at.clone());
             let max = opts.max_app_tracks;
+            let roll = opts.roll_keep_from.clone();
             std::thread::Builder::new()
                 .name("audio-apps".into())
                 .spawn(move || {
@@ -486,7 +502,7 @@ mod win {
                                     let (file, title) = add_track(&dir, &manifest, app.title.clone(), TrackKind::App);
                                     log(&format!("app track: {title} (pid {}, {})", app.pid, app.exe));
                                     send_event("audio_app_added", json!({ "title": title, "exe": app.exe }));
-                                    spawn(&threads, Source::App(app.pid), file, title, origin_hns, &stop2, &stop_at2);
+                                    spawn(&threads, Source::App(app.pid), file, title, origin_hns, &stop2, &stop_at2, &roll);
                                 }
                             }
                             Err(err) => log(&format!("audio app scan failed: {err}")),

@@ -94,7 +94,8 @@ pub fn set_recording_state(app: AppHandle, recording: bool, label: Option<String
     if let Some(item) = state.record_item.lock().unwrap().as_ref() {
         let _ = item.set_text(if recording { "Stop and save recording" } else { "Start recording" });
     }
-    if let Some(tray) = state.tray.lock().unwrap().as_ref() {
+    let tray_guard = state.tray.lock().unwrap();
+    if let Some(tray) = tray_guard.as_ref() {
         let icon = if recording {
             Image::from_bytes(RECORDING_ICON).ok()
         } else {

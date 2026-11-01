@@ -295,6 +295,7 @@ impl Engine {
             mic_device: self.settings.mic_device.clone(),
             app_tracks: self.settings.audio_app_tracks,
             max_app_tracks: 8,
+            roll_keep_from: None,
         };
 
         let active = recorder::start(
@@ -308,6 +309,7 @@ impl Engine {
             preferred,
             &audio_opts,
             self.settings.audio_offset_ms,
+            false,
         )?;
         self.known_pipeline.insert(encoder.name(), active.pipeline);
         let info = json!({

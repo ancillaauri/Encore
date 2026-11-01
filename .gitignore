@@ -6,3 +6,4 @@
 /src-tauri/resources/FFMPEG-LICENSE.txt
 /src-tauri/gen
 *.log
+/src-tauri/binaries/encore-engine-x86_64-unknown-linux-gnu
