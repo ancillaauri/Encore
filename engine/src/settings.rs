@@ -74,7 +74,16 @@ pub struct Settings {
     pub replay_on: bool,
     /// Global hotkey to save the replay; empty = none. Read by the shell.
     pub hotkey_save_replay: String,
+    /// Global hotkeys to save just the last 30 seconds / 1 minute / the custom length.
+    pub hotkey_save_30s: String,
+    pub hotkey_save_60s: String,
+    pub hotkey_save_custom: String,
+    /// Length saved by the custom hotkey, in seconds (capped at the replay length when saving).
+    pub replay_custom_seconds: u32,
 }
+
+/// Shortest and longest custom save length.
+pub const CUSTOM_SECONDS: std::ops::RangeInclusive<u32> = 5..=1200;
 
 /// Replay lengths offered: 30 s to 20 minutes.
 pub const REPLAY_SECONDS: [u32; 7] = [30, 60, 120, 300, 600, 900, 1200];
@@ -103,6 +112,10 @@ impl Default for Settings {
             replay_seconds: 120,
             replay_on: false,
             hotkey_save_replay: "Ctrl+Alt+S".into(),
+            hotkey_save_30s: "Ctrl+Alt+1".into(),
+            hotkey_save_60s: "Ctrl+Alt+2".into(),
+            hotkey_save_custom: "Ctrl+Alt+3".into(),
+            replay_custom_seconds: 90,
         }
     }
 }
@@ -160,8 +173,13 @@ impl Settings {
         if !REPLAY_SECONDS.contains(&updated.replay_seconds) {
             return Err(format!("Replay length must be one of {:?} seconds", REPLAY_SECONDS));
         }
-        if updated.hotkey_save_replay.len() > 64 {
-            return Err("Hotkey is too long".into());
+        for k in [&updated.hotkey_save_replay, &updated.hotkey_save_30s, &updated.hotkey_save_60s, &updated.hotkey_save_custom] {
+            if k.len() > 64 {
+                return Err("Hotkey is too long".into());
+            }
+        }
+        if !CUSTOM_SECONDS.contains(&updated.replay_custom_seconds) {
+            return Err("Custom length must be between 5 seconds and 20 minutes".into());
         }
         if updated.hotkey_record.len() > 64 {
             return Err("Hotkey is too long".into());
@@ -188,6 +206,9 @@ impl Settings {
         }
         if !REPLAY_SECONDS.contains(&self.replay_seconds) {
             self.replay_seconds = 120;
+        }
+        if !CUSTOM_SECONDS.contains(&self.replay_custom_seconds) {
+            self.replay_custom_seconds = 90;
         }
         // Not set up yet and still on an old guessed default: use the real Videos folder (it may be
         // on another drive or in OneDrive, where the guess made a new, empty folder).
@@ -261,5 +282,7 @@ mod tests {
         assert_eq!(s.hotkey_record, "Ctrl+Alt+R");
         assert_eq!((s.replay_seconds, s.replay_on), (120, false));
         assert_eq!(s.hotkey_save_replay, "Ctrl+Alt+S");
+        assert_eq!((s.hotkey_save_30s.as_str(), s.hotkey_save_60s.as_str(), s.hotkey_save_custom.as_str()), ("Ctrl+Alt+1", "Ctrl+Alt+2", "Ctrl+Alt+3"));
+        assert_eq!(s.replay_custom_seconds, 90);
     }
 }

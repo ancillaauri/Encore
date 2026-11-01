@@ -1,34 +1,28 @@
-## Encore 0.7.3 (beta), test build 11: smooth game recordings, without the hassle
+## Encore 0.7.4 (beta), test build 12: save-length hotkeys
 
 ### What's new
-- **Game stutter is fixed.** When a game uses all of your graphics card, Encore now gets priority
-  for the recording, so clips stay smooth (tested: Warframe at 120 fps, every frame captured).
-  This needs Encore to run as administrator.
-- **Start Encore as administrator** (Settings → General). Turn it on and Windows asks for
-  permission once. After that Encore always opens with admin rights, with no prompt. Turning it off
-  asks once more and puts things back as they were.
-  - New installs are offered it during setup ("Smooth game recordings").
-  - If you ticked "Run this program as an administrator" in Encore's Properties for testing, untick
-    it: the setting replaces it, and that box makes Windows ask every time.
-- **Update checks** try again by themselves if GitHub can't be reached, and the message is plainer.
+- **Save just the bit you want.** New hotkeys for instant replay (Settings → Hotkeys):
+  - **Ctrl+Alt+1**: save the last 30 seconds
+  - **Ctrl+Alt+2**: save the last minute
+  - **Ctrl+Alt+3**: save a custom length you choose (in seconds or minutes, up to 20 minutes)
+  - **Ctrl+Alt+S** still saves the whole replay length.
+  A save can't be longer than the replay length set in the left panel; if the custom length is
+  longer, Settings says so and it saves the whole replay instead. Each hotkey can be changed or
+  cleared.
+- Turning on "Start Encore as administrator" while Encore already has admin rights now confirms it
+  (it used to say nothing).
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.7.3). Otherwise download
-`Encore_0.7.3_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
-**More info**, then **Run anyway**.
+Update from inside Encore (≡ → Help → Update to 0.7.4). Encore restarts with admin rights
+automatically if "Start Encore as administrator" is on.
 
 ### Test checklist
-1. Untick "Run this program as an administrator" in Encore's Properties (Compatibility tab).
-2. Quit Encore from the tray and open it. ≡ → File should show **Restart as Administrator**.
-3. Settings → General → turn on **Start Encore as administrator**. Windows asks once; say yes.
-   Click **Restart now**: Encore should reopen with no prompt, and Restart as Administrator should
-   be gone from ≡ → File.
-4. Quit from the tray and open Encore again: no prompt, still elevated.
-5. Record uncapped Warframe for 20 seconds: smooth, no warning.
-6. Turn the setting off (Windows asks once). Quit and open: normal start, Restart as Administrator
-   is back.
-7. Say **No** to the Windows prompt once: Encore should say nothing was changed.
+1. Turn instant replay on, play for 2 minutes, then press Ctrl+Alt+1, Ctrl+Alt+2 and Ctrl+Alt+3:
+   three files of about 30 seconds, 1 minute and 90 seconds.
+2. Set the custom length to 5 minutes with a 2-minute replay: Settings should warn, and Ctrl+Alt+3
+   should save 2 minutes.
+3. Hotkeys inside a League match (with Encore running as administrator).
+4. After updating: Encore should reopen with admin rights and no prompt.
 
 ### What to send back
-Worked / didn't work for each step, any message Encore showed, and the log
-(`%LOCALAPPDATA%\Encore\logs\engine.log`) if something failed.
+Worked / didn't work for each step, and the log if something failed.

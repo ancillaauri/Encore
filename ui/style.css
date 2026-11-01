@@ -312,7 +312,7 @@ body.side-collapsed .sidetoggle:hover .tg-lib { opacity: 0; transform: scale(.85
 body.side-collapsed .sidetoggle:hover .tg-open { opacity: 1; transform: none; color: #fff; }
 
 /* ---------- controls ---------- */
-input[type="text"] {
+input[type="text"], input[type="number"] {
   width: 100%;
   min-width: 0;
   background: var(--panel2);
@@ -322,7 +322,12 @@ input[type="text"] {
   outline: none;
   user-select: text;
 }
-input[type="text"]:focus { border-color: var(--acc); }
+input[type="text"]:focus, input[type="number"]:focus { border-color: var(--acc); }
+input[type="number"] { color: var(--text); font: inherit; font-size: 13px; height: 32px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.custom-len { display: flex; align-items: center; gap: 6px; flex: none; }
+.custom-len input { width: 56px; text-align: center; }
+.setsub.warn { color: var(--warn); }
 .with-button { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-auto-flow: column; gap: 6px; align-items: center; }
 
 .btn {

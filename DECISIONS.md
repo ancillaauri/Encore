@@ -297,3 +297,9 @@ Both have hardware-accelerated GPU scheduling on.
 - Hotkeys didn't work in a League match. Other recorders report the same, fixed by running as
   administrator (the match most likely runs with raised rights, which blocks keys from a non-admin
   app). To confirm with "Start Encore as administrator" on.
+
+## 2026-11-01: Save-length hotkeys (0.7.4)
+- As well as Save replay (the whole replay length), three hotkeys save just the last 30 seconds
+  (Ctrl+Alt+1), the last minute (Ctrl+Alt+2) or a custom length (Ctrl+Alt+3, default 90 seconds,
+  5 seconds to 20 minutes, set in seconds or minutes). A save never goes past the replay length;
+  Settings says so when the custom length is longer. All four save from the same buffer.

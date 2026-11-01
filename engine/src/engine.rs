@@ -195,7 +195,7 @@ impl Engine {
                 self.stop_replay();
                 Ok(self.status())
             }
-            "save_replay" => self.save_replay(),
+            "save_replay" => self.save_replay(&c.args),
             "shutdown" => {
                 send(&reply_ok(id, json!({})));
                 self.shutdown();
@@ -425,16 +425,19 @@ impl Engine {
         }
     }
 
-    /// Saves the last `replay_seconds` without stopping the buffer.
-    fn save_replay(&mut self) -> Result<Value, String> {
+    /// Saves the last `seconds` (from args; the whole replay length if not given, and never more
+    /// than it) without stopping the buffer.
+    fn save_replay(&mut self, args: &Value) -> Result<Value, String> {
         let Some(a) = self.active.as_ref().filter(|a| a.is_replay()) else {
             return Err("Instant replay is off. Turn it on first.".into());
         };
+        let max = self.settings.replay_seconds;
+        let seconds = args.get("seconds").and_then(|v| v.as_u64()).map(|s| (s as u32).clamp(1, max)).unwrap_or(max);
         let to = platform::now_hns();
-        let from = to.saturating_sub(self.settings.replay_seconds as u64 * 10_000_000);
+        let from = to.saturating_sub(seconds as u64 * 10_000_000);
         let out_path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &a.label, platform::local_time());
         self.save_in_background(from, to, out_path, a.label.clone(), true);
-        Ok(json!({ "saving": true }))
+        Ok(json!({ "saving": true, "seconds": seconds }))
     }
 
     /// Joins `from..to` of the replay session into `out_path` on a worker thread, so the capture

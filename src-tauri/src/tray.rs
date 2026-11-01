@@ -27,7 +27,13 @@ pub struct ShellState {
 }
 
 /// Each hotkey setting and the action its press sends to the interface.
-const HOTKEYS: [(&str, &str); 2] = [("hotkey_record", "toggle_record"), ("hotkey_save_replay", "save_replay")];
+const HOTKEYS: [(&str, &str); 5] = [
+    ("hotkey_record", "toggle_record"),
+    ("hotkey_save_replay", "save_replay"),
+    ("hotkey_save_30s", "save_replay_30"),
+    ("hotkey_save_60s", "save_replay_60"),
+    ("hotkey_save_custom", "save_replay_custom"),
+];
 
 pub fn show_window(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {

@@ -9,7 +9,8 @@
     stopRecording: () => call('stop_recording'),
     startReplay: (source) => call('start_replay', source),
     stopReplay: () => call('stop_replay'),
-    saveReplay: () => call('save_replay'),
+    // seconds: how much to save (the whole replay length if left out)
+    saveReplay: (seconds) => call('save_replay', seconds ? { seconds } : {}),
     getStatus: () => call('get_status'),
     getSettings: () => call('get_settings'),
     setSettings: (patch) => call('set_settings', patch),

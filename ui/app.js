@@ -949,15 +949,15 @@
       await setReplay(true, false);
     }, 400);
   }
-  async function saveReplay() {
+  async function saveReplay(seconds) {
     if (!state.replay.on) { toast('Turn on instant replay first (left panel).', 'warning', 5000); return; }
     try {
-      await bridge.saveReplay();
+      await bridge.saveReplay(seconds);
       playCue('save');
     } catch (e) { toast(String(e), 'error', 10000); }
   }
   $('replay-on').addEventListener('change', (e) => setReplay(e.target.checked));
-  $('save-replay').addEventListener('click', saveReplay);
+  $('save-replay').addEventListener('click', () => saveReplay());
 
   // ---------- tray, hotkeys, sounds ----------
   // A short tone pair: rising when recording starts, falling when it stops.
@@ -1006,7 +1006,41 @@
     });
     document.querySelectorAll('[data-close-to-tray]').forEach((o) =>
       o.setAttribute('aria-checked', String((o.dataset.closeToTray === 'true') === !!s.close_to_tray)));
+    renderCustomLength();
   }
+  // Custom save length: shown in minutes when it's a whole number of minutes, else in seconds.
+  function lengthText(sec) {
+    if (sec % 60 === 0) return sec === 60 ? '1 minute' : `${sec / 60} minutes`;
+    return sec < 60 ? `${sec} seconds` : `${Math.floor(sec / 60)} min ${sec % 60} s`;
+  }
+  function renderCustomLength() {
+    const s = state.settings;
+    if (!s) return;
+    const sec = s.replay_custom_seconds || 90;
+    const box = $('custom-len');
+    if (document.activeElement !== box) {
+      const unit = sec % 60 === 0 && sec >= 60 ? 60 : 1;
+      $('custom-unit').value = String(unit);
+      box.value = String(sec / unit);
+    }
+    const max = s.replay_seconds;
+    $('custom-len-note').textContent = sec > max
+      ? `Longer than your replay length, so it saves ${lengthText(max)}`
+      : `Saves the last ${lengthText(sec)}`;
+    $('custom-len-note').classList.toggle('warn', sec > max);
+  }
+  async function saveCustomLength() {
+    const unit = Number($('custom-unit').value) || 1;
+    let sec = Math.round(Number($('custom-len').value) * unit);
+    if (!Number.isFinite(sec) || sec < 5) sec = 5;
+    if (sec > 1200) sec = 1200;
+    if (state.settings && sec !== state.settings.replay_custom_seconds) await saveSetting('replay_custom_seconds', sec);
+    $('custom-len').blur();
+    renderCustomLength();
+  }
+  $('custom-len').addEventListener('change', saveCustomLength);
+  $('custom-len').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveCustomLength(); } });
+  $('custom-unit').addEventListener('change', saveCustomLength);
   const KEY_NAMES = { ' ': 'Space', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Escape: 'Esc' };
   function comboFrom(e) {
     const mods = [];
@@ -1062,6 +1096,8 @@
   window.addEventListener('blur', stopListening);
   document.addEventListener('pointerdown', (e) => { if (listening && e.target !== listening) stopListening(); }, true);
   $('hotkey-record-clear').addEventListener('click', () => { stopListening(); saveHotkey('hotkey_record', ''); });
+  document.querySelectorAll('[data-hotkey-clear]').forEach((b) =>
+    b.addEventListener('click', () => { stopListening(); saveHotkey(b.dataset.hotkeyClear, ''); }));
   document.querySelectorAll('[data-close-to-tray]').forEach((o) => o.addEventListener('click', async () => {
     await saveSetting('close_to_tray', o.dataset.closeToTray === 'true');
     bridge.applyShellSettings().catch(() => {});
@@ -1069,10 +1105,12 @@
   }));
   bridge.onHotkey((action) => {
     if (action === 'save_replay') { saveReplay(); return; }
+    if (action === 'save_replay_30') { saveReplay(30); return; }
+    if (action === 'save_replay_60') { saveReplay(60); return; }
+    if (action === 'save_replay_custom') { saveReplay(state.settings ? state.settings.replay_custom_seconds : 90); return; }
     if (action !== 'toggle_record') return;
     if (state.phase === 'idle' || state.phase === 'recording') toggleRecording();
   });
-  $('hotkey-replay-clear').addEventListener('click', () => { stopListening(); saveHotkey('hotkey_save_replay', ''); });
 
   // ---------- first-run setup ----------
   const BPP = { high: 0.30, medium: 0.18, low: 0.10 }; // same as the engine (ffmpeg::bitrate_kbps)
