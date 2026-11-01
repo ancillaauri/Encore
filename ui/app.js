@@ -1633,7 +1633,8 @@
     if (!test && (!s.notifications || s.do_not_disturb || !s[NOTIFY_KEYS[kind]] || document.hasFocus())) return;
     const id = s.notify_screen.startsWith('id:') ? s.notify_screen.slice(3) : null;
     const m = id && monitorById(id);
-    bridge.showNotification(m ? m.device : null, s.notify_pos, { kind, title, text: text || '', seconds: s.notify_seconds })
+    const g = gameActive();
+    bridge.showNotification(m ? m.device : null, g ? g.handle : null, s.notify_pos, { kind, title, text: text || '', seconds: s.notify_seconds })
       .catch((e) => { if (test) toast(String(e), 'error'); });
   }
 

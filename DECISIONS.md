@@ -555,3 +555,11 @@ Agreed design for game detection (to build next):
   graphics card, so Encore can't keep up. Capping the game's frame rate a little below your
   monitor's usually fixes it." (plus "Settings → Advanced has a stronger option." in Encore when
   it's off), and as a Problems notification.
+- 0.9.11, notifications seen only some of the time (Warframe): the log showed every one sent and
+  drawn, but (1) nearly all went to the other screen: "the screen you're using" came from the
+  window in front, which wasn't always Warframe; and (2) twice the page waited 3.3 s to draw,
+  paused because WebView2 thought the window hidden, so the card never faded in. Now the screen
+  in use is the screen of the game being recorded (its window, from game detection), then the
+  window in front. Both windows run WebView2 with native occlusion and background throttling off
+  (same arguments on both, so they share one WebView2). The window only hides when the page has
+  had every notification sent (a new one arriving as the last faded could be hidden).

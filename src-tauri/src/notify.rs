@@ -19,6 +19,16 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 pub const LABEL: &str = "notify";
 
+/// How many notifications have been sent to the page. The page reports how many it has had when
+/// it goes idle; if one more was sent meanwhile, the window stays up for it.
+static SENT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// WebView2 options for both of Encore's windows (they must match to share one WebView2). The
+/// usual ones, plus: keep drawing when Windows thinks the window is hidden or covered. Without
+/// them the notification page was sometimes paused for seconds after being shown over a game,
+/// so the notification never appeared.
+pub const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows";
+
 /// Room for the card (or tab) and its glow, in logical pixels. Matches ui/notify.html.
 const CARD_W: f64 = 400.0;
 const TAB_W: f64 = 350.0;
@@ -40,6 +50,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         .always_on_top(true)
         .skip_taskbar(true)
         .focused(false)
+        .additional_browser_args(BROWSER_ARGS)
         // Created shown (off screen, and empty, so nothing is seen) and then hidden directly:
         // a page created hidden isn't drawn when the window is later shown without focus.
         .position(-32000.0, -32000.0)
@@ -63,11 +74,11 @@ pub struct Screen {
 }
 
 /// Shows one notification. `device` is the chosen screen's Windows name ("\\.\DISPLAY2"), or
-/// None for the screen in use (the one holding the window in front, normally the game); a screen
-/// that isn't connected falls back to that too. `item` goes to the page as it is (kind, title,
-/// text, seconds).
+/// None for the screen in use: the screen of `window` (the game being recorded) if given, else
+/// the one holding the window in front. A screen that isn't connected falls back the same way.
+/// `item` goes to the page as it is (kind, title, text, seconds).
 #[tauri::command]
-pub fn show_notification(app: AppHandle, device: Option<String>, pos: String, item: Value) -> Result<(), String> {
+pub fn show_notification(app: AppHandle, device: Option<String>, window: Option<u64>, pos: String, item: Value) -> Result<(), String> {
     let win = app.get_webview_window(LABEL).ok_or("The notification window isn't ready.")?;
     let monitors = app.available_monitors().unwrap_or_default();
     let chosen = device.and_then(|d| monitors.iter().find(|m| m.name().map(|n| n == &d).unwrap_or(false)));
@@ -75,7 +86,9 @@ pub fn show_notification(app: AppHandle, device: Option<String>, pos: String, it
         Some(m) => Some(Screen { x: m.position().x, y: m.position().y, width: m.size().width, height: m.size().height }),
         None => {
             #[cfg(windows)]
-            let s = win::screen_in_use();
+            let s = window.and_then(win::screen_of_window).or_else(win::screen_in_use);
+            #[cfg(not(windows))]
+            let _ = window;
             #[cfg(not(windows))]
             let s = None;
             s
@@ -96,7 +109,9 @@ pub fn show_notification(app: AppHandle, device: Option<String>, pos: String, it
         win::show_at(hwnd.0 as _, x, y, w, h);
     }
     let kind = item.get("kind").and_then(|k| k.as_str()).unwrap_or("?").to_string();
-    crate::hotkeys::note(&app, format!("notification {kind}: window shown at {x},{y} {w}x{h} ({pos}, scale {scale}) in {} ms", started.elapsed().as_millis()));
+    let on = if chosen.is_some() { "chosen screen" } else if window.is_some() { "game's screen" } else { "screen in use" };
+    crate::hotkeys::note(&app, format!("notification {kind}: window shown at {x},{y} {w}x{h} ({pos}, scale {scale}, {on}) in {} ms", started.elapsed().as_millis()));
+    SENT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     win.emit_to(LABEL, "notify", serde_json::json!({ "pos": pos, "item": item })).map_err(|e| e.to_string())
 }
 
@@ -106,9 +121,12 @@ pub fn notification_drawn(app: AppHandle, kind: String, waited_ms: u64) {
     crate::hotkeys::note(&app, format!("notification {kind}: drawn {waited_ms} ms after it arrived"));
 }
 
-/// Called by the page when its last notification has faded.
+/// Called by the page when its last notification has faded. `seen`: how many it has had.
 #[tauri::command]
-pub fn notifications_idle(app: AppHandle) {
+pub fn notifications_idle(app: AppHandle, seen: u64) {
+    if seen < SENT.load(std::sync::atomic::Ordering::SeqCst) {
+        return; // another one is on its way
+    }
     crate::hotkeys::note(&app, "notifications: window hidden".into());
     if let Some(win) = app.get_webview_window(LABEL) {
         #[cfg(windows)]
@@ -178,8 +196,24 @@ mod win {
 
     /// The screen holding the window in front (the primary screen if there's none).
     pub fn screen_in_use() -> Option<Screen> {
+        unsafe { screen_of(GetForegroundWindow()) }
+    }
+
+    /// The screen holding a window (a game's), if the window still exists.
+    pub fn screen_of_window(handle: u64) -> Option<Screen> {
+        use windows_sys::Win32::UI::WindowsAndMessaging::IsWindow;
+        let hwnd = handle as usize as HWND;
         unsafe {
-            let mon = MonitorFromWindow(GetForegroundWindow(), MONITOR_DEFAULTTOPRIMARY);
+            if IsWindow(hwnd) == 0 {
+                return None;
+            }
+            screen_of(hwnd)
+        }
+    }
+
+    unsafe fn screen_of(hwnd: HWND) -> Option<Screen> {
+        unsafe {
+            let mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY);
             let mut info: MONITORINFO = std::mem::zeroed();
             info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
             if GetMonitorInfoW(mon, &mut info) == 0 {

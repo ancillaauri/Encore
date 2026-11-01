@@ -1,3 +1,15 @@
+## Encore 0.9.11 (beta), test build 32: notifications you can see
+
+### Fixed
+- **Notifications showing on the wrong screen.** They now go to the screen your game is on (with
+  "The screen you're using" picked in Settings → Notifications).
+- **Notifications that never appeared.** The notification window was sometimes paused by Windows
+  for a few seconds after showing, so the card never drew. It now always draws straight away.
+- A notification arriving just as the last one faded could be hidden at once.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.11).
+
 ## Encore 0.9.10 (beta), test build 31: top graphics priority
 
 ### What's new

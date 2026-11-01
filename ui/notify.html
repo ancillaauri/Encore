@@ -83,6 +83,7 @@
   const kinds = { echo: 'Echoes', record: 'Recording', saved: 'Recording', game: 'Game detection', problem: 'Encore' };
   let pos = 'tr';
   const live = []; // newest last
+  let seen = 0; // notifications received, reported when going idle
 
   function layout(p) {
     pos = p;
@@ -120,11 +121,12 @@
     n.el.classList.add('out');
     setTimeout(() => {
       n.el.remove();
-      if (!live.length && !stack.children.length) tauri.core.invoke('notifications_idle').catch(() => {});
+      if (!live.length && !stack.children.length) tauri.core.invoke('notifications_idle', { seen }).catch(() => {});
     }, 260);
   }
 
   function show({ pos: p, item }) {
+    seen++;
     if (p !== pos) {
       // Moved to another spot: start afresh there.
       for (const n of [...live]) { clearTimeout(n.timer); n.el.remove(); }
