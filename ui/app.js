@@ -1634,7 +1634,7 @@
     const id = s.notify_screen.startsWith('id:') ? s.notify_screen.slice(3) : null;
     const m = id && monitorById(id);
     const g = gameActive();
-    bridge.showNotification(m ? m.device : null, g ? g.handle : null, s.notify_pos, { kind, title, text: text || '', seconds: s.notify_seconds })
+    bridge.showNotification(m ? m.device : null, g ? g.handle : null, s.notify_pos, { kind, title, text: text || '', seconds: s.notify_seconds, size: s.notify_size || 100 })
       .catch((e) => { if (test) toast(String(e), 'error'); });
   }
 

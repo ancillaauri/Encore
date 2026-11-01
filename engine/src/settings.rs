@@ -136,7 +136,12 @@ pub struct Settings {
     /// Windows). Off: high. For games that use all of the graphics card; can freeze a PC with an
     /// unstable graphics driver, so it's opt-in.
     pub gpu_realtime: bool,
+    /// Notification size, in percent of normal (one of NOTIFY_SIZES), on top of the screen's own
+    /// scale.
+    pub notify_size: u32,
 }
+
+pub const NOTIFY_SIZES: [u32; 5] = [100, 125, 150, 175, 200];
 
 pub const NOTIFY_SPOTS: [&str; 8] = ["tl", "tc", "tr", "ml", "mr", "bl", "bc", "br"];
 pub const NOTIFY_SECONDS: std::ops::RangeInclusive<u32> = 2..=10;
@@ -207,6 +212,7 @@ impl Default for Settings {
             notify_game: true,
             notify_problems: true,
             gpu_realtime: false,
+            notify_size: 100,
         }
     }
 }
@@ -295,6 +301,9 @@ impl Settings {
         if !NOTIFY_SPOTS.contains(&updated.notify_pos.as_str()) {
             return Err("Unknown notification position".into());
         }
+        if !NOTIFY_SIZES.contains(&updated.notify_size) {
+            return Err(format!("Notification size must be one of {:?} %", NOTIFY_SIZES));
+        }
         if !NOTIFY_SECONDS.contains(&updated.notify_seconds) {
             return Err("Notifications can stay for 2 to 10 seconds".into());
         }
@@ -359,6 +368,9 @@ impl Settings {
         }
         if !NOTIFY_SPOTS.contains(&self.notify_pos.as_str()) {
             self.notify_pos = d.notify_pos.clone();
+        }
+        if !NOTIFY_SIZES.contains(&self.notify_size) {
+            self.notify_size = 100;
         }
         self.notify_seconds = self.notify_seconds.clamp(*NOTIFY_SECONDS.start(), *NOTIFY_SECONDS.end());
         if !(self.notify_screen == "game" || (self.notify_screen.starts_with("id:") && self.notify_screen.len() > 3)) {
@@ -481,6 +493,9 @@ mod tests {
         assert!(s.apply_patch(&serde_json::json!({ "notify_pos": "mr", "notify_seconds": 10 })).is_ok());
         assert!(s.apply_patch(&serde_json::json!({ "notify_pos": "middle" })).is_err());
         assert!(s.apply_patch(&serde_json::json!({ "notify_seconds": 1 })).is_err());
+        assert!(s.apply_patch(&serde_json::json!({ "notify_size": 175 })).is_ok());
+        assert!(s.apply_patch(&serde_json::json!({ "notify_size": 300 })).is_err());
+        assert_eq!(Settings::default().notify_size, 100);
         assert!(s.apply_patch(&serde_json::json!({ "notify_screen": "id:abc" })).is_ok());
         assert!(s.apply_patch(&serde_json::json!({ "notify_screen": "left" })).is_err());
         // Settings from before notifications existed, or with odd values, load with sensible ones.

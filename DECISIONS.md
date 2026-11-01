@@ -599,3 +599,9 @@ Agreed design for game detection (to build next):
   60, 80 of 120) with 2-second freezes (up to 37 % repeated frames); with top priority 0.2 %. So
   top priority is needed for games that use the whole card on this PC. The microphone track was
   silent because the headset's mute switch was on.
+- 0.9.15 tested: 2 of 2 notifications seen, smooth timer, drawn in about 60 ms; Echoes clean (60
+  fps, 0.2 % repeated). A stream on the other screen nearly froze while Warframe ran with top
+  priority: realtime capture plus an uncapped game leave other programs little graphics card time.
+- 0.9.16: Settings → Notifications → Size: Normal (1×), 1.25×, 1.5×, 1.75×, 2× (`notify_size`,
+  percent), on top of the screen's own scale; Show a test uses it. The notification appearing a
+  few seconds after the save sound (it waits for the file) is left as it is for now.

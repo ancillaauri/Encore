@@ -91,6 +91,9 @@ pub fn show_notification(app: AppHandle, device: Option<String>, window: Option<
     let get = |k: &str| item.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string();
     let kind_name = get("kind");
     let seconds = item.get("seconds").and_then(|v| v.as_f64()).unwrap_or(5.0).clamp(2.0, 10.0) as f32;
+    // The size chosen in Settings, on top of the screen's scale.
+    let size = item.get("size").and_then(|v| v.as_f64()).unwrap_or(100.0).clamp(100.0, 200.0) / 100.0;
+    let scale = scale * size;
     let on = if chosen.is_some() { "chosen screen" } else if window.is_some() { "game's screen" } else { "screen in use" };
     crate::hotkeys::note(&app, format!("notification {kind_name}: {pos} on the {on} ({},{} {}x{}, scale {scale})", screen.x, screen.y, screen.width, screen.height));
     let req = Request { screen, pos, scale, kind: Kind::parse(&kind_name), title: get("title"), text: get("text"), seconds };

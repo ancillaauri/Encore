@@ -1,3 +1,12 @@
+## Encore 0.9.16 (beta), test build 37: notification size
+
+### What's new
+- **Settings → Notifications → Size:** Normal, 1.25×, 1.5×, 1.75× or 2×. Show a test uses the
+  size you pick.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.16).
+
 ## Encore 0.9.15 (beta), test build 36: notifications drawn by Encore
 
 ### Changed
