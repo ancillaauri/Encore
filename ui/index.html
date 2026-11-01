@@ -46,7 +46,6 @@
       <div class="side-body">
         <section class="sec" id="replay-sec">
           <h2 class="lab">Instant replay</h2>
-          <label class="srow"><span>Keep the last few minutes</span><input type="checkbox" class="toggle sm" id="replay-on"></label>
           <label class="srow"><span>Length</span>
             <select class="dd" id="q-replay" data-setting="replay_seconds" data-number>
               <option value="30">30 seconds</option>
@@ -116,18 +115,48 @@
     </nav>
 
     <section class="stage" aria-label="Recording">
-      <button id="record" class="record" type="button" aria-describedby="what">
-        <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
-          <circle class="ring-track" cx="110" cy="110" r="96"/>
-          <circle id="ring-sweep" class="ring-sweep" cx="110" cy="110" r="96"/>
-        </svg>
-        <span class="dot" aria-hidden="true"></span>
-        <span id="timer" class="timer">0:00</span>
-        <span id="record-label" class="record-label">Start recording</span>
-      </button>
-      <p id="what" class="what">Records the screen you're using</p>
-      <p id="detail" class="detail"></p>
-      <p id="tracks" class="tracks" hidden></p>
+      <div class="hero">
+        <div class="hero-side hero-left">
+          <h2 class="hlab">Switches</h2>
+          <label class="qs" title="Keeps the last few minutes so you can save great moments after they happen">
+            <span class="qs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/></svg></span>
+            <span class="qs-text"><span class="qs-name">Instant replay</span><span class="qs-sub" id="qs-replay-sub">Off</span></span>
+            <input type="checkbox" class="toggle sm" id="replay-on">
+          </label>
+          <label class="qs soon" title="Arrives in the next update">
+            <span class="qs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/></svg></span>
+            <span class="qs-text"><span class="qs-name">Game detection</span><span class="qs-sub">Next update</span></span>
+            <input type="checkbox" class="toggle sm" disabled>
+          </label>
+          <label class="qs soon" title="Arrives with notifications">
+            <span class="qs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg></span>
+            <span class="qs-text"><span class="qs-name">Do not disturb</span><span class="qs-sub">With notifications</span></span>
+            <input type="checkbox" class="toggle sm" disabled>
+          </label>
+        </div>
+
+        <div class="hero-mid">
+          <button id="record" class="record" type="button" aria-describedby="what">
+            <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
+              <circle class="ring-track" cx="110" cy="110" r="96"/>
+              <circle id="ring-sweep" class="ring-sweep" cx="110" cy="110" r="96"/>
+            </svg>
+            <span class="dot" aria-hidden="true"></span>
+          </button>
+          <div id="timer" class="timer">0:00</div>
+          <div id="record-label" class="record-label">Start recording</div>
+        </div>
+
+        <div class="hero-side hero-right">
+          <h2 class="hlab">Status</h2>
+          <ul class="status" id="status" aria-live="polite"></ul>
+          <p id="what" class="sr-only"></p>
+          <p id="detail" class="sr-only"></p>
+          <p id="tracks" class="sr-only" hidden></p>
+        </div>
+      </div>
+
+      <div class="divider" aria-hidden="true"></div>
 
       <h2 class="pickhead">What to record</h2>
       <div class="picks" id="picks" role="radiogroup" aria-label="What to record">

@@ -448,7 +448,8 @@
     const rec = $('record');
     rec.disabled = state.phase === 'starting' || state.phase === 'saving' || state.engineGone;
     const label = { idle: 'Start recording', starting: 'Starting…', recording: 'Stop and save', saving: 'Saving…' }[state.phase];
-    $('record-label').textContent = label;
+    const key = state.settings && state.settings.hotkey_record ? state.settings.hotkey_record.replace(/\+/g, ' + ') : '';
+    $('record-label').textContent = key && (state.phase === 'idle' || state.phase === 'recording') ? `${label} \u00b7 ${key}` : label;
     rec.setAttribute('aria-label', label);
 
     const tracks = state.phase === 'recording' && state.recording ? state.recording.audio_tracks || [] : [];
@@ -471,6 +472,7 @@
       $('timer').textContent = '0:00';
       $('ring-sweep').style.strokeDashoffset = RING;
     }
+    renderStatus();
     // Settings that change the file are locked while recording or saving.
     const locked = state.phase !== 'idle';
     $('lock-note').hidden = !locked;
@@ -478,6 +480,52 @@
     fitPicks();
     syncTray();
     renderReplay();
+  }
+
+  // The status panel beside the record button: one line per feature, with a coloured light.
+  function renderStatus() {
+    const list = $('status');
+    if (!list) return;
+    const s = state.settings;
+    const rows = [];
+    const add = (kind, title, value) => rows.push({ kind, title, value });
+    // Recorder
+    if (state.phase === 'recording' && state.recording) {
+      const r = state.recording;
+      add('rec', 'Recording', [`${r.width}\u00d7${r.height}`, r.fps ? `${r.fps} fps` : '', encoderLabel(r.encoder)].filter(Boolean).join(' \u00b7 '));
+    } else if (state.phase === 'saving') add('acc', 'Saving', 'Joining the pieces into one file');
+    else if (state.phase === 'starting') add('acc', 'Starting', 'Getting the capture ready');
+    else add('', 'Standing by', 'Ready when you are');
+    // What's captured
+    if (state.phase === 'recording' && state.recording) {
+      const r = state.recording;
+      const m = r.monitor && monitorById(r.monitor);
+      const name = m ? m.name : r.source.replace(/^Desktop: /, '').replace(/^Window: /, '');
+      add('acc', r.following ? 'Following you' : (m ? 'Locked to screen' : 'Application'), name);
+    } else if (state.source === 'window') {
+      add(state.windowTitle ? 'acc' : '', 'Application', state.windowTitle || 'Choose one below');
+    } else if (pinnedId()) {
+      const m = targetMonitor();
+      add('acc', 'Locked to screen', m ? m.name : 'Not connected: the primary is used');
+    } else {
+      const m = targetMonitor();
+      add('acc', 'Following you', m ? `On ${m.name}` : 'The screen you click');
+    }
+    // Instant replay
+    if (state.replay && state.replay.on) add('good', 'Instant replay', `Holding the last ${replayLength()}`);
+    else add('', 'Instant replay', 'Off');
+    // Audio tracks while recording
+    const tracks = state.phase === 'recording' && state.recording ? state.recording.audio_tracks || [] : [];
+    if (tracks.length) add('', `${tracks.length} audio track${tracks.length === 1 ? '' : 's'}`, tracks.join(', '));
+    // Where files go
+    if (s) add('', 'Saving to', encoreRoot());
+    list.textContent = '';
+    for (const r of rows) {
+      const li = h('li', r.kind);
+      li.append(h('span', 'sd'), h('span', 'st', r.title), h('span', 'sv', r.value));
+      li.title = `${r.title}: ${r.value}`;
+      list.append(li);
+    }
   }
 
   function encoderLabel(name) {
@@ -954,6 +1002,10 @@
       ? `On. ${key ? `${key} saves` : 'Save replay keeps'} the last ${replayLength()}. Uses about ${disk} of disk while on.`
       : 'Off. Turn on to save great moments after they happen.';
     $('replay-note').classList.toggle('replay-live', on);
+    const qs = $('replay-on').closest('.qs');
+    if (qs) qs.classList.toggle('lit', on);
+    $('qs-replay-sub').textContent = on ? `Last ${replayLength()}` : 'Off';
+    renderStatus();
   }
   async function setReplay(on, remember = true) {
     if (state.replayBusy) return;

@@ -380,3 +380,9 @@ Agreed design for game detection (to build next):
 - 0.8.2: the record button sits higher (top of the stage, not centred), and Select Application
   and Game moved to a second row under the screens. The picker shrinks to fit the window's height
   as well as its width.
+- 0.8.3: the top area has three parts. Left, **Switches** (Instant replay, moved from the side
+  panel; Game detection and Do not disturb shown greyed until they arrive). Middle, a plain round
+  record button (dot, or square while recording) with the timer and "Start recording · hotkey"
+  under it. Right, **Status**: one line per feature with a coloured light (Standing by /
+  Recording / Saving; Following you / Locked to screen / Application; Instant replay; audio tracks
+  while recording; Saving to). A divider that fades at both ends separates it from What to record.
