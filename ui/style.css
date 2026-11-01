@@ -841,3 +841,18 @@ body.gd-game:not(.recording) #picks .pick.on, body.gd-game:not(.recording) #pick
 .hrow .sortbtn { flex: 0 1 auto; min-width: 0; }
 #replay-sec.restarting .esub { color: #f3c96b; }
 #replay-sec.restarting .echo-btn svg { stroke: #f6cf7a; filter: drop-shadow(0 0 2px rgba(240, 178, 50, .9)) drop-shadow(0 0 7px rgba(240, 178, 50, .5)); }
+
+/* Setup: feature pages */
+.sdots { display: flex; gap: 6px; margin: -2px 0 10px; }
+.sdots i { width: 18px; height: 4px; border-radius: 2px; background: #2a292e; }
+.sdots i.done { background: rgba(138, 150, 255, .45); }
+.sdots i.on { background: var(--acc); }
+.echo-hero.purple svg { stroke: #c3b4ff; filter: drop-shadow(0 0 3px rgba(150, 120, 255, .9)) drop-shadow(0 0 12px rgba(130, 100, 255, .5)); }
+.green { color: #6fdc8c; font-weight: 600; }
+.tour-row { display: flex; justify-content: center; align-items: flex-end; gap: 18px; margin: 8px 0 6px; }
+.tour-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--mute); }
+.tour-tile b { font-weight: 600; color: var(--dim); }
+.tour-tile svg { width: 58px; height: 46px; padding: 8px 12px; box-sizing: border-box; border: 1.5px solid rgba(138, 150, 255, .7); border-radius: 6px; fill: none; stroke: #c9ceff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; background: linear-gradient(180deg, rgba(88, 101, 242, .25), rgba(88, 101, 242, .04)); }
+.tour-mon { width: 84px; height: 48px; display: grid; place-items: center; border: 1.5px solid rgba(138, 150, 255, .7); border-radius: 6px; color: #d6dbff; font-size: 20px; font-weight: 700; background: linear-gradient(180deg, rgba(88, 101, 242, .25), rgba(88, 101, 242, .04)); }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; margin: 4px 0 6px; font-size: 13.5px; color: var(--dim); }
+.keys .kbd { justify-self: start; font-size: 12px; font-weight: 600; color: #c9ceff; padding: 2px 7px; border-radius: 4px; background: rgba(138, 150, 255, .14); white-space: nowrap; }

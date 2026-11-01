@@ -445,3 +445,8 @@ Agreed design for game detection (to build next):
 - 0.9.2: while Echoes restarts for a settings change, its status line and panel turn amber
   ("Restarting with your new settings"), and the icon stays on. Do not disturb is no longer in the
   status panel (its button is always visible); it may come back in a small always-on-top remote.
+- 0.9.3: first-run setup is a short tour, 7 steps with progress dashes: Welcome (save folder),
+  Video, Sound, What to record (Follow / a monitor / Select Application), Game detection (switch,
+  on for new installs), Echoes (switch and length), You're all set (the main hotkeys, the tray,
+  Do not disturb, and a Start with Windows switch). Every page fits the minimum window. Settings →
+  Games wording simplified (no bracketed asides; "The game I'm playing" explained plainly).

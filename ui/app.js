@@ -1343,11 +1343,17 @@
   function renderSetup() {
     const s = state.settings;
     if (!s) return;
-    document.querySelectorAll('#setup .sstep').forEach((el) => (el.hidden = Number(el.dataset.step) !== setupStep));
-    $('setup-step').textContent = `Step ${setupStep} of 4`;
-    $('setup-title').textContent = ['Welcome to Encore', 'Video', 'Sound', 'Echoes'][setupStep - 1];
+    const steps = [...document.querySelectorAll('#setup .sstep')];
+    const total = steps.length;
+    steps.forEach((el) => (el.hidden = Number(el.dataset.step) !== setupStep));
+    $('setup-step').textContent = `Step ${setupStep} of ${total}`;
+    $('setup-title').textContent = steps[setupStep - 1].dataset.title;
+    $('setup-dots').innerHTML = steps.map((_, i) => `<i class="${i + 1 === setupStep ? 'on' : i + 1 < setupStep ? 'done' : ''}"></i>`).join('');
     $('setup-back').disabled = setupStep === 1;
-    $('setup-next').textContent = setupStep === 4 ? 'Start using Encore' : 'Next';
+    $('setup-next').textContent = setupStep === total ? 'Start using Encore' : 'Next';
+    const k = (v) => (v ? v.replace(/\+/g, ' + ') : 'not set');
+    $('tour-key-record').textContent = k(s.hotkey_record);
+    $('tour-key-echo').textContent = k(s.hotkey_save_replay);
     if (s.hotkey_save_replay) $('setup-echo-key').textContent = s.hotkey_save_replay.replace(/\+/g, ' + ');
     $('setup-folder').value = s.output_dir;
     const root = encoreRoot();
@@ -1363,6 +1369,10 @@
   function openSetup() {
     setupStep = 1;
     refreshAdmin();
+    const s0 = state.settings;
+    $('setup-games').checked = !s0 || !s0.setup_done || !!s0.game_detection;
+    $('setup-echo').checked = !s0 || !s0.setup_done || !!s0.replay_on;
+    bridge.autostartStatus().then((on) => { $('setup-autostart').checked = !!on; }).catch(() => {});
     renderSetup();
     openDialog('setup');
   }
@@ -1630,12 +1640,16 @@
   $('browse-output').addEventListener('click', browseFolder);
   $('setup-back').addEventListener('click', () => { if (setupStep > 1) { setupStep--; renderSetup(); } });
   $('setup-next').addEventListener('click', async () => {
-    if (setupStep < 4) { setupStep++; renderSetup(); return; }
+    if (setupStep < document.querySelectorAll('#setup .sstep').length) { setupStep++; renderSetup(); return; }
     const want = $('setup-admin').checked;
     const change = want !== !!state.startAsAdmin;
     const echoes = $('setup-echo').checked;
+    const games = $('setup-games').checked;
+    const autostart = $('setup-autostart').checked;
     closeDialog($('setup'));
     await finishSetup();
+    if (state.settings && games !== !!state.settings.game_detection) await saveSetting('game_detection', games);
+    try { if (autostart !== !!(await bridge.autostartStatus())) await bridge.setAutostart(autostart); } catch (e) { toast(String(e), 'error'); }
     if (echoes && !state.replay.on && state.phase === 'idle') await setReplay(true);
     else if (!echoes && state.replay.on) await setReplay(false);
     if (change) await setStartAsAdmin(want, { restart: 'now' });

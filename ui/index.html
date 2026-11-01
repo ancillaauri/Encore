@@ -537,9 +537,10 @@
     <div class="modal setup" role="dialog" aria-modal="true" aria-labelledby="setup-title">
       <button type="button" class="modal-x" id="setup-skip" aria-label="Skip setup" title="Skip (you can change everything later in Settings)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
       <h2 id="setup-title">Welcome to Encore</h2>
-      <p class="updsub" id="setup-step">Step 1 of 3</p>
+      <p class="updsub" id="setup-step">Step 1 of 7</p>
+      <div class="sdots" id="setup-dots" aria-hidden="true"></div>
 
-      <div class="sstep" data-step="1">
+      <div class="sstep" data-step="1" data-title="Welcome to Encore">
         <p class="slead">Where should your recordings go?</p>
         <div class="with-button">
           <input id="setup-folder" type="text" spellcheck="false" readonly>
@@ -548,7 +549,7 @@
         <p class="snote" id="setup-folder-note"></p>
       </div>
 
-      <div class="sstep" data-step="2" hidden>
+      <div class="sstep" data-step="2" data-title="Video" hidden>
         <p class="slead">How should recordings look?</p>
         <div class="setcard" role="radiogroup" aria-label="Quality">
           <button type="button" class="setrow setopt" role="radio" data-quality="ultra">
@@ -594,7 +595,7 @@
         </div>
       </div>
 
-      <div class="sstep" data-step="3" hidden>
+      <div class="sstep" data-step="3" data-title="Sound" hidden>
         <p class="slead">What should Encore record?</p>
         <div class="setcard">
           <label class="setrow"><span class="settext"><span class="setname">Full System Audio</span>
@@ -610,7 +611,34 @@
         <p class="snote">You can change all of this later in Settings.</p>
       </div>
 
-      <div class="sstep" data-step="4" hidden>
+      <div class="sstep" data-step="4" data-title="What to record" hidden>
+        <div class="tour-row" aria-hidden="true">
+          <span class="tour-tile"><svg viewBox="0 0 24 24"><path d="M6 4l11.5 8.2-5.2.9 3 6-2.4 1.2-3-6.1L6 17.6z"/></svg><b>Follow</b></span>
+          <span class="tour-tile"><span class="tour-mon">1</span><b>A monitor</b></span>
+          <span class="tour-tile"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 9h16"/></svg><b>Select Application</b></span>
+        </div>
+        <p class="slead center">You choose what's recorded</p>
+        <p class="sbody"><strong>Follow</strong> records whichever screen you're using. Click a window on another monitor and the recording moves with you.</p>
+        <p class="sbody">Pick <strong>a monitor</strong> to always record that one, or <strong>Select Application</strong> to record just one app's window, even when you Alt+Tab away.</p>
+        <p class="snote">It's all under "What to record", below the big record button.</p>
+      </div>
+
+      <div class="sstep" data-step="5" data-title="Game detection" hidden>
+        <div class="echo-hero purple" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/><path d="M8 11.5v2M7 12.5h2M15.5 12h.01M17.5 13h.01"/></svg>
+        </div>
+        <p class="slead center">Made for games</p>
+        <p class="sbody">Start a game and Encore switches to it on its own, recording just the game: no desktop, no pop-ups. Close it and Encore goes back to your screen, which glows <span class="green">green</span> while it waits for the next one.</p>
+        <p class="sbody">Files are named after the game, so your clips sort themselves.</p>
+        <div class="setcard spaced">
+          <label class="setrow"><span class="settext"><span class="setname">Turn on game detection</span>
+            <span class="setsub">The controller under the screens turns it on or off</span></span>
+            <input type="checkbox" class="toggle" id="setup-games" checked></label>
+        </div>
+        <p class="snote">Playing two games at once? Press Ctrl + Alt + G in the one you want and Encore stays on it.</p>
+      </div>
+
+      <div class="sstep" data-step="6" data-title="Echoes" hidden>
         <div class="echo-hero" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/></svg>
         </div>
@@ -634,6 +662,24 @@
           </label>
         </div>
         <p class="snote">Just want the highlight? Ctrl + Alt + 1 saves the last 30 seconds, and Ctrl + Alt + 2 the last minute.</p>
+      </div>
+
+
+      <div class="sstep" data-step="7" data-title="You're all set" hidden>
+        <p class="slead">A few handy keys</p>
+        <div class="keys">
+          <span class="kbd" id="tour-key-record">Ctrl + Alt + R</span><span>Start or stop recording</span>
+          <span class="kbd" id="tour-key-echo">Ctrl + Alt + S</span><span>Save an Echo</span>
+          <span class="kbd">Ctrl + Alt + 1 / 2</span><span>Save the last 30 seconds / minute</span>
+          <span class="kbd">Ctrl + Alt + G</span><span>Record the game you're in</span>
+        </div>
+        <p class="sbody">They work anywhere, even in full screen games. Change them in Settings → Hotkeys.</p>
+        <p class="sbody">Closing Encore's window keeps it running in the tray by the clock, so the keys keep working. The <strong>moon</strong> at the bottom left is Do not disturb.</p>
+        <div class="setcard spaced">
+          <label class="setrow"><span class="settext"><span class="setname">Start Encore when Windows starts</span>
+            <span class="setsub">Opens quietly in the tray, ready when you are</span></span>
+            <input type="checkbox" class="toggle" id="setup-autostart"></label>
+        </div>
       </div>
 
       <div class="modal-btns">
