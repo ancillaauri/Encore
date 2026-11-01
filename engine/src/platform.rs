@@ -5,6 +5,17 @@
 
 use serde::Serialize;
 
+/// Top (realtime) graphics priority for the capture, chosen in Settings → Advanced.
+static GPU_TOP: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_gpu_top(on: bool) {
+    GPU_TOP.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn gpu_top() -> bool {
+    GPU_TOP.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Monitor {
     /// Stable identifier (device path). Does not change when monitors are renumbered.
@@ -663,6 +674,7 @@ mod win {
     /// opened the graphics card, so the caller retries for a few seconds after FFmpeg starts.
     /// Ok and Err both carry a line for the log, error codes included.
     pub fn try_gpu_priority(pid: u32) -> Result<String, String> {
+        let top = super::gpu_top();
         type SetGpuPriority = unsafe extern "system" fn(*mut c_void, i32) -> i32;
         const PROCESS_ALL_ACCESS: u32 = 0x001F_FFFF;
         const GPU_HIGH: i32 = 4;
@@ -686,18 +698,19 @@ mod win {
                 None => Err(format!("GPU priority unavailable ({admin}, {privilege})")),
                 Some(f) => {
                     let set: SetGpuPriority = std::mem::transmute(f);
-                    // Realtime is no longer used: at that level the capture can starve the rest
-                    // of the system (a full PC freeze was reported with it on). High is enough to
-                    // keep the capture fed without taking over.
-                    let _ = (hags, GPU_REALTIME);
-                    let rt = -1;
+                    // Realtime only when chosen (Settings → Advanced): at that level the capture
+                    // can starve the rest of the system (a full PC freeze was reported with it
+                    // on), but high isn't always enough for games that use the whole card.
+                    let rt = if top { set(hp as *mut c_void, GPU_REALTIME) } else { -1 };
                     if rt >= 0 {
                         Ok(format!("GPU priority realtime ({admin}, {privilege}, {sched})"))
                     } else {
                         let hi = set(hp as *mut c_void, GPU_HIGH);
-                        if hi >= 0 {
+                        if hi >= 0 && top {
+                            Ok(format!("GPU priority high, realtime refused 0x{rt:08x} ({admin}, {privilege}, {sched})"))
+                        } else if hi >= 0 {
                             Ok(format!("GPU priority high ({admin}, {privilege}, {sched})"))
-                        } else if hags {
+                        } else if hags || !top {
                             Err(format!("GPU priority refused ({admin}, {privilege}, {sched}; high 0x{hi:08x})"))
                         } else {
                             Err(format!(

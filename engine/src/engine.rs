@@ -162,9 +162,11 @@ impl Engine {
             *probe_caps.lock().unwrap() = result;
             send_event("capabilities", value);
         });
+        let settings = Settings::load();
+        platform::set_gpu_top(settings.gpu_realtime);
         Engine {
             ffmpeg,
-            settings: Settings::load(),
+            settings,
             caps,
             active: None,
             known_pipeline: HashMap::new(),
@@ -343,6 +345,10 @@ impl Engine {
             }
         }
         updated.save()?;
+        platform::set_gpu_top(updated.gpu_realtime);
+        if updated.gpu_realtime != self.settings.gpu_realtime {
+            log(&format!("top graphics priority {}", if updated.gpu_realtime { "on" } else { "off" }));
+        }
         self.settings = updated;
         Ok(serde_json::to_value(&self.settings).unwrap_or(Value::Null))
     }

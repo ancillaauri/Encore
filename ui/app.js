@@ -608,6 +608,7 @@
     renderGames();
     renderGameSettings();
     renderNotify();
+    $('gpu-realtime').checked = !!s.gpu_realtime;
     if (!$('setup').hidden) renderSetup();
   }
 
@@ -783,6 +784,7 @@
         renderStage();
         break;
       case 'game_switched':
+        behindToldFor = null; // a new game gets its own warning
         if (state.recording) state.recording.game = data.name || null;
         renderStage();
         if (data.name) {
@@ -804,6 +806,9 @@
           if (!list.includes(data.title)) list.push(data.title);
           renderStage();
         }
+        break;
+      case 'capture_behind':
+        captureBehind(data);
         break;
       case 'warning':
         toast(data.message, 'warning', 12000);
@@ -1113,7 +1118,7 @@
     renderStage();
   }
   // Settings that change what's captured restart the buffer (it starts again from now).
-  const CAPTURE_KEYS = ['work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks'];
+  const CAPTURE_KEYS = ['gpu_realtime', 'work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks'];
   let replayRestart = null;
   // Shown in amber while Echoes restarts for a settings change (it starts again from now).
   function restartReplay() {
@@ -1585,6 +1590,32 @@
   bridge.onTrayGame((id) => lockGame(id === 'unlock' ? null : Number(id)));
 
   // Settings → Games: always / never lists, and the two choices.
+  // ---------- Advanced: top graphics priority (asks first when turning on) ----------
+  $('gpu-realtime').addEventListener('change', (e) => {
+    if (!e.target.checked) { saveSetting('gpu_realtime', false); return; }
+    e.target.checked = false; // stays off until confirmed
+    openDialog('gpu-confirm');
+  });
+  $('gpu-cancel').addEventListener('click', () => closeDialog($('gpu-confirm')));
+  $('gpu-ok').addEventListener('click', async () => {
+    closeDialog($('gpu-confirm'));
+    await saveSetting('gpu_realtime', true);
+    toast('Top graphics priority is on.', 'ok', 4000);
+  });
+
+  // The capture fell behind real time: told once per game (or once while on the desktop).
+  let behindToldFor = null;
+  function captureBehind(data) {
+    const game = (state.recording && state.recording.game) || (gameActive() && gameActive().name) || null;
+    const key = game || 'desktop';
+    if (behindToldFor === key) return;
+    behindToldFor = key;
+    const who = game || 'Your game';
+    const text = `${who} is using all of your graphics card, so Encore can’t keep up. Capping the game’s frame rate a little below your monitor’s usually fixes it.`;
+    toast(`Recording is falling behind. ${text}${data && data.top_priority ? '' : ' Settings → Advanced has a stronger option.'}`, 'warning', 15000);
+    notify('problem', 'Recording is falling behind', text);
+  }
+
   // ---------- notifications over the game (drawn by the shell's notification window) ----------
   const NOTIFY_SPOTS = [['tl', 'Top left'], ['tc', 'Top centre'], ['tr', 'Top right'], ['ml', 'Left edge'], ['mr', 'Right edge'], ['bl', 'Bottom left'], ['bc', 'Bottom centre'], ['br', 'Bottom right']];
   const NOTIFY_KEYS = { echo: 'notify_echo', record: 'notify_record', saved: 'notify_saved', game: 'notify_game', problem: 'notify_problems' };

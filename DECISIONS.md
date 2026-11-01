@@ -537,3 +537,21 @@ Agreed design for game detection (to build next):
     behind the capture was.
   - Notifications now log when the window is shown (where, and how long it took), when each one
     is drawn, and when the window hides, to see whether they line up with the stalls.
+
+## 2026-11-01: Top graphics priority, and noticing a capture that falls behind (0.9.10)
+- The 10:00 and 10:04 Echoes held 28 s and 10 s of video for a 60 s save: real frames at a
+  steady 60 fps, but the capture ran at a fraction of real time for the first minutes in
+  Warframe. Every Warframe capture since 0.9.4 ran at high graphics priority; the smooth ones
+  before that were realtime. High isn't enough when a game uses all of the graphics card.
+- Realtime comes back as a choice: Settings → **Advanced** (last section) → **Top graphics
+  priority**, off by default, with an always-visible amber "Use with care" note (black screen or
+  freeze on an unstable driver; works best as administrator) and a confirmation when turning it
+  on ("Turn on top graphics priority?"). No restart needed: the priority is set as each capture
+  starts, and Echoes restarts itself; a recording picks it up from its next part. Setting
+  `gpu_realtime`. If realtime is refused, high is used and the log says so.
+- The engine now compares FFmpeg's progress with the clock. More than 3 s behind for 4 s: logged
+  and the `capture_behind` event sent once per capture part; logged again when it catches up. The
+  interface warns once per game: "Recording is falling behind. <Game> is using all of your
+  graphics card, so Encore can't keep up. Capping the game's frame rate a little below your
+  monitor's usually fixes it." (plus "Settings → Advanced has a stronger option." in Encore when
+  it's off), and as a Problems notification.

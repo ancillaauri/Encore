@@ -358,6 +358,7 @@ fn watch_progress(
     std::thread::spawn(move || {
         let mut last_saved: Option<u64> = None;
         let mut last_save_time: Option<Instant> = None;
+        let mut behind = Behind::default();
         for line in BufReader::new(stdout).lines() {
             let Ok(line) = line else { break };
             let now = platform::now_hns();
@@ -367,6 +368,11 @@ fn watch_progress(
                     c.observe(now, us);
                     c.start_hns()
                 };
+                if let Some(start) = best {
+                    // How far the video written is behind real time.
+                    let lag = now.saturating_sub(start).saturating_sub(us.max(0) as u64 * 10);
+                    behind.check(lag, index);
+                }
                 let due = last_save_time.map(|t| t.elapsed() > Duration::from_secs(2)).unwrap_or(true);
                 if best.is_some() && best != last_saved && due {
                     let mut m = manifest.lock().unwrap();
@@ -383,6 +389,45 @@ fn watch_progress(
             }
         }
     });
+}
+
+/// Notices when a capture falls behind real time (the game is using all of the graphics card and
+/// the capture can't keep up): logged when it starts and when it catches up, and the interface is
+/// told once per capture part.
+#[derive(Default)]
+struct Behind {
+    since: Option<Instant>,
+    worst: u64,
+    told: bool,
+}
+
+/// Behind by more than this, for longer than BEHIND_FOR, counts.
+const BEHIND_HNS: u64 = 3 * 10_000_000;
+const BEHIND_FOR: Duration = Duration::from_secs(4);
+
+impl Behind {
+    fn check(&mut self, lag: u64, index: usize) {
+        if lag > BEHIND_HNS {
+            let since = *self.since.get_or_insert_with(Instant::now);
+            self.worst = self.worst.max(lag);
+            if !self.told && since.elapsed() >= BEHIND_FOR {
+                self.told = true;
+                let secs = lag / 10_000_000;
+                log(&format!("capture part {index} is falling behind: {secs} s behind real time (priority {})", if platform::gpu_top() { "realtime chosen" } else { "high" }));
+                crate::protocol::send_event("capture_behind", serde_json::json!({ "seconds": secs, "top_priority": platform::gpu_top() }));
+            }
+        } else if lag < BEHIND_HNS / 3 && self.since.is_some() {
+            if self.told {
+                log(&format!(
+                    "capture part {index} caught up after {} s (at worst {} s behind)",
+                    self.since.map(|s| s.elapsed().as_secs()).unwrap_or(0),
+                    self.worst / 10_000_000
+                ));
+            }
+            self.since = None;
+            self.worst = 0;
+        }
+    }
 }
 
 /// What happened to a monitor switch, for the engine to report.

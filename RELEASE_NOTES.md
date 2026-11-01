@@ -1,3 +1,16 @@
+## Encore 0.9.10 (beta), test build 31: top graphics priority
+
+### What's new
+- **Settings → Advanced → Top graphics priority.** For games that use all of your graphics card
+  (Warframe, for one). It puts Encore's capture first on the graphics card so recordings and
+  Echoes don't fall behind. Off by default, with a warning and a confirmation: on a PC with an
+  unstable graphics driver it can black the screen for a moment or freeze the PC.
+- **A warning when the recording falls behind.** If a game takes so much of the graphics card
+  that Encore can't keep up, you're told once per game, with how to fix it.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.10).
+
 ## Encore 0.9.9 (beta), test build 30: admin after updates, Echoes that fell behind
 
 ### Fixed

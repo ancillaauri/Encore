@@ -132,6 +132,10 @@ pub struct Settings {
     pub notify_saved: bool,
     pub notify_game: bool,
     pub notify_problems: bool,
+    /// Advanced: realtime graphics priority for the capture (top priority, ahead of the game and
+    /// Windows). Off: high. For games that use all of the graphics card; can freeze a PC with an
+    /// unstable graphics driver, so it's opt-in.
+    pub gpu_realtime: bool,
 }
 
 pub const NOTIFY_SPOTS: [&str; 8] = ["tl", "tc", "tr", "ml", "mr", "bl", "bc", "br"];
@@ -202,6 +206,7 @@ impl Default for Settings {
             notify_saved: true,
             notify_game: true,
             notify_problems: true,
+            gpu_realtime: false,
         }
     }
 }
@@ -467,6 +472,7 @@ mod tests {
         assert_eq!((s.volume_start, s.volume_stop, s.volume_save), (50, 50, 50));
         assert!(s.notifications && s.notify_echo && s.notify_record && s.notify_saved && s.notify_game && s.notify_problems);
         assert_eq!((s.notify_pos.as_str(), s.notify_seconds, s.notify_screen.as_str()), ("tr", 5, "game"));
+        assert!(!s.gpu_realtime); // opt-in only
     }
 
     #[test]

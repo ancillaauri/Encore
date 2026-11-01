@@ -934,3 +934,9 @@ body.gd-wait .ps.rec-tag { color: #8fdca5; }
 @keyframes ntfY { from { transform: scaleY(1); } to { transform: scaleY(0); } }
 @media (prefers-reduced-motion: reduce) { .ntf-tm { animation: none; } }
 @media (max-width: 760px) { .ntf-card { flex-direction: column; align-items: stretch; } .ntf-pick { --w: 340px; --h: 191px; } }
+
+/* ---------- Advanced: the caution note ---------- */
+.caution { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(240, 178, 50, .45); background: rgba(240, 178, 50, .07); }
+.caution svg { flex: none; width: 18px; height: 18px; margin-top: 1px; fill: none; stroke: #ffd27a; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px rgba(240, 178, 50, .6)); }
+.caution p { margin: 0; font-size: 12.5px; line-height: 1.5; color: #d9d2bf; user-select: text; }
+.caution strong { color: #ffd27a; }
