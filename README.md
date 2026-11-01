@@ -2,14 +2,19 @@
 
 A lightweight game and screen recorder for Windows 11, made as a pair with the companion clip editor.
 
-- Records the screen you're using and follows you when you click a window on another monitor, or
-  always one monitor, or a single app
+- **What to record:** Follow (the screen you click on), always one monitor, or Select Application
+  (a single app's window)
+- **Instant replay:** keeps the last 30 seconds to 20 minutes; save it all, or just the last 30
+  seconds, minute or a length you choose, with hotkeys that work in games
 - **Split Application Audio:** a separate audio track for each app that makes sound (game, music,
-  browser, voice chat), plus Full mix (everything, including your mic), Microphone and Desktop audio
-- GPU encoding on NVIDIA, AMD and Intel (H.264, HEVC or AV1)
+  browser, voice chat), plus Full mix (everything, including your mic), Microphone and Desktop audio.
+  Encore's own sounds are never recorded
+- GPU encoding on NVIDIA, AMD and Intel (H.264, HEVC or AV1), with graphics priority so games
+  that use the whole card don't make recordings stutter (needs "Start Encore as administrator")
 - Saves into an Encore folder wherever you choose, with a folder per game or app
+- Tray icon, start with Windows, start/stop/save sounds you can choose, and a status panel
 - In-app updates, on your terms (tell me, download automatically, or never)
-- Coming next: hotkeys, tray icon, automatic game detection and instant replay
+- Coming next: automatic game detection, then Encore's own notifications
 
 Status: beta (0.x). See [FEATURES.md](FEATURES.md) for what is built and what is planned.
 

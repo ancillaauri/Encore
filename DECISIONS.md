@@ -405,3 +405,16 @@ Agreed design for game detection (to build next):
   click the icon to turn the option on or off. Other switches use the monitors' lighter blue.
   Only the labels changed: the tracks in the files keep their names ("Desktop audio" etc.), so the
   editor's handling is unchanged.
+- "Full System Audio" renamed **Everything You Hear** (it's whatever comes out of your speakers),
+  with an (i): all sound in one track including Windows' own; off keeps only the apps (with Split
+  Application Audio) or, with all three off, gives a silent recording.
+
+## 2026-11-01: Health check (old names and leftovers)
+- Interface names now: Follow, Select Application, Game detection, Everything You Hear,
+  Microphone, Split Application Audio, Do not disturb. Old names ("One app", "Split App Tracks",
+  "Desktop audio" as a label, "Full System Audio", the "ALWAYS" pin, the Game tile) are gone from
+  the interface, README, FEATURES and ARCHITECTURE; DECISIONS keeps them as history. `Desktop
+  audio` stays as a track title inside files (file contract with the editor).
+- Removed leftover styles (old second picker row, separator, "coming soon" switch, unused helper
+  classes) and an unused bridge call. Every setting the interface uses exists in the engine, and
+  every engine setting is used. README's feature list brought up to date.

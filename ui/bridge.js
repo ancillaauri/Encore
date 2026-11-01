@@ -15,7 +15,6 @@
     getSettings: () => call('get_settings'),
     setSettings: (patch) => call('set_settings', patch),
     getCapabilities: () => call('get_capabilities'),
-    listAudioApps: () => call('list_audio_apps'),
     listAudioInputs: () => call('list_audio_inputs'),
     listMonitors: () => call('list_monitors'),
     listWindows: () => call('list_windows'),

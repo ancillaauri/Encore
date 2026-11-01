@@ -85,7 +85,7 @@ Monitor selection (built in 0.5):
 - Game mode: not needed; capture follows the game window across monitors.
 - Desktop setting `monitor`: `follow` (default) records the monitor of the window last clicked on
   (the focused window) and moves with it; `id:<monitor>` always records that monitor. Chosen in the
-  hologram row under the record button (click a monitor to pin it, again to unpin).
+  hologram row under the record button: the Follow tile, or a monitor to pin it (0.8.1).
 - Focus rules (`platform::focus_rule`): Encore's own windows, Alt+Tab and Start are ignored; the
   desktop and taskbars use the monitor under the mouse; anything else uses its window's monitor.
   The focus must stay on the new monitor for 0.3 s before the recording moves.
@@ -111,7 +111,10 @@ Game detection (step 6):
 - The detected game names the file, the per-game folder, and its own audio track.
 
 Audio (steps 4 and 5) — built in batch 2:
-- Desktop audio: WASAPI loopback on the default output device.
+- Everything You Hear (the `Desktop audio` track): WASAPI process loopback in exclude mode, aimed
+  at the Encore app, so everything except Encore; on older Windows, loopback on the default output
+  device. Interface names: Everything You Hear, Microphone, Split Application Audio; the track
+  titles in files stay Full mix / Microphone / Desktop audio / app names (file contract).
 - Microphone: WASAPI capture on the default input device (selectable in settings).
 - Per app: WASAPI process loopback, "include process tree" on the app's top-level process
   (so Chrome's child processes count as Chrome).

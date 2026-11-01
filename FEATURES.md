@@ -13,7 +13,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | "What's being recorded" indicator (tray + window) | 6 | [ ] |
 | Codec choice: H.264 default, HEVC and AV1 optional | 3 | [~] |
 | Quality settings: resolution (native/downscaled), frame rate up to 144, quality/bitrate presets | 3 | [~] |
-| Full desktop audio + microphone tracks | 4 | [x] |
+| Everything You Hear (all PC sound, minus Encore's own) + microphone tracks | 4 | [x] |
 | Microphone choice (push-to-talk comes with hotkeys) | 4 | [~] |
 | Split Application Audio: one audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [x] |
 | Global hotkeys (start/stop recording; more with replay), tray icon, close to tray, sounds | 6 | [~] 0.6.0 |

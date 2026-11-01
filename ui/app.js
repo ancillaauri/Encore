@@ -11,7 +11,7 @@
     monitors: [],
     windows: [],
     inputs: [],
-    source: 'desktop', // 'desktop' or 'window' (one app)
+    source: 'desktop', // 'desktop' (Follow or a monitor) or 'window' (Select Application)
     windowHandle: 0,
     windowTitle: '',
     focusMonitor: null, // id of the monitor last clicked on (what "follow" records)
@@ -989,7 +989,7 @@
   renderMaximized();
 
   // ---------- instant replay ----------
-  // What to capture, from the picker: the screen in use / a monitor, or one app.
+  // What to capture, from the picker: Follow / a monitor, or the application chosen in Select Application.
   function currentSource() {
     if (state.source !== 'window') return { source: 'desktop' };
     if (!state.windowHandle) { toast('Choose an app to record first.', 'warning'); return null; }
