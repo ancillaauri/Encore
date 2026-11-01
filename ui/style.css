@@ -865,9 +865,30 @@ body.gd-wait .ps.rec-tag { color: #8fdca5; }
 /* Games only: the screens aren't used until a game opens */
 #picks.unused { opacity: .4; }
 #picks.unused:hover { opacity: .7; }
-.gb-when { display: flex; align-items: center; gap: 10px; flex: none; padding-left: 14px; border-left: 1px solid var(--line); }
-.gb-when-l { font-size: 12px; color: var(--mute); white-space: nowrap; }
-.seg { display: inline-flex; padding: 2px; border-radius: 8px; background: #0a090c; border: 1px solid var(--line2); }
-.seg button { border: 0; background: transparent; color: var(--mute); font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-.seg button:hover { color: var(--text); }
-.seg button[aria-checked="true"] { background: rgba(88, 101, 242, .2); color: #e0e3ff; }
+
+/* Desktop Capture: the heading of the screens section, with its own icon switch */
+.dchead { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 18px 0 8px; }
+.dchead .pickhead { margin: 0; font-size: 14px; color: var(--text); }
+.dc-btn { width: 36px; height: 32px; cursor: pointer; }
+.dc-btn svg { width: 21px; height: 21px; fill: none; stroke: #8e8d93; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s ease, filter .25s ease; }
+.dc-btn:has(input:checked) svg { stroke: #b4bbff; filter: drop-shadow(0 0 2px rgba(124, 136, 255, .95)) drop-shadow(0 0 7px rgba(110, 120, 255, .55)); }
+.dc-btn:has(input:disabled) { cursor: default; }
+.dc-btn:has(.aswitch:focus-visible) { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+/* Every glowing icon switch sits on a small tile, so it reads as a button */
+.aic, .gb-ic, .dnd-ic {
+  background: rgba(255, 255, 255, .045);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+  border-radius: 8px;
+  transition: background .15s ease, box-shadow .15s ease;
+}
+.arow .aic:hover, .echo-btn:hover, .dc-btn:hover, .gb-switch:hover:not(:disabled) .gb-ic, .dnd:hover .dnd-ic {
+  background: rgba(255, 255, 255, .09);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14);
+}
+.aic:has(input:checked), .gb-switch[aria-pressed="true"] .gb-ic { background: rgba(110, 120, 255, .10); box-shadow: inset 0 0 0 1px rgba(138, 150, 255, .22); }
+.arow.mic .aic:has(input:checked) { background: rgba(59, 199, 93, .09); box-shadow: inset 0 0 0 1px rgba(98, 214, 133, .22); }
+.dnd[aria-pressed="true"] .dnd-ic { background: rgba(255, 92, 97, .10); box-shadow: inset 0 0 0 1px rgba(255, 122, 126, .25); }
+.dnd-ic { width: 34px; height: 32px; flex: none; display: grid; place-items: center; }
+.dnd:hover { background: transparent; }
+.gamebar:not(.on) .gb-switch { border-right: 0; padding-right: 4px; }

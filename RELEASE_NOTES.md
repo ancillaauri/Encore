@@ -1,21 +1,20 @@
-## Encore 0.9.5 (beta), test build 26: clearer "What to record", and games only
+## Encore 0.9.6 (beta), test build 27: Desktop Capture
 
 ### What's changed
-- **"What to record" explains itself:** it's used for recordings *and* Echoes, and **Follow** is
-  marked **Recommended**, so you can leave it alone.
-- **The Echoes panel says what it's keeping**: "keeping the last 2 minutes of Warframe" (or your
-  screen).
-- **Only want games?** With game detection on, the bar under the screens now has
-  **Until a game opens: Record my screen / Wait for a game**. "Wait for a game" means nothing is
-  kept on the desktop: Echoes starts when a game opens, and a recording ends when its game closes.
-  The screens dim, since they're only used if you press record with no game open.
-- Setup's game detection page offers the same choice ("Only record games").
+- **Desktop Capture** heads the screens section, with its own glowing icon switch.
+  - **On** (the default): Encore records your chosen screen when no game is open, as before.
+  - **Off**: Encore only records games. The screens dim, Echoes waits for a game, a recording ends
+    when its game closes, and the record button is greyed out until a game opens.
+  - Off needs game detection on (otherwise nothing could be recorded), so turning game detection
+    off turns Desktop Capture back on.
+- The "Until a game opens" choice in the game bar is gone; Desktop Capture replaces it.
+- **Icon switches look like buttons**: each glowing icon sits on a faint tile, tinted when on.
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.9.5).
+Update from inside Encore (≡ → Help → Update to 0.9.6).
 
 ### Test checklist
-1. Game detection on → **Wait for a game**, Echoes on. On the desktop: status says "Waiting for a
-   game" and Echoes waits. Open Warframe: Echoes starts ("keeping the last 2 minutes of Warframe").
+1. Game detection on, Desktop Capture off, Echoes on: status says "Desktop Capture: Off · waiting
+   for a game", the record button is greyed out. Open Warframe: Echoes starts and record works.
    Close it: Echoes waits again.
-2. Switch back to **Record my screen**: Echoes keeps your screen again (green).
+2. Turn game detection off: Desktop Capture turns itself back on.

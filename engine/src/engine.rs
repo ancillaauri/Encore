@@ -375,6 +375,13 @@ impl Engine {
             send_event("recording_started", info.clone());
             return Ok(info);
         }
+        let source = args.get("source").and_then(|v| v.as_str()).unwrap_or("desktop");
+        if source == "desktop" && self.settings.game_detection && !self.settings.desktop_capture {
+            self.scan_games(true);
+            if self.current_game().is_none() {
+                return Err("Start a game to record, or turn on Desktop Capture to record your screen.".into());
+            }
+        }
         self.start_session(args, false)
     }
 
@@ -503,7 +510,7 @@ impl Engine {
             None => {}
         }
         let source = args.get("source").and_then(|v| v.as_str()).unwrap_or("desktop");
-        if source == "desktop" && self.settings.game_detection && !self.settings.replay_on_desktop {
+        if source == "desktop" && self.settings.game_detection && !self.settings.desktop_capture {
             self.scan_games(true);
             if self.current_game().is_none() {
                 // Only games are kept: wait for one to open.
@@ -928,14 +935,16 @@ impl Engine {
     fn leave_game(&mut self) {
         let replay = self.active.as_ref().map(|a| a.is_replay()).unwrap_or(false);
         let detection = self.settings.game_detection;
-        if detection && self.settings.game_end == "stop" && self.is_recording() {
-            log("game closed: stopping the recording (setting)");
+        // Desktop Capture off: nothing is recorded outside games, so a recording ends with its game.
+        let games_only = detection && !self.settings.desktop_capture;
+        if (games_only || (detection && self.settings.game_end == "stop")) && self.is_recording() {
+            log("game closed: stopping the recording");
             self.stop_recording();
             if !replay {
                 return;
             }
         }
-        if replay && detection && !self.settings.replay_on_desktop {
+        if replay && games_only {
             log("game closed: instant replay waits for the next game");
             if self.clip.is_some() {
                 self.stop_recording();

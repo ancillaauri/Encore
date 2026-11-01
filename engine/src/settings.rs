@@ -93,8 +93,12 @@ pub struct Settings {
     /// Hotkeys: lock onto the game in front; move to the next open game.
     pub hotkey_lock_game: String,
     pub hotkey_next_game: String,
-    /// Instant replay also runs while no game is open (off: it only keeps a replay of games).
-    pub replay_on_desktop: bool,
+    /// Desktop Capture: Encore may record and keep Echoes outside games (your screen, an app).
+    /// Off (games only, needs game detection): Echoes waits for a game, a recording ends with its
+    /// game, and recording with no game open is refused. Older settings called this
+    /// `replay_on_desktop`.
+    #[serde(alias = "replay_on_desktop")]
+    pub desktop_capture: bool,
     /// Folder for work in progress (recordings being made, the instant replay buffer); empty =
     /// Encore's own folder in %LOCALAPPDATA%. A folder "Encore temp" is made inside the chosen one.
     pub work_dir: String,
@@ -161,7 +165,7 @@ impl Default for Settings {
             games_never: Vec::new(),
             hotkey_lock_game: "Ctrl+Alt+G".into(),
             hotkey_next_game: "Ctrl+Alt+N".into(),
-            replay_on_desktop: true,
+            desktop_capture: true,
             work_dir: String::new(),
             settings_version: SETTINGS_VERSION,
             sound_start: "rise".into(),
@@ -210,8 +214,11 @@ impl Settings {
             }
             cur.insert(k.clone(), v.clone());
         }
-        let updated: Settings =
+        let mut updated: Settings =
             serde_json::from_value(current).map_err(|e| format!("Invalid setting value: {e}"))?;
+        if !updated.game_detection {
+            updated.desktop_capture = true; // without game detection, only the desktop is left
+        }
         if !ALLOWED_FPS.contains(&updated.fps) {
             return Err(format!("Frame rate must be one of {:?}", ALLOWED_FPS));
         }
@@ -292,6 +299,9 @@ impl Settings {
         if !["newest", "focused"].contains(&self.game_pick.as_str()) {
             self.game_pick = "newest".into();
         }
+        if !self.game_detection {
+            self.desktop_capture = true; // otherwise nothing could ever be recorded
+        }
         if !["continue", "stop"].contains(&self.game_end.as_str()) {
             self.game_end = "continue".into();
         }
@@ -321,6 +331,20 @@ impl Settings {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn desktop_capture_reads_the_old_name_and_needs_game_detection_to_be_off() {
+        let old: Settings = serde_json::from_value(json!({"game_detection": true, "replay_on_desktop": false})).unwrap();
+        assert!(!old.desktop_capture);
+        let s = Settings::default();
+        assert!(s.desktop_capture);
+        let u = s.apply_patch(&json!({"desktop_capture": false})).unwrap();
+        assert!(u.desktop_capture, "game detection is off, so desktop capture stays on");
+        let u = s.apply_patch(&json!({"game_detection": true, "desktop_capture": false})).unwrap();
+        assert!(!u.desktop_capture);
+        let u = u.apply_patch(&json!({"game_detection": false})).unwrap();
+        assert!(u.desktop_capture, "turning game detection off turns desktop capture back on");
+    }
 
     #[test]
     fn old_high_becomes_ultra_once() {

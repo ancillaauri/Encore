@@ -483,3 +483,19 @@ Agreed design for game detection (to build next):
   resources) on the RTX 3060 Ti. Suggested a clean driver install, removing any GPU overclock,
   checking temperatures and power cables. If a freeze happens on 0.9.4+ with no hardware error
   logged, look at Encore again.
+
+## 2026-11-01: Desktop Capture (0.9.6)
+- "Until a game opens: Record my screen / Wait for a game" was a mode hidden inside the game bar.
+  It's now **Desktop Capture**, an icon switch heading the screens section (where "What to
+  record" was). "Manual mode" was considered and dropped: you can still press record by hand with
+  it off. Setting `desktop_capture` (reads the old `replay_on_desktop`).
+- Off (games only, needs game detection): screens and Select Application dimmed and disabled;
+  Echoes waits for a game; a recording always ends with its game; record is greyed out with no
+  game open ("Start a game to record (or turn on Desktop Capture)"), and the engine refuses it
+  too; status "Desktop Capture: Off · waiting for a game".
+- Game detection off forces Desktop Capture on (both off would record nothing), in the engine
+  and the switch's tooltip.
+- The Settings option "Only keep Echoes while a game is running" is gone (same thing); "when the
+  game closes" now only applies with Desktop Capture on. Setup's switch is "Desktop Capture".
+- Every glowing icon switch now sits on a faint tile (a tinted one when on), so it reads as a
+  button: audio, Echoes, Desktop Capture, game detection, Do not disturb.
