@@ -1,3 +1,15 @@
+## Encore 0.9.12 (beta), test build 33: fewer false alarms, no double saves
+
+### Changed
+- **The "Recording is falling behind" warning** now only appears when it affects your Echoes:
+  the capture is still behind after 30 seconds, or more than 10 seconds behind. A short slip
+  while a game loads no longer sets it off. Every slip is still noted in Encore's log.
+- **Pressing a save hotkey twice by accident** (within a second and a half) saves one Echo, not
+  two identical ones.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.12).
+
 ## Encore 0.9.11 (beta), test build 32: notifications you can see
 
 ### Fixed

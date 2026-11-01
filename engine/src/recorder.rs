@@ -359,6 +359,7 @@ fn watch_progress(
         let mut last_saved: Option<u64> = None;
         let mut last_save_time: Option<Instant> = None;
         let mut behind = Behind::default();
+        let begun = Instant::now();
         for line in BufReader::new(stdout).lines() {
             let Ok(line) = line else { break };
             let now = platform::now_hns();
@@ -371,7 +372,7 @@ fn watch_progress(
                 if let Some(start) = best {
                     // How far the video written is behind real time.
                     let lag = now.saturating_sub(start).saturating_sub(us.max(0) as u64 * 10);
-                    behind.check(lag, index);
+                    behind.check(lag, begun.elapsed(), index);
                 }
                 let due = last_save_time.map(|t| t.elapsed() > Duration::from_secs(2)).unwrap_or(true);
                 if best.is_some() && best != last_saved && due {
@@ -392,40 +393,74 @@ fn watch_progress(
 }
 
 /// Notices when a capture falls behind real time (the game is using all of the graphics card and
-/// the capture can't keep up): logged when it starts and when it catches up, and the interface is
-/// told once per capture part.
+/// the capture can't keep up). Every slip of more than a few seconds is logged, with when it
+/// catches up. The interface is told (once per capture part) only when it matters for Echoes:
+/// still behind after 30 seconds, or more than 10 seconds behind. A short slip while a game
+/// loads catches up by itself.
 #[derive(Default)]
 struct Behind {
-    since: Option<Instant>,
+    /// When this slip began (time since the part started).
+    since: Option<Duration>,
+    logged: bool,
     worst: u64,
     told: bool,
 }
 
-/// Behind by more than this, for longer than BEHIND_FOR, counts.
+/// Behind by more than this, for longer than BEHIND_FOR, is logged.
 const BEHIND_HNS: u64 = 3 * 10_000_000;
 const BEHIND_FOR: Duration = Duration::from_secs(4);
+/// The interface is told after this long behind, or when this far behind.
+const BEHIND_WARN_FOR: Duration = Duration::from_secs(30);
+const BEHIND_WARN_HNS: u64 = 10 * 10_000_000;
+
+#[derive(Debug, PartialEq)]
+enum BehindNews {
+    Slipped(u64),
+    Warn(u64),
+    CaughtUp { after: u64, worst: u64 },
+}
 
 impl Behind {
-    fn check(&mut self, lag: u64, index: usize) {
+    /// `lag`: how far behind real time (hns); `at`: time since the part started.
+    fn step(&mut self, lag: u64, at: Duration) -> Vec<BehindNews> {
+        let mut news = Vec::new();
         if lag > BEHIND_HNS {
-            let since = *self.since.get_or_insert_with(Instant::now);
+            let since = *self.since.get_or_insert(at);
             self.worst = self.worst.max(lag);
-            if !self.told && since.elapsed() >= BEHIND_FOR {
+            let long = at.saturating_sub(since);
+            if !self.logged && long >= BEHIND_FOR {
+                self.logged = true;
+                news.push(BehindNews::Slipped(lag / 10_000_000));
+            }
+            if self.logged && !self.told && (long >= BEHIND_WARN_FOR || lag >= BEHIND_WARN_HNS) {
                 self.told = true;
-                let secs = lag / 10_000_000;
-                log(&format!("capture part {index} is falling behind: {secs} s behind real time (priority {})", if platform::gpu_top() { "realtime chosen" } else { "high" }));
-                crate::protocol::send_event("capture_behind", serde_json::json!({ "seconds": secs, "top_priority": platform::gpu_top() }));
+                news.push(BehindNews::Warn(lag / 10_000_000));
             }
-        } else if lag < BEHIND_HNS / 3 && self.since.is_some() {
-            if self.told {
-                log(&format!(
-                    "capture part {index} caught up after {} s (at worst {} s behind)",
-                    self.since.map(|s| s.elapsed().as_secs()).unwrap_or(0),
-                    self.worst / 10_000_000
-                ));
+        } else if lag < BEHIND_HNS / 3 {
+            if let Some(since) = self.since.take() {
+                if self.logged {
+                    news.push(BehindNews::CaughtUp { after: at.saturating_sub(since).as_secs(), worst: self.worst / 10_000_000 });
+                }
+                self.logged = false;
+                self.worst = 0;
             }
-            self.since = None;
-            self.worst = 0;
+        }
+        news
+    }
+
+    fn check(&mut self, lag: u64, at: Duration, index: usize) {
+        let priority = if platform::gpu_top() { "top priority" } else { "high priority" };
+        for n in self.step(lag, at) {
+            match n {
+                BehindNews::Slipped(s) => log(&format!("capture part {index} is falling behind: {s} s behind real time ({priority})")),
+                BehindNews::Warn(s) => {
+                    log(&format!("capture part {index}: still behind ({s} s): telling the interface"));
+                    crate::protocol::send_event("capture_behind", serde_json::json!({ "seconds": s, "top_priority": platform::gpu_top() }));
+                }
+                BehindNews::CaughtUp { after, worst } => {
+                    log(&format!("capture part {index} caught up after {after} s (at worst {worst} s behind)"))
+                }
+            }
         }
     }
 }
@@ -1142,5 +1177,29 @@ mod e2e_replay {
         assert_eq!(start, s0); // the 18 s written, from the start
         assert_eq!(plan[0].first_index, 0);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn falling_behind_is_logged_each_time_and_told_only_when_it_matters() {
+        let s = |n: u64| Duration::from_secs(n);
+        let lag = |secs: u64| secs * 10_000_000;
+        let mut b = Behind::default();
+        // A loading-screen slip: 6 s behind for 8 s, then caught up. Logged, not told.
+        assert!(b.step(lag(5), s(10)).is_empty());
+        assert_eq!(b.step(lag(6), s(14)), vec![BehindNews::Slipped(6)]);
+        assert!(b.step(lag(6), s(17)).is_empty());
+        assert_eq!(b.step(0, s(18)), vec![BehindNews::CaughtUp { after: 8, worst: 6 }]);
+        // Slips again later and drifts past 10 s: logged again, and told.
+        assert!(b.step(lag(4), s(40)).is_empty());
+        assert_eq!(b.step(lag(5), s(44)), vec![BehindNews::Slipped(5)]);
+        assert_eq!(b.step(lag(10), s(50)), vec![BehindNews::Warn(10)]);
+        assert!(b.step(lag(20), s(60)).is_empty()); // told once per part
+        assert_eq!(b.step(0, s(70)), vec![BehindNews::CaughtUp { after: 30, worst: 20 }]);
+        // Behind a little but for 30 s: told.
+        let mut c = Behind::default();
+        c.step(lag(4), s(0));
+        assert_eq!(c.step(lag(4), s(4)), vec![BehindNews::Slipped(4)]);
+        assert!(c.step(lag(4), s(29)).is_empty());
+        assert_eq!(c.step(lag(4), s(30)), vec![BehindNews::Warn(4)]);
     }
 }

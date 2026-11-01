@@ -563,3 +563,13 @@ Agreed design for game detection (to build next):
   window in front. Both windows run WebView2 with native occlusion and background throttling off
   (same arguments on both, so they share one WebView2). The window only hides when the page has
   had every notification sent (a new one arriving as the last faded could be hidden).
+- 0.9.12, from the 10:31–10:35 test: on high priority the Warframe capture caught up after the
+  loading screen (8 s), then slipped again in play and drifted to about 28 s behind, so 60 s
+  Echoes held 42 s and 32 s (smooth 60 fps, just cut short). The warning didn't come again (once
+  per part). On top priority it stayed caught up. Repeated frames: 1.8% on high, 0.2% on top.
+  - Every slip of more than 3 s for 4 s is now logged, each time, with when it catches up. The
+    interface is told once per part, only when it matters: still behind after 30 s, or more than
+    10 s behind (the person's rule: catching up within 30 s and staying caught up is fine).
+  - Waiting at save time for the missing seconds was considered and left out for now.
+  - The same hotkey pressed twice within 1.5 s counts as one press (a double tap saved two
+    identical Echoes); the second press is logged.

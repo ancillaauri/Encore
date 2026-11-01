@@ -109,11 +109,17 @@ fn down(vk: i32) -> bool {
     unsafe { (GetAsyncKeyState(vk) as u16 & 0x8000) != 0 }
 }
 
+/// A second press of the same hotkey within this long counts as the same press.
+const REPEAT_GAP: Duration = Duration::from_millis(1500);
+
 /// Watches the keyboard on a background thread for as long as Encore runs.
 pub fn start(app: AppHandle) {
     #[cfg(windows)]
     std::thread::spawn(move || {
         let mut held: Vec<bool> = Vec::new();
+        // When each action last fired: a second press of the same hotkey within REPEAT_GAP is
+        // taken as one press (two identical Echoes were saved from one quick double tap).
+        let mut last_fired: std::collections::HashMap<&'static str, std::time::Instant> = Default::default();
         loop {
             std::thread::sleep(Duration::from_millis(10));
             let bindings = app.state::<Hotkeys>().bindings.lock().unwrap().clone();
@@ -130,8 +136,14 @@ pub fn start(app: AppHandle) {
             for (i, (c, action, text)) in bindings.iter().enumerate() {
                 let now = down(c.key) && ctrl == c.ctrl && alt == c.alt && shift == c.shift && win == c.win;
                 if now && !held[i] {
-                    let _ = app.emit("hotkey", *action);
-                    note(&app, format!("hotkey {text} pressed ({action})"));
+                    let repeat = last_fired.get(action).map(|t| t.elapsed() < REPEAT_GAP).unwrap_or(false);
+                    if repeat {
+                        note(&app, format!("hotkey {text} pressed again straight away ({action}): taken as one press"));
+                    } else {
+                        last_fired.insert(*action, std::time::Instant::now());
+                        let _ = app.emit("hotkey", *action);
+                        note(&app, format!("hotkey {text} pressed ({action})"));
+                    }
                 }
                 held[i] = now;
             }
