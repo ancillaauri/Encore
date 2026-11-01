@@ -783,3 +783,31 @@ body.side-collapsed .side-foot { display: none; }
 .arow:has(input:disabled) .aic svg { opacity: .45; }
 .info { display: inline-grid; place-items: center; width: 15px; height: 15px; flex: none; border-radius: 50%; border: 1.3px solid #6b6a70; color: #9c9ba0; font-size: 10px; font-weight: 700; font-style: normal; line-height: 1; cursor: help; }
 .info:hover, .info:focus-visible { border-color: #b4bbff; color: #e0e3ff; outline: none; }
+
+/* ---------- game detection: waiting on the chosen screen (green), or recording a game ---------- */
+body.gd-wait .pick.on .mon, body.gd-wait .pick.on .app {
+  border-color: rgba(98, 214, 133, .9);
+  color: #d4f7de;
+  background: repeating-linear-gradient(0deg, rgba(98, 214, 133, .10) 0 1px, transparent 1px 4px), linear-gradient(180deg, rgba(59, 165, 93, .32), rgba(59, 165, 93, .05));
+  box-shadow: 0 0 22px rgba(59, 165, 93, .4), inset 0 0 18px rgba(98, 214, 133, .22);
+  text-shadow: 0 0 12px rgba(98, 214, 133, .9);
+}
+body.gd-wait .pick.on .app .bar { border-color: rgba(98, 214, 133, .7); }
+body.gd-wait .pick.on .neck { background: rgba(98, 214, 133, .7); box-shadow: 0 0 8px rgba(59, 165, 93, .8); }
+body.gd-wait .pick.on .beam { background: radial-gradient(ellipse at center, rgba(59, 165, 93, .6), transparent 70%); }
+body.gd-wait .pick.on { border-color: #1f3a28; background: #0f1611; }
+body.gd-wait .pick.cur .mon { border-color: rgba(98, 214, 133, .55); color: #a9e8bb; box-shadow: 0 0 12px rgba(59, 165, 93, .2); }
+body.gd-wait .pick.cur .neck { background: rgba(98, 214, 133, .4); }
+body.gd-wait .pick.cur .beam { background: radial-gradient(ellipse at center, rgba(59, 165, 93, .3), transparent 70%); }
+body.gd-wait .pick.cur .ps { color: #8fdca5; }
+/* A game is being recorded: the chosen screen waits in the background. */
+body.gd-game:not(.recording) #picks .pick.on, body.gd-game:not(.recording) #picks .pick.cur { opacity: .55; }
+.gchip.rec { border-color: rgba(255, 120, 124, .8); background: rgba(242, 63, 67, .12); color: #ffd9da; }
+.gchip.rec .gd { background: var(--red); box-shadow: 0 0 6px rgba(242, 63, 67, .8); }
+
+/* Settings → Games lists */
+.gamelist { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 12px; }
+.gamelist .gb-empty { font-size: 12.5px; }
+.lchip { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 10px; border-radius: 6px; background: var(--panel2); border: 1px solid var(--line2); font-size: 12.5px; }
+.lx { width: 20px; height: 20px; border: 0; border-radius: 4px; background: transparent; color: var(--mute); font-size: 15px; line-height: 1; cursor: pointer; }
+.lx:hover { background: #2a292e; color: #fff; }

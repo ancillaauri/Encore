@@ -14,7 +14,9 @@ A lightweight game and screen recorder for Windows 11, made as a pair with the c
 - Saves into an Encore folder wherever you choose, with a folder per game or app
 - Tray icon, start with Windows, start/stop/save sounds you can choose, and a status panel
 - In-app updates, on your terms (tell me, download automatically, or never)
-- Coming next: automatic game detection, then Encore's own notifications
+- **Game detection:** games are recorded on their own as they open (just the game's window), and
+  the screen you chose takes over when they close; lock a game when several are open
+- Coming next: Encore's own notifications
 
 Status: beta (0.x). See [FEATURES.md](FEATURES.md) for what is built and what is planned.
 

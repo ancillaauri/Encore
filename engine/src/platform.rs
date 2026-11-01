@@ -22,6 +22,25 @@ pub struct Monitor {
     pub primary: bool,
 }
 
+/// A visible top-level window, with what game detection needs to know about it.
+#[derive(Debug, Clone, Default)]
+pub struct TopWindow {
+    pub handle: u64,
+    pub pid: u32,
+    pub title: String,
+    /// Program file name, e.g. "League of Legends.exe".
+    pub exe: String,
+    /// Full path of the program, when Windows lets us read it (empty otherwise).
+    pub path: String,
+    pub width: u32,
+    pub height: u32,
+    /// The window fills (or overflows) its whole monitor.
+    pub covers_monitor: bool,
+    /// The window has a normal title bar (most games in full screen or borderless don't).
+    pub captioned: bool,
+    pub minimised: bool,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct WindowInfo {
     pub handle: u64,
@@ -116,6 +135,12 @@ mod other {
     }
     pub fn list_windows() -> Vec<WindowInfo> {
         Vec::new()
+    }
+    pub fn top_windows() -> Vec<TopWindow> {
+        Vec::new()
+    }
+    pub fn foreground_window() -> u64 {
+        0
     }
     pub fn monitor_under_cursor() -> Option<u64> {
         None
@@ -225,6 +250,7 @@ mod win {
     use windows_sys::Win32::UI::HiDpi::SetProcessDpiAwarenessContext;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetClassNameW, GetClientRect, GetCursorPos, GetForegroundWindow, GetWindow, GetWindowLongPtrW,
+        GetWindowRect,
         GetWindowTextLengthW,
         GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindow, IsWindowVisible,
     };
@@ -744,6 +770,92 @@ mod win {
                     continue;
                 }
                 out.push(WindowInfo { handle: h2u(h), title, exe: process_exe(pid), width: w, height: ht });
+            }
+        }
+        out
+    }
+
+    /// The window that has the keyboard focus (0 if none).
+    pub fn foreground_window() -> u64 {
+        unsafe { h2u(GetForegroundWindow()) }
+    }
+
+    /// Full path of a process's program file ("" if Windows won't say, e.g. some protected games).
+    fn process_path(pid: u32) -> String {
+        unsafe {
+            let hp = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION as _, 0, pid);
+            if hp.is_null() {
+                return String::new();
+            }
+            let mut buf = vec![0u16; 1024];
+            let mut size = buf.len() as u32;
+            let ok = QueryFullProcessImageNameW(hp, 0, buf.as_mut_ptr(), &mut size);
+            CloseHandle(hp);
+            if ok == 0 {
+                return String::new();
+            }
+            String::from_utf16_lossy(&buf[..size as usize])
+        }
+    }
+
+    /// Visible top-level windows of other programs, for game detection. Same filters as
+    /// `list_windows`, plus where each one sits and whether it fills its monitor.
+    pub fn top_windows() -> Vec<TopWindow> {
+        const GWL_STYLE: i32 = -16;
+        const WS_CAPTION: isize = 0x00C0_0000;
+        let mut handles: Vec<HWND> = Vec::new();
+        let mut out = Vec::new();
+        let procs = processes();
+        unsafe {
+            EnumWindows(Some(collect_window), &mut handles as *mut _ as LPARAM);
+            let me = GetCurrentProcessId();
+            for h in handles {
+                if IsWindowVisible(h) == 0 || !GetWindow(h, GW_OWNER as _).is_null() {
+                    continue;
+                }
+                if GetWindowLongPtrW(h, GWL_EXSTYLE as _) & WS_EX_TOOLWINDOW != 0 {
+                    continue;
+                }
+                let mut cloaked: u32 = 0;
+                DwmGetWindowAttribute(h, DWMWA_CLOAKED as _, &mut cloaked as *mut u32 as *mut c_void, 4);
+                if cloaked != 0 {
+                    continue;
+                }
+                let mut pid: u32 = 0;
+                GetWindowThreadProcessId(h, &mut pid);
+                if pid == me || pid == 0 {
+                    continue;
+                }
+                let (w, ht) = client_size(h).unwrap_or((0, 0));
+                let minimised = IsIconic(h) != 0;
+                if !minimised && (w < 200 || ht < 150) {
+                    continue;
+                }
+                let mut r: RECT = zeroed();
+                let mut covers = false;
+                if GetWindowRect(h, &mut r) != 0 {
+                    let hm = MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST as _);
+                    let mut mi: MONITORINFO = zeroed();
+                    mi.cbSize = size_of::<MONITORINFO>() as u32;
+                    if !hm.is_null() && GetMonitorInfoW(hm, &mut mi) != 0 {
+                        let m = mi.rcMonitor;
+                        covers = r.left <= m.left && r.top <= m.top && r.right >= m.right && r.bottom >= m.bottom;
+                    }
+                }
+                let captioned = GetWindowLongPtrW(h, GWL_STYLE as _) & WS_CAPTION == WS_CAPTION;
+                let exe = procs.get(&pid).map(|p| p.exe.clone()).filter(|e| !e.is_empty()).unwrap_or_else(|| process_exe(pid));
+                out.push(TopWindow {
+                    handle: h2u(h),
+                    pid,
+                    title: window_title(h),
+                    exe,
+                    path: process_path(pid),
+                    width: w,
+                    height: ht,
+                    covers_monitor: covers,
+                    captioned,
+                    minimised,
+                });
             }
         }
         out

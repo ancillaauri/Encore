@@ -18,6 +18,13 @@
     listAudioInputs: () => call('list_audio_inputs'),
     listMonitors: () => call('list_monitors'),
     listWindows: () => call('list_windows'),
+    // Game detection
+    listGames: () => call('list_games'),
+    lockGame: (pid) => call('lock_game', { pid: pid ?? null }),
+    lockFocusedGame: () => call('lock_focused_game'),
+    nextGame: () => call('next_game'),
+    setTrayGames: (on, games, active, locked, recording) => T.core.invoke('set_tray_games', { on, games, active: active ?? null, locked: locked ?? null, recording }),
+    onTrayGame: (callback) => T.event.listen('tray-game', (e) => callback(e.payload)),
     openFolder: (path) => T.core.invoke('open_folder', { path }),
     revealFile: (path) => T.core.invoke('reveal_in_folder', { path }),
     openLink: (url) => T.core.invoke('open_link', { url }),

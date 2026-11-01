@@ -17,7 +17,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Microphone choice (push-to-talk comes with hotkeys) | 4 | [~] |
 | Split Application Audio: one audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [x] |
 | Global hotkeys (start/stop recording; more with replay), tray icon, close to tray, sounds | 6 | [~] 0.6.0 |
-| Game detection (auto + always/never list + pick a window) | 6 | [ ] |
+| Game detection: games recorded on their own (window only), green fallback screen, lock/next game (click, tray, Ctrl+Alt+G / Ctrl+Alt+N), newest or focused game, always/never lists, names from Steam/library folders, saves named after the game | 6 | [x] 0.9 |
 | Recording moves to the monitor you click on, mid-recording, with no gap | 6 | [x] 0.5 |
 | Switch Game ↔ Desktop mid-recording (reuses the same mechanism) | 6 | [ ] |
 | Pause / resume manual recording | 6 | [ ] |

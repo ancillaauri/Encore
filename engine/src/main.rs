@@ -8,6 +8,7 @@
 mod audio;
 mod engine;
 mod ffmpeg;
+mod games;
 mod log;
 mod paths;
 mod platform;

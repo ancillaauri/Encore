@@ -15,7 +15,8 @@
     windowHandle: 0,
     windowTitle: '',
     focusMonitor: null, // id of the monitor last clicked on (what "follow" records)
-    replay: { on: false }, // instant replay: { on, seconds, label }
+    replay: { on: false }, // instant replay: { on, seconds, label, waiting }
+    games: { on: false, games: [], active: null, locked: null, paused: false }, // from the engine
     replayBusy: false,
     phase: 'idle', // idle | starting | recording | saving
     recording: null,
@@ -384,7 +385,10 @@
     let note = '';
     if (recording && state.recording && state.recording.following) note = 'Follows the screen you click on. Click a window on another monitor to move the recording there.';
     else if (recording) note = '';
+    else if (state.source === 'window' && state.settings && state.settings.game_detection) note = 'Only this window is recorded, even when you alt-tab. Game detection is paused until you pick Follow or a monitor.';
     else if (state.source === 'window') note = 'Only this window is recorded, even when you alt-tab. Pick Follow or a monitor to record a screen instead.';
+    else if (gameActive()) note = `${state.phase === 'recording' ? 'Recording' : 'Records'} ${gameActive().name}. The highlighted screen is used again when it closes.`;
+    else if (gameWaiting()) note = 'Game detection is on: the green screen is recorded until a game opens.';
     else if (pin) note = 'Always records this monitor. Pick Follow to record whichever screen you click on.';
     else note = 'Records the screen you click on and moves with you. Pick a monitor to always record that one.';
     $('pick-note').textContent = note;
@@ -504,24 +508,37 @@
     else if (state.phase === 'starting') add('acc', 'Starting', 'Getting the capture ready');
     else add('', 'Standing by', 'Ready when you are');
     // What's captured
-    if (state.phase === 'recording' && state.recording) {
+    const game = gameActive();
+    const waiting = gameWaiting();
+    if (state.phase === 'recording' && state.recording && state.recording.game) {
+      add('acc', 'Recording game', state.recording.game);
+    } else if (state.phase === 'recording' && state.recording) {
       const r = state.recording;
       const m = r.monitor && monitorById(r.monitor);
-      const name = m ? m.name : r.source.replace(/^Desktop: /, '').replace(/^Window: /, '');
-      add('acc', r.following ? 'Following you' : (m ? 'Locked to screen' : 'Application'), name);
+      const name = m ? m.name : r.source.replace(/^Desktop: /, '').replace(/^Window: /, '').replace(/^Game: /, '');
+      add(waiting ? 'good' : 'acc', r.following ? 'Following you' : (m ? 'Locked to screen' : 'Application'), name);
+    } else if (game && state.source === 'desktop') {
+      // The game detection line below says which game.
     } else if (state.source === 'window') {
       add(state.windowTitle ? 'acc' : '', 'Application', state.windowTitle || 'Choose one below');
     } else if (pinnedId()) {
       const m = targetMonitor();
-      add('acc', 'Locked to screen', m ? m.name : 'Not connected: the primary is used');
+      add(waiting ? 'good' : 'acc', 'Locked to screen', m ? m.name : 'Not connected: the primary is used');
     } else {
       const m = targetMonitor();
-      add('acc', 'Following you', m ? `On ${m.name}` : 'The screen you click');
+      add(waiting ? 'good' : 'acc', 'Following you', m ? `On ${m.name}` : 'The screen you click');
     }
     // Game detection
-    if (s && s.game_detection) add('acc', 'Game detection', 'Scanning for games');
+    if (s && s.game_detection) {
+      const g = state.games || {};
+      if (state.source === 'window' || g.paused) add('', 'Game detection', 'Paused while recording an application');
+      else if (game && g.locked === game.pid) add('acc', 'Locked to', game.name);
+      else if (game) add('acc', 'Tracking', game.name);
+      else add('good', 'Game detection', 'Scanning for games');
+    }
     // Instant replay
-    if (state.replay && state.replay.on) add('good', 'Instant replay', `Holding the last ${replayLength()}`);
+    if (state.replay && state.replay.on && state.replay.waiting) add('', 'Instant replay', 'Waiting for a game');
+    else if (state.replay && state.replay.on) add('good', 'Instant replay', `Holding the last ${replayLength()}`);
     else add('', 'Instant replay', 'Off');
     // Audio tracks while recording
     const tracks = state.phase === 'recording' && state.recording ? state.recording.audio_tracks || [] : [];
@@ -569,6 +586,8 @@
     renderReplay();
     renderSounds();
     renderToggles();
+    renderGames();
+    renderGameSettings();
     if (!$('setup').hidden) renderSetup();
   }
 
@@ -733,6 +752,15 @@
         toast(`Saved replay${len}: ${fileName(data.path)}`, 'ok', 5000);
         break;
       }
+      case 'games':
+        state.games = data;
+        renderGames();
+        renderStage();
+        break;
+      case 'game_switched':
+        if (state.recording) state.recording.game = data.name || null;
+        renderStage();
+        break;
       case 'focus_monitor':
         state.focusMonitor = data.id || state.focusMonitor;
         if (state.phase === 'idle') renderStage();
@@ -1149,6 +1177,8 @@
     playCue(rec ? 'start' : 'stop');
     const label = rec && state.recording ? (state.recording.label || '') : '';
     bridge.setRecordingState(rec, label).catch(() => {});
+    traySent = '';
+    syncTrayGames();
   }
 
   // Hotkey settings: click the button, then press the keys.
@@ -1268,6 +1298,7 @@
     if (action === 'save_replay_30') { saveReplay(30); return; }
     if (action === 'save_replay_60') { saveReplay(60); return; }
     if (action === 'save_replay_custom') { saveReplay(state.settings ? state.settings.replay_custom_seconds : 90); return; }
+    if (action === 'lock_game' || action === 'next_game') { gameHotkey(action); return; }
     if (action !== 'toggle_record') return;
     if (state.phase === 'idle' || state.phase === 'recording') toggleRecording();
   });
@@ -1377,7 +1408,6 @@
     $('dnd-sub').textContent = dnd ? 'On: notifications paused' : 'Off';
     const game = !!s.game_detection;
     $('game-on').setAttribute('aria-pressed', String(game));
-    $('gb-sub').textContent = game ? 'Scanning for games' : 'Off';
     $('gamebar').classList.toggle('on', game);
   }
   // After a click the tip under the mouse shows the new state.
@@ -1393,6 +1423,132 @@
     await saveSetting('game_detection', !state.settings.game_detection);
     refreshTipFor($('game-on'));
   });
+
+  // ---------- game detection ----------
+  const LOCK_SVG = '<svg class="lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  function gameActive() {
+    const g = state.games || {};
+    if (!state.settings || !state.settings.game_detection) return null;
+    return (g.games || []).find((x) => x.pid === g.active) || null;
+  }
+  // Game detection is on but no game is open: the chosen screen is recorded meanwhile (green).
+  function gameWaiting() {
+    const s = state.settings;
+    return !!(s && s.game_detection && state.source === 'desktop' && !(state.games || {}).paused && !gameActive());
+  }
+  function renderGames() {
+    const s = state.settings;
+    if (!s) return;
+    const g = state.games || {};
+    const on = !!s.game_detection;
+    const act = gameActive();
+    const paused = on && (state.source === 'window' || g.paused);
+    $('gb-sub').textContent = !on ? 'Off'
+      : paused ? 'Paused while recording an application'
+      : act ? (g.locked === act.pid ? `Locked to ${act.name}` : `Tracking ${act.name}`)
+      : 'Scanning for games';
+    const box = $('gb-games');
+    box.textContent = '';
+    if (on) {
+      if (!(g.games || []).length) box.append(h('span', 'gb-empty', 'No games open. Your chosen screen is recorded until one starts.'));
+      for (const game of g.games || []) {
+        const isActive = game.pid === g.active;
+        const isLocked = game.pid === g.locked;
+        const b = h('button', `gchip${isActive ? ' active' : ''}${isLocked ? ' locked' : ''}${isActive && state.phase === 'recording' ? ' rec' : ''}`);
+        b.type = 'button';
+        b.append(h('span', 'gd'), document.createTextNode(game.name));
+        if (isLocked) b.insertAdjacentHTML('beforeend', LOCK_SVG);
+        b.dataset.tip = isLocked
+          ? `${game.name} is locked. Click to unlock (Encore goes back to the newest game).`
+          : `Click to lock ${game.name}: Encore records it until it closes. Right-click for more.`;
+        b.addEventListener('click', () => lockGame(isLocked ? null : game.pid));
+        b.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          openMenu(e.clientX, e.clientY, [
+            { text: isLocked ? 'Unlock' : 'Record this game', run: () => lockGame(isLocked ? null : game.pid) },
+            '-',
+            { text: `Never a game (${game.exe})`, run: () => addGameToList('games_never', game.exe) },
+          ]);
+        });
+        box.append(b);
+      }
+    }
+    document.body.classList.toggle('gd-wait', gameWaiting());
+    document.body.classList.toggle('gd-game', !!(on && !paused && act && state.source === 'desktop'));
+    $('replay-desk-row').hidden = !on;
+    syncTrayGames();
+  }
+  async function lockGame(pid) {
+    try {
+      state.games = await bridge.lockGame(pid);
+      renderGames();
+      renderStage();
+    } catch (e) { toast(String(e), 'warning'); }
+  }
+  async function gameHotkey(action) {
+    if (!state.settings || !state.settings.game_detection) { toast('Turn on game detection first (the controller under the screens).', 'warning', 6000); return; }
+    try {
+      const r = action === 'next_game' ? await bridge.nextGame() : await bridge.lockFocusedGame();
+      playCue('save');
+      toast(`Recording ${r.locked} until it closes`, 'ok', 4000);
+    } catch (e) { toast(String(e), 'warning', 7000); }
+  }
+  let traySent = '';
+  function syncTrayGames() {
+    const s = state.settings;
+    const g = state.games || {};
+    const on = !!(s && s.game_detection);
+    const games = (g.games || []).map((x) => ({ pid: x.pid, name: x.name }));
+    const rec = state.phase === 'recording';
+    const sig = JSON.stringify([on, games, g.active, g.locked, rec]);
+    if (sig === traySent) return;
+    traySent = sig;
+    bridge.setTrayGames(on, games, g.active, g.locked, rec).catch(() => {});
+  }
+  bridge.onTrayGame((id) => lockGame(id === 'unlock' ? null : Number(id)));
+
+  // Settings → Games: always / never lists, and the two choices.
+  function renderGameSettings() {
+    const s = state.settings;
+    if (!s) return;
+    document.querySelectorAll('[data-game-pick]').forEach((o) => o.setAttribute('aria-checked', String(o.dataset.gamePick === s.game_pick)));
+    document.querySelectorAll('[data-game-end]').forEach((o) => o.setAttribute('aria-checked', String(o.dataset.gameEnd === s.game_end)));
+    for (const [key, id] of [['games_always', 'games-always'], ['games_never', 'games-never']]) {
+      const box = $(id);
+      box.textContent = '';
+      const list = s[key] || [];
+      if (!list.length) box.append(h('span', 'gb-empty', 'None'));
+      for (const exe of list) {
+        const chip = h('span', 'lchip', exe);
+        const x = h('button', 'lx');
+        x.type = 'button';
+        x.setAttribute('aria-label', `Remove ${exe}`);
+        x.textContent = '\u00d7';
+        x.addEventListener('click', () => saveSetting(key, list.filter((e) => e !== exe)));
+        chip.append(x);
+        box.append(chip);
+      }
+    }
+  }
+  async function addGameToList(key, exe) {
+    if (!state.settings || !exe) return;
+    const other = key === 'games_always' ? 'games_never' : 'games_always';
+    const has = (l) => l.some((e) => e.toLowerCase() === exe.toLowerCase());
+    if (has(state.settings[other])) await saveSetting(other, state.settings[other].filter((e) => e.toLowerCase() !== exe.toLowerCase()));
+    if (!has(state.settings[key])) await saveSetting(key, [...state.settings[key], exe]);
+    toast(key === 'games_always' ? `${exe} will be treated as a game.` : `${exe} won\u2019t be treated as a game.`, 'ok');
+  }
+  async function pickAppFor(key, btn) {
+    let wins = [];
+    try { wins = await bridge.listWindows(); } catch { /* none */ }
+    const items = wins.filter((w) => w.exe).map((w) => ({ text: `${w.title} (${w.exe})`, run: () => addGameToList(key, w.exe) }));
+    const r = btn.getBoundingClientRect();
+    openMenu(r.left, r.bottom + 6, items.length ? items : [{ text: 'No apps open', disabled: true, run: () => {} }]);
+  }
+  $('add-always-game').addEventListener('click', (e) => { e.stopPropagation(); pickAppFor('games_always', e.currentTarget); });
+  $('add-never-game').addEventListener('click', (e) => { e.stopPropagation(); pickAppFor('games_never', e.currentTarget); });
+  document.querySelectorAll('[data-game-pick]').forEach((o) => o.addEventListener('click', () => saveSetting('game_pick', o.dataset.gamePick)));
+  document.querySelectorAll('[data-game-end]').forEach((o) => o.addEventListener('click', () => saveSetting('game_end', o.dataset.gameEnd)));
 
   // ---------- settings contents (click to jump; the current section is highlighted) ----------
   (function buildSettingsNav() {
@@ -1482,6 +1638,7 @@
       state.elevated = !!status.elevated;
       await refreshAdmin();
       state.replay = status.replay || { on: false };
+      if (status.games) state.games = status.games;
       if (status.state === 'recording') {
         state.recording = { ...status.recording, source: status.recording.label };
         state.phase = 'recording';

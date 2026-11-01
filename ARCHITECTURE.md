@@ -229,3 +229,28 @@ while recording; the engine is shut down (saving any recording) just before the 
 
 First: the companion editor adds our output folder to the folders it scans. No API needed.
 Later, only if useful: a small local API (e.g. "replay saved, open in trim view").
+
+## Game detection (engine, 0.9)
+
+`engine/src/games.rs` decides which windows are games (`classify`) and what they're called
+(`game_name`); `Watch` keeps the open games, the lock, and which one to record (newest, or the one
+last focused). Order of rules: never list, always list, known launchers/clients/browsers/players/
+Windows parts (not games; the League client is one), well-known games by program name, game
+library folders (Steam, Epic, Riot, EA, Ubisoft, GOG, Xbox, Amazon), then full screen with no title
+bar. Names: well-known list, Steam's `appmanifest_*.acf` for the folder, the library folder name,
+then the program's description cleaned ("(TM)", "Client", "-Win64-Shipping" removed). Only window
+and file information is read; nothing touches a game's process.
+
+The engine scans once a second when `game_detection` is on (straight away when a recorded game
+window disappears). With a desktop session running, the capture switches to the game's window
+(`Target::Window`) with the same seamless part switch used for monitors, and back to the chosen
+screen (Follow or a pinned monitor) when no game is open. A game window that closes ends its
+FFmpeg part before the next one starts; the join stretches that part's last file (`duration` in
+the concat list) so everything after stays in time with the audio. Each part carries a label
+(game name or "Desktop"); saves and recordings are named after the label on screen for most of the
+saved stretch. Settings: `game_pick` (newest / focused), `game_end` (continue / stop),
+`games_always`, `games_never`, `replay_on_desktop` (off: replay waits for a game and its buffer is
+dropped when games close), hotkeys `hotkey_lock_game`, `hotkey_next_game`. Select Application
+(`source: window`) pauses detection. Commands: `list_games`, `lock_game`, `lock_focused_game`,
+`next_game`; event `games` (list, active, locked, paused) and `game_switched`.
+Not yet: telling the person when a game in exclusive full screen captures black.

@@ -2,6 +2,7 @@
 
 use crate::audio::{self, AudioOptions};
 use crate::ffmpeg::{self, CaptureSpec, Encoder, Pipeline, Target, ALL_CODECS, VENDOR_ORDER};
+use crate::games::{self, Pick, Watch};
 use crate::log::{log, tail};
 use crate::paths;
 use crate::platform;
@@ -84,6 +85,18 @@ pub struct Engine {
     clip: Option<Clip>,
     /// Start times of saves still reading the replay session's files (they mustn't be deleted).
     pins: Arc<Mutex<Vec<u64>>>,
+    /// Game detection: the games that are open, and which one is locked.
+    watch: Watch,
+    last_game_scan: Option<Instant>,
+    /// Names already worked out for each game process (reading them takes a moment).
+    game_names: HashMap<u32, String>,
+    /// What the interface last heard about games (to send updates only when something changes).
+    games_sent: String,
+    /// What the current capture was started for: "desktop" (Follow / a monitor) or "window"
+    /// (Select Application, which pauses game detection).
+    session_source: String,
+    /// Instant replay is on but only keeps games, and no game is open: waiting for one.
+    replay_waiting: bool,
 }
 
 /// A recording taken from the instant-replay capture: from `from` until it is stopped.
@@ -91,6 +104,7 @@ struct Clip {
     from: u64,
     out_path: PathBuf,
     label: String,
+    local: platform::LocalTime,
 }
 
 /// How long the focus must stay on another monitor before the recording moves there.
@@ -149,6 +163,12 @@ impl Engine {
             following: false,
             clip: None,
             pins: Arc::new(Mutex::new(Vec::new())),
+            watch: Watch::default(),
+            last_game_scan: None,
+            game_names: HashMap::new(),
+            games_sent: String::new(),
+            session_source: "desktop".into(),
+            replay_waiting: false,
         }
     }
 
@@ -196,6 +216,41 @@ impl Engine {
                 Ok(self.status())
             }
             "save_replay" => self.save_replay(&c.args),
+            "list_games" => Ok(self.games_json()),
+            // Lock onto a game ({"pid": n}) or unlock ({"pid": null}).
+            "lock_game" => {
+                let pid = c.args.get("pid").and_then(|v| v.as_u64()).map(|p| p as u32);
+                if self.watch.lock(pid) {
+                    self.send_games(true);
+                    Ok(self.games_json())
+                } else {
+                    Err("That game has closed.".into())
+                }
+            }
+            // Hotkey: lock onto the game in front.
+            "lock_focused_game" => {
+                self.scan_games(true);
+                match self.watch.lock_window(platform::foreground_window()) {
+                    Some(name) => {
+                        log(&format!("locked to {name}"));
+                        self.send_games(true);
+                        Ok(json!({ "locked": name }))
+                    }
+                    None => Err("The window in front isn't a game Encore knows. Add it in Settings → Games.".into()),
+                }
+            }
+            // Hotkey: move to the next open game.
+            "next_game" => {
+                self.scan_games(true);
+                match self.watch.next(self.pick()) {
+                    Some(name) => {
+                        log(&format!("next game: {name}"));
+                        self.send_games(true);
+                        Ok(json!({ "locked": name }))
+                    }
+                    None => Err("No games are open.".into()),
+                }
+            }
             // A line from the app shell for the log (e.g. hotkey presses).
             "note" => {
                 log(c.args.get("message").and_then(|m| m.as_str()).unwrap_or(""));
@@ -223,6 +278,7 @@ impl Engine {
         let focus = self.focus.and_then(monitor_id);
         let replay = match &self.active {
             Some(a) if a.is_replay() => json!({ "on": true, "seconds": self.settings.replay_seconds, "label": a.label }),
+            _ if self.replay_waiting => json!({ "on": true, "waiting": true, "seconds": self.settings.replay_seconds }),
             _ => json!({ "on": false }),
         };
         let recording = match &self.active {
@@ -239,6 +295,10 @@ impl Engine {
                 "audio_tracks": a.track_titles(),
                 "monitor": match a.target() { Target::Monitor { handle } => monitor_id(handle), _ => None },
                 "following": self.following,
+                "game": match a.target() {
+                    Target::Window { handle } if self.session_source == "desktop" => self.watch.games.iter().find(|g| g.handle == handle).map(|g| g.name.clone()),
+                    _ => None,
+                },
             }),
             _ => Value::Null,
         };
@@ -248,6 +308,7 @@ impl Engine {
             "replay": replay,
             "focus_monitor": focus,
             "elevated": platform::is_elevated(),
+            "games": self.games_json(),
         })
     }
 
@@ -298,7 +359,7 @@ impl Engine {
                 "following": self.following,
                 "from_replay": true,
             });
-            self.clip = Some(Clip { from: now, out_path, label: a.label.clone() });
+            self.clip = Some(Clip { from: now, out_path, label: a.label.clone(), local: platform::local_time() });
             send_event("recording_started", info.clone());
             return Ok(info);
         }
@@ -326,7 +387,22 @@ impl Engine {
 
         let source = args.get("source").and_then(|v| v.as_str()).unwrap_or("desktop");
         let following = source == "desktop" && self.settings.monitor == "follow";
+        if source == "desktop" && self.settings.game_detection {
+            self.scan_games(true);
+        }
+        let game = if source == "desktop" && self.settings.game_detection { self.current_game() } else { None };
         let (target, label, src_w, src_h, describe) = match source {
+            "desktop" if game.is_some() => {
+                let g = game.unwrap();
+                let (w, h) = platform::window_size(g.handle).filter(|(w, h)| *w > 0 && *h > 0).map_or_else(
+                    || self.pick_monitor().map(|m| (m.2, m.3)).unwrap_or((1920, 1080)),
+                    |s| s,
+                );
+                // The output size is set once, from the screen, so switching to and from the
+                // game doesn't change it (the game is scaled to fit if it's windowed).
+                let (mw, mh) = self.pick_monitor().map(|m| (m.2, m.3)).unwrap_or((w, h));
+                (Target::Window { handle: g.handle }, g.name.clone(), mw.max(w), mh.max(h), format!("Game: {}", g.name))
+            }
             "desktop" => self.pick_monitor()?,
             "window" => {
                 let handle = args
@@ -399,6 +475,7 @@ impl Engine {
         self.active = Some(active);
         self.following = following;
         self.focus_candidate = None;
+        self.session_source = source.to_string();
         if replay {
             send_event("replay_status", json!({ "on": true, "seconds": self.settings.replay_seconds, "label": info["label"] }));
         } else {
@@ -413,6 +490,17 @@ impl Engine {
             Some(_) => return Err("Stop the recording first, then turn on instant replay.".into()),
             None => {}
         }
+        let source = args.get("source").and_then(|v| v.as_str()).unwrap_or("desktop");
+        if source == "desktop" && self.settings.game_detection && !self.settings.replay_on_desktop {
+            self.scan_games(true);
+            if self.current_game().is_none() {
+                // Only games are kept: wait for one to open.
+                self.replay_waiting = true;
+                send_event("replay_status", json!({ "on": true, "waiting": true, "seconds": self.settings.replay_seconds }));
+                return Ok(self.status());
+            }
+        }
+        self.replay_waiting = false;
         self.start_session(args, true)?;
         Ok(self.status())
     }
@@ -426,6 +514,10 @@ impl Engine {
     }
 
     fn stop_replay(&mut self) {
+        if self.replay_waiting {
+            self.replay_waiting = false;
+            send_event("replay_status", json!({ "on": false }));
+        }
         if self.clip.is_some() {
             self.stop_recording();
         }
@@ -448,8 +540,9 @@ impl Engine {
         let seconds = args.get("seconds").and_then(|v| v.as_u64()).map(|s| (s as u32).clamp(1, max)).unwrap_or(max);
         let to = platform::now_hns();
         let from = to.saturating_sub(seconds as u64 * 10_000_000);
-        let out_path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &a.label, platform::local_time());
-        self.save_in_background(from, to, out_path, a.label.clone(), true);
+        let label = a.label_for(from, to);
+        let out_path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &label, platform::local_time());
+        self.save_in_background(from, to, out_path, label, true);
         Ok(json!({ "saving": true, "seconds": seconds }))
     }
 
@@ -524,13 +617,27 @@ impl Engine {
     fn stop_recording(&mut self) {
         if let Some(clip) = self.clip.take() {
             // A recording from the replay capture: save its stretch; the buffer keeps running.
+            // Named after what was on screen for most of it (e.g. the game).
             send_event("status", json!({ "state": "saving" }));
-            self.save_in_background(clip.from, platform::now_hns(), clip.out_path, clip.label, false);
+            let now = platform::now_hns();
+            let (out_path, label) = match self.active.as_ref().map(|a| a.label_for(clip.from, now)) {
+                Some(l) if l != clip.label => {
+                    let _ = std::fs::remove_file(&clip.out_path);
+                    (recorder::output_path(&PathBuf::from(&self.settings.output_dir), &l, clip.local), l)
+                }
+                _ => (clip.out_path, clip.label),
+            };
+            self.save_in_background(clip.from, now, out_path, label, false);
             return;
         }
         match self.active.take() {
             Some(active) if active.is_replay() => self.active = Some(active),
-            Some(active) => {
+            Some(mut active) => {
+                let label = active.label_for(0, platform::now_hns());
+                if label != active.label {
+                    let path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &label, active.started_local);
+                    active.set_output(label, path);
+                }
                 let label = active.label.clone();
                 send_event("status", json!({ "state": "saving" }));
                 report_saved(active.stop_and_save(&self.ffmpeg), &label, false);
@@ -623,15 +730,165 @@ impl Engine {
                 if since.elapsed() >= SWITCH_SETTLE {
                     self.focus_candidate = None;
                     log(&format!("focus moved to monitor {want}: switching"));
-                    active.switch_to(&self.ffmpeg, Target::Monitor { handle: want });
+                    active.switch_to(&self.ffmpeg, Target::Monitor { handle: want }, "Desktop");
                 }
             }
             _ => self.focus_candidate = Some((want, Instant::now())),
         }
     }
 
-    /// Called regularly from the main loop: follows the focus, notices if FFmpeg stopped on its own.
+    fn pick(&self) -> Pick {
+        if self.settings.game_pick == "focused" { Pick::Focused } else { Pick::Newest }
+    }
+
+    /// The game to record now, if game detection is on and one is open.
+    fn current_game(&self) -> Option<games::Game> {
+        if !self.settings.game_detection {
+            return None;
+        }
+        self.watch.active(self.pick()).cloned()
+    }
+
+    /// Looks for games: once a second, or straight away when `now`.
+    fn scan_games(&mut self, now: bool) {
+        if !self.settings.game_detection {
+            if !self.watch.games.is_empty() || self.watch.locked.is_some() {
+                self.watch = Watch::default();
+            }
+            self.send_games(false);
+            return;
+        }
+        if !now && self.last_game_scan.map(|t| t.elapsed() < Duration::from_secs(1)).unwrap_or(false) {
+            return;
+        }
+        self.last_game_scan = Some(Instant::now());
+        let mut found = Vec::new();
+        for w in platform::top_windows() {
+            let Some(why) = games::classify(&w, &self.settings.games_always, &self.settings.games_never) else { continue };
+            let name = match self.game_names.get(&w.pid) {
+                Some(n) => n.clone(),
+                None => {
+                    let n = games::game_name(&w, &platform::app_display_name(w.pid));
+                    log(&format!("game found: {n} ({}, {:?})", w.exe, why));
+                    self.game_names.insert(w.pid, n.clone());
+                    n
+                }
+            };
+            found.push((w, name, why));
+        }
+        let alive: Vec<u32> = found.iter().map(|f| f.0.pid).collect();
+        self.game_names.retain(|p, _| alive.contains(p));
+        self.watch.update(found, platform::foreground_window());
+        self.send_games(false);
+    }
+
+    fn games_json(&self) -> Value {
+        let active = self.current_game();
+        let mut list = self.watch.games.clone();
+        list.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        json!({
+            "on": self.settings.game_detection,
+            // Select Application is being recorded: detection waits until a screen is picked again.
+            "paused": self.settings.game_detection && self.active.is_some() && self.session_source == "window",
+            "games": list,
+            "active": active.as_ref().map(|g| g.pid),
+            "active_name": active.map(|g| g.name),
+            "locked": self.watch.locked,
+        })
+    }
+
+    /// Tells the interface about the games, when something changed (or always, when `force`).
+    fn send_games(&mut self, force: bool) {
+        let v = self.games_json();
+        let sig = v.to_string();
+        if force || sig != self.games_sent {
+            self.games_sent = sig;
+            send_event("games", v);
+        }
+    }
+
+    /// Moves the capture to the game being played, and back to the chosen screen when games close.
+    fn follow_games(&mut self) {
+        // A recorded game window that has just closed: look again now rather than within a second,
+        // so the hand-over to the screen happens before the capture is taken as having failed.
+        let gone = self
+            .active
+            .as_ref()
+            .map(|a| matches!(a.target(), Target::Window { handle } if self.session_source == "desktop" && !platform::window_exists(handle)))
+            .unwrap_or(false);
+        self.scan_games(gone);
+        // Instant replay that only keeps games: start when one opens.
+        if self.replay_waiting && self.active.is_none() && self.current_game().is_some() {
+            log("a game opened: starting instant replay");
+            self.replay_waiting = false;
+            if let Err(e) = self.start_session(&json!({ "source": "desktop" }), true) {
+                self.replay_waiting = true;
+                send_event("warning", json!({ "message": format!("Couldn't start instant replay for the game: {e}") }));
+            }
+            return;
+        }
+        let Some(active) = self.active.as_ref() else { return };
+        if self.session_source != "desktop" {
+            return;
+        }
+        let current = active.switching_to().unwrap_or(active.target());
+        match (self.current_game(), current) {
+            (Some(g), Target::Window { handle }) if handle == g.handle => {}
+            (Some(g), _) => {
+                log(&format!("game: recording {}", g.name));
+                self.focus_candidate = None;
+                if let Some(a) = self.active.as_mut() {
+                    a.switch_to(&self.ffmpeg, Target::Window { handle: g.handle }, &g.name);
+                }
+                send_event("game_switched", json!({ "name": g.name }));
+            }
+            (None, Target::Window { .. }) => self.leave_game(),
+            (None, Target::Monitor { .. }) => {}
+        }
+    }
+
+    /// The game being recorded has closed (or game detection was turned off).
+    fn leave_game(&mut self) {
+        let replay = self.active.as_ref().map(|a| a.is_replay()).unwrap_or(false);
+        let detection = self.settings.game_detection;
+        if detection && self.settings.game_end == "stop" && self.is_recording() {
+            log("game closed: stopping the recording (setting)");
+            self.stop_recording();
+            if !replay {
+                return;
+            }
+        }
+        if replay && detection && !self.settings.replay_on_desktop {
+            log("game closed: instant replay waits for the next game");
+            if self.clip.is_some() {
+                self.stop_recording();
+            }
+            self.wait_for_saves();
+            if let Some(a) = self.active.take() {
+                a.discard();
+            }
+            self.replay_waiting = true;
+            send_event("replay_status", json!({ "on": true, "waiting": true, "seconds": self.settings.replay_seconds }));
+            send_event("game_switched", json!({ "name": null }));
+            return;
+        }
+        match self.pick_monitor() {
+            Ok((target, ..)) => {
+                log("game closed: back to the chosen screen");
+                self.focus_candidate = None;
+                if let Some(a) = self.active.as_mut() {
+                    a.switch_to(&self.ffmpeg, target, "Desktop");
+                }
+                send_event("game_switched", json!({ "name": null }));
+            }
+            Err(e) => log(&format!("game closed, but no screen to go back to: {e}")),
+        }
+    }
+
+    /// Called regularly from the main loop: follows games and the focus, notices if FFmpeg
+    /// stopped on its own.
     pub fn tick(&mut self) {
+        self.follow_games();
         self.follow_focus();
         if let Some(event) = self.active.as_mut().and_then(|a| a.poll()) {
             match event {
@@ -641,12 +898,13 @@ impl Engine {
                 recorder::SwitchEvent::Switched(_) => {}
                 recorder::SwitchEvent::Failed(detail) => send_event(
                     "warning",
-                    json!({ "message": format!("Couldn't move the recording to the other monitor, so it carries on where it was. FFmpeg said: {detail}") }),
+                    json!({ "message": format!("Couldn't switch what's being recorded, so it carries on where it was. FFmpeg said: {detail}") }),
                 ),
             }
         }
         self.prune_replay();
-        let stopped = matches!(self.active.as_mut().map(|a| a.has_exited()), Some(true));
+        // A capture that ended while another is taking over (a game closed) isn't a failure.
+        let stopped = matches!(self.active.as_mut().map(|a| a.has_exited() && a.switching_to().is_none()), Some(true));
         if stopped && self.active.as_ref().map(|a| a.is_replay()).unwrap_or(false) {
             // The replay capture stopped (e.g. the recorded window closed): keep anything being
             // recorded from it, then turn replay off.

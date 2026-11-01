@@ -58,6 +58,9 @@ pub struct VideoPart {
     /// A part that started but was abandoned (it never took over): left out of the file.
     #[serde(default)]
     pub dropped: bool,
+    /// What this part recorded, for naming the file ("Desktop", a game's name, a window's title).
+    #[serde(default)]
+    pub label: Option<String>,
 }
 
 impl Manifest {

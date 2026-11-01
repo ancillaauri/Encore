@@ -45,6 +45,8 @@ pub struct Active {
     pub seg_dir: PathBuf,
     pub started: Instant,
     pub started_unix_ms: u64,
+    /// Local time at the start (in the file name).
+    pub started_local: LocalTime,
     pub label: String,
     pub out_path: PathBuf,
     pub encoder: Encoder,
@@ -271,7 +273,7 @@ pub fn start(
     let mut last_error = String::new();
     for pipeline in order {
         clear_video_files(&seg_dir);
-        set_part(&manifest, 0, VideoPart { prefix: part_prefix(0), start_hns: None, dropped: false });
+        set_part(&manifest, 0, VideoPart { prefix: part_prefix(0), start_hns: None, dropped: false, label: Some(label.to_string()) });
         let mut proc = match spawn_part(ffmpeg_path, spec, encoder, pipeline, kbps, &seg_dir, 0, &manifest) {
             Ok(p) => p,
             Err(e) => {
@@ -307,6 +309,7 @@ pub fn start(
                     seg_dir,
                     started: begun,
                     started_unix_ms: unix_ms(),
+                    started_local: platform::local_time(),
                     label: label.to_string(),
                     out_path,
                     encoder,
@@ -421,13 +424,13 @@ impl Active {
 
     /// Starts recording `target` alongside the current capture. It takes over (see `poll`) once
     /// it is producing video, so there is no gap; the join cuts the old part at that moment.
-    pub fn switch_to(&mut self, ffmpeg_path: &Path, target: Target) {
-        if self.pending.is_some() || self.proc.target == target {
+    pub fn switch_to(&mut self, ffmpeg_path: &Path, target: Target, label: &str) {
+        if self.pending.is_some() || (self.proc.target == target && !self.has_exited()) {
             return;
         }
         let index = self.clocks.len();
         let spec = CaptureSpec { target, ..self.spec };
-        set_part(&self.manifest, index, VideoPart { prefix: part_prefix(index), start_hns: None, dropped: false });
+        set_part(&self.manifest, index, VideoPart { prefix: part_prefix(index), start_hns: None, dropped: false, label: Some(label.to_string()) });
         match spawn_part(ffmpeg_path, &spec, self.encoder, self.pipeline, self.kbps, &self.seg_dir, index, &self.manifest) {
             Ok(p) => {
                 self.clocks.push(p.clock.clone());
@@ -472,6 +475,17 @@ impl Active {
 
     pub fn is_replay(&self) -> bool {
         self.roll.is_some()
+    }
+
+    /// What was on screen for most of `from..to` (e.g. a game's name), to name a save after.
+    pub fn label_for(&self, from: u64, to: u64) -> String {
+        majority_label(&self.snapshot().parts, from, to).unwrap_or_else(|| self.label.clone())
+    }
+
+    /// Where `stop_and_save` writes the file, and what it's called.
+    pub fn set_output(&mut self, label: String, out_path: PathBuf) {
+        self.label = label;
+        self.out_path = out_path;
     }
 
     /// The session's manifest as it stands, with each part's latest start time.
@@ -554,6 +568,25 @@ impl Active {
         manifest.save(&self.seg_dir);
         finalise(ffmpeg_path, &self.seg_dir, &self.out_path, duration_ms)
     }
+}
+
+/// The label of the part(s) that cover most of `from..to`.
+pub fn majority_label(parts: &[VideoPart], from: u64, to: u64) -> Option<String> {
+    let placed: Vec<&VideoPart> = parts.iter().filter(|p| !p.dropped && p.start_hns.is_some()).collect();
+    let mut totals: Vec<(String, u64)> = Vec::new();
+    for (i, p) in placed.iter().enumerate() {
+        let start = p.start_hns.unwrap().max(from);
+        let end = placed.get(i + 1).and_then(|n| n.start_hns).unwrap_or(to).min(to);
+        if end <= start {
+            continue;
+        }
+        let Some(label) = p.label.clone() else { continue };
+        match totals.iter_mut().find(|(l, _)| *l == label) {
+            Some(t) => t.1 += end - start,
+            None => totals.push((label, end - start)),
+        }
+    }
+    totals.into_iter().max_by_key(|(_, d)| *d).map(|(l, _)| l)
 }
 
 /// Segment files of one part, in order.
@@ -769,6 +802,28 @@ pub fn leftover_sessions(temp_root: &Path) -> Vec<PathBuf> {
 }
 
 #[cfg(test)]
+mod label_tests {
+    use super::*;
+
+    fn part(start: u64, label: &str) -> VideoPart {
+        VideoPart { prefix: String::new(), start_hns: Some(start), dropped: false, label: Some(label.into()) }
+    }
+
+    #[test]
+    fn save_is_named_after_what_was_on_screen_longest() {
+        // Desktop 0-10 s, League 10-70 s, Desktop 70 s on.
+        let s = 10_000_000u64;
+        let parts = vec![part(0, "Desktop"), part(10 * s, "League of Legends"), part(70 * s, "Desktop")];
+        assert_eq!(majority_label(&parts, 0, 80 * s).as_deref(), Some("League of Legends"));
+        // The last 30 seconds of a replay saved at 120 s: all desktop.
+        assert_eq!(majority_label(&parts, 90 * s, 120 * s).as_deref(), Some("Desktop"));
+        // End of a match plus the lobby: mostly the match.
+        assert_eq!(majority_label(&parts, 50 * s, 80 * s).as_deref(), Some("League of Legends"));
+        assert_eq!(majority_label(&[], 0, 1), None);
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -905,10 +960,10 @@ mod e2e_switch {
             audio_offset_ms: 0,
             tracks: vec![TrackInfo { file: "a01_mic.pcm".into(), title: "Microphone".into(), kind: TrackKind::Mic }],
             parts: vec![
-                VideoPart { prefix: "seg_".into(), start_hns: Some(13_500_000), dropped: false },
-                VideoPart { prefix: "p001_".into(), start_hns: Some(48_500_000), dropped: false },
+                VideoPart { prefix: "seg_".into(), start_hns: Some(13_500_000), dropped: false, label: None },
+                VideoPart { prefix: "p001_".into(), start_hns: Some(48_500_000), dropped: false, label: None },
                 // A switch that never took over: must be ignored.
-                VideoPart { prefix: "p002_".into(), start_hns: None, dropped: true },
+                VideoPart { prefix: "p002_".into(), start_hns: None, dropped: true, label: None },
             ],
         };
         m.save(&dir);
@@ -974,8 +1029,8 @@ mod e2e_replay {
             audio_offset_ms: 0,
             tracks: vec![TrackInfo { file: "a01_mic.pcm".into(), title: "Microphone".into(), kind: TrackKind::Mic }],
             parts: vec![
-                VideoPart { prefix: "seg_".into(), start_hns: Some(s0), dropped: false },
-                VideoPart { prefix: "p001_".into(), start_hns: Some(s0 + 70_000_000), dropped: false },
+                VideoPart { prefix: "seg_".into(), start_hns: Some(s0), dropped: false, label: None },
+                VideoPart { prefix: "p001_".into(), start_hns: Some(s0 + 70_000_000), dropped: false, label: None },
             ],
         };
         let out = std::env::temp_dir().join(format!("encore-e2e-rp-{}.mp4", std::process::id()));

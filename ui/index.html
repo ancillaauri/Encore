@@ -141,6 +141,8 @@
               <option value="1200">20 minutes</option>
             </select>
           </label>
+          <label class="hrow" id="replay-desk-row" hidden data-tip="Off: instant replay only keeps games, and waits while no game is open. Saves disk space and graphics card time on the desktop."><span>Also when no game is open</span>
+            <input type="checkbox" class="toggle sm" data-setting="replay_on_desktop"></label>
           <button type="button" class="btn sm wide" id="save-replay" disabled>Save replay</button>
           <p class="lock" id="replay-note"></p>
         </div>
@@ -356,6 +358,65 @@
               <button type="button" class="hotkey" data-hotkey="hotkey_save_custom"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_custom">Clear</button>
             </div>
+            <div class="setrow">
+              <span class="settext"><span class="setname">Record this game</span>
+                <span class="setsub">Press while a game is in front: Encore stays on it until it closes</span></span>
+              <button type="button" class="hotkey" data-hotkey="hotkey_lock_game"></button>
+              <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_lock_game">Clear</button>
+            </div>
+            <div class="setrow">
+              <span class="settext"><span class="setname">Next game</span>
+                <span class="setsub">Moves to the next open game and stays on it</span></span>
+              <button type="button" class="hotkey" data-hotkey="hotkey_next_game"></button>
+              <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_next_game">Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="setsec">
+          <h3>Games</h3>
+          <p class="setnote">Game detection (the controller under the screens) records games on their own as they open, and goes back to the screen you chose when they close.</p>
+          <p class="setnote">When more than one game is open, record:</p>
+          <div class="setcard" role="radiogroup" aria-label="Which game to record">
+            <button type="button" class="setrow setopt" role="radio" data-game-pick="newest">
+              <span class="radio" aria-hidden="true"></span>
+              <span class="settext"><span class="setname">The newest game</span>
+                <span class="setsub wrap">The one opened last.</span></span>
+            </button>
+            <button type="button" class="setrow setopt" role="radio" data-game-pick="focused">
+              <span class="radio" aria-hidden="true"></span>
+              <span class="settext"><span class="setname">The game I'm playing</span>
+                <span class="setsub wrap">The one you last clicked into. Good for two games side by side.</span></span>
+            </button>
+          </div>
+          <p class="setnote">Locking a game (click it under the screens, the tray menu, or Ctrl+Alt+G) beats both until that game closes.</p>
+          <p class="setnote spaced">If you're recording when the game closes:</p>
+          <div class="setcard" role="radiogroup" aria-label="When the game closes">
+            <button type="button" class="setrow setopt" role="radio" data-game-end="continue">
+              <span class="radio" aria-hidden="true"></span>
+              <span class="settext"><span class="setname">Keep recording the screen</span>
+                <span class="setsub wrap">Carries on with the screen you chose (Follow or a monitor), in the same file.</span></span>
+            </button>
+            <button type="button" class="setrow setopt" role="radio" data-game-end="stop">
+              <span class="radio" aria-hidden="true"></span>
+              <span class="settext"><span class="setname">Stop and save</span>
+                <span class="setsub wrap">The recording ends with the game. Instant replay keeps going.</span></span>
+            </button>
+          </div>
+          <div class="setcard spaced">
+            <label class="setrow"><span class="settext"><span class="setname">Instant replay when no game is open</span>
+              <span class="setsub wrap">Off: instant replay only keeps games, and waits while none is open.</span></span>
+              <input type="checkbox" class="toggle" data-setting="replay_on_desktop"></label>
+          </div>
+          <div class="setcard spaced">
+            <div class="setrow"><span class="settext"><span class="setname">Always a game</span>
+              <span class="setsub wrap">Apps Encore should treat as games, even if it doesn't spot them.</span></span>
+              <button type="button" class="btn sm" id="add-always-game">Add…</button></div>
+            <div class="gamelist" id="games-always"></div>
+            <div class="setrow"><span class="settext"><span class="setname">Never a game</span>
+              <span class="setsub wrap">Apps Encore should leave alone. Right-click a game under the screens to add it here.</span></span>
+              <button type="button" class="btn sm" id="add-never-game">Add…</button></div>
+            <div class="gamelist" id="games-never"></div>
           </div>
         </section>
 

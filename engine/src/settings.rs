@@ -83,6 +83,18 @@ pub struct Settings {
     pub do_not_disturb: bool,
     /// Game detection: games are found and recorded on their own; otherwise the chosen screen.
     pub game_detection: bool,
+    /// With several games open: "newest" (the last one opened) or "focused" (the one last used).
+    pub game_pick: String,
+    /// A manual recording when its game closes: "continue" (on the chosen screen) or "stop" (save).
+    pub game_end: String,
+    /// Program file names always / never treated as games (e.g. "MyGame.exe").
+    pub games_always: Vec<String>,
+    pub games_never: Vec<String>,
+    /// Hotkeys: lock onto the game in front; move to the next open game.
+    pub hotkey_lock_game: String,
+    pub hotkey_next_game: String,
+    /// Instant replay also runs while no game is open (off: it only keeps a replay of games).
+    pub replay_on_desktop: bool,
     /// Folder for work in progress (recordings being made, the instant replay buffer); empty =
     /// Encore's own folder in %LOCALAPPDATA%. A folder "Encore temp" is made inside the chosen one.
     pub work_dir: String,
@@ -143,6 +155,13 @@ impl Default for Settings {
             replay_custom_seconds: 90,
             do_not_disturb: false,
             game_detection: false,
+            game_pick: "newest".into(),
+            game_end: "continue".into(),
+            games_always: Vec::new(),
+            games_never: Vec::new(),
+            hotkey_lock_game: "Ctrl+Alt+G".into(),
+            hotkey_next_game: "Ctrl+Alt+N".into(),
+            replay_on_desktop: true,
             work_dir: String::new(),
             settings_version: SETTINGS_VERSION,
             sound_start: "rise".into(),
@@ -208,7 +227,16 @@ impl Settings {
         if !REPLAY_SECONDS.contains(&updated.replay_seconds) {
             return Err(format!("Replay length must be one of {:?} seconds", REPLAY_SECONDS));
         }
-        for k in [&updated.hotkey_save_replay, &updated.hotkey_save_30s, &updated.hotkey_save_60s, &updated.hotkey_save_custom] {
+        if !["newest", "focused"].contains(&updated.game_pick.as_str()) {
+            return Err("Game choice must be newest or focused".into());
+        }
+        if !["continue", "stop"].contains(&updated.game_end.as_str()) {
+            return Err("When a game closes must be continue or stop".into());
+        }
+        if updated.games_always.len() > 200 || updated.games_never.len() > 200 {
+            return Err("That list is too long".into());
+        }
+        for k in [&updated.hotkey_save_replay, &updated.hotkey_save_30s, &updated.hotkey_save_60s, &updated.hotkey_save_custom, &updated.hotkey_lock_game, &updated.hotkey_next_game] {
             if k.len() > 64 {
                 return Err("Hotkey is too long".into());
             }
@@ -260,6 +288,12 @@ impl Settings {
                 self.quality = Quality::Ultra;
             }
             self.settings_version = 1;
+        }
+        if !["newest", "focused"].contains(&self.game_pick.as_str()) {
+            self.game_pick = "newest".into();
+        }
+        if !["continue", "stop"].contains(&self.game_end.as_str()) {
+            self.game_end = "continue".into();
         }
         let d = Settings::default();
         for (snd, def) in [(&mut self.sound_start, d.sound_start), (&mut self.sound_stop, d.sound_stop), (&mut self.sound_save, d.sound_save)] {

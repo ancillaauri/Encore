@@ -418,3 +418,14 @@ Agreed design for game detection (to build next):
 - Removed leftover styles (old second picker row, separator, "coming soon" switch, unused helper
   classes) and an unused bridge call. Every setting the interface uses exists in the engine, and
   every engine setting is used. README's feature list brought up to date.
+
+## 2026-11-01: Game detection built (0.9.0)
+- As agreed above. Details in ARCHITECTURE.md ("Game detection").
+- A closing game ends its capture a moment before the screen's capture takes over. Rather than
+  shift everything after it, the joined video holds the game's last frame for that moment, so
+  audio stays in sync (checked with FFmpeg: a 4 s part handing over at 5 s gives a 9 s file with
+  the next part starting at 5.0 s).
+- The output size is set once at the start (from the screen), so a windowed game is scaled to fit
+  rather than changing the file's size part-way.
+- League of Legends, VALORANT and a few others are recognised by program name, because their
+  install folder may not be readable while they run.

@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, Wry};
 
@@ -24,12 +24,14 @@ pub struct ShellState {
 }
 
 /// Each hotkey setting and the action its press sends to the interface.
-const HOTKEYS: [(&str, &str); 5] = [
+const HOTKEYS: [(&str, &str); 7] = [
     ("hotkey_record", "toggle_record"),
     ("hotkey_save_replay", "save_replay"),
     ("hotkey_save_30s", "save_replay_30"),
     ("hotkey_save_60s", "save_replay_60"),
     ("hotkey_save_custom", "save_replay_custom"),
+    ("hotkey_lock_game", "lock_game"),
+    ("hotkey_next_game", "next_game"),
 ];
 
 pub fn show_window(app: &AppHandle) {
@@ -40,12 +42,47 @@ pub fn show_window(app: &AppHandle) {
     }
 }
 
-pub fn setup(app: &AppHandle) -> tauri::Result<()> {
+/// A game in the tray menu (from the interface, which hears about games from the engine).
+#[derive(serde::Deserialize, Clone)]
+pub struct TrayGame {
+    pub pid: u32,
+    pub name: String,
+}
+
+/// Builds the tray menu. With game detection on, a "Game" submenu lists the open games (the one
+/// being recorded ticked) so one can be locked from the tray.
+fn build_menu(app: &AppHandle, recording: bool, games: Option<(&[TrayGame], Option<u32>, Option<u32>)>) -> tauri::Result<Menu<Wry>> {
     let open = MenuItem::with_id(app, "open", "Open Encore", true, None::<&str>)?;
-    let record = MenuItem::with_id(app, "record", "Start recording", true, None::<&str>)?;
+    let record = MenuItem::with_id(app, "record", if recording { "Stop and save recording" } else { "Start recording" }, true, None::<&str>)?;
     let replay = MenuItem::with_id(app, "replay", "Save replay", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Encore", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &record, &replay, &PredefinedMenuItem::separator(app)?, &quit])?;
+    let sep = PredefinedMenuItem::separator(app)?;
+    let menu = Menu::with_items(app, &[&open, &record, &replay])?;
+    if let Some((list, active, locked)) = games {
+        let title = match list.iter().find(|g| Some(g.pid) == active) {
+            Some(g) if locked == Some(g.pid) => format!("Game: {} (locked)", g.name),
+            Some(g) => format!("Game: {}", g.name),
+            None => "Game: none open".to_string(),
+        };
+        let sub = Submenu::with_id(app, "games", title, !list.is_empty())?;
+        for g in list {
+            let item = CheckMenuItem::with_id(app, format!("game:{}", g.pid), &g.name, true, Some(g.pid) == active, None::<&str>)?;
+            sub.append(&item)?;
+        }
+        if locked.is_some() {
+            sub.append(&PredefinedMenuItem::separator(app)?)?;
+            sub.append(&MenuItem::with_id(app, "game:unlock", "Unlock (follow the newest game)", true, None::<&str>)?)?;
+        }
+        menu.append(&sub)?;
+    }
+    menu.append(&sep)?;
+    menu.append(&quit)?;
+    *app.state::<ShellState>().record_item.lock().unwrap() = Some(record);
+    Ok(menu)
+}
+
+pub fn setup(app: &AppHandle) -> tauri::Result<()> {
+    let menu = build_menu(app, false, None)?;
     let mut builder = TrayIconBuilder::with_id("main")
         .tooltip("Encore")
         .menu(&menu)
@@ -59,7 +96,11 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
                 let _ = app.emit("hotkey", "save_replay");
             }
             "quit" => app.exit(0),
-            _ => {}
+            other => {
+                if let Some(g) = other.strip_prefix("game:") {
+                    let _ = app.emit("tray-game", g.to_string());
+                }
+            }
         })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
@@ -70,10 +111,22 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
         builder = builder.icon(icon.clone());
     }
     let tray = builder.build(app)?;
-    let state = app.state::<ShellState>();
-    *state.tray.lock().unwrap() = Some(tray);
-    *state.record_item.lock().unwrap() = Some(record);
+    *app.state::<ShellState>().tray.lock().unwrap() = Some(tray);
     Ok(())
+}
+
+/// Rebuilds the tray menu with the open games (`on` false: game detection is off, no submenu).
+#[tauri::command]
+pub fn set_tray_games(app: AppHandle, on: bool, games: Vec<TrayGame>, active: Option<u32>, locked: Option<u32>, recording: bool) {
+    let menu = match build_menu(&app, recording, if on { Some((&games, active, locked)) } else { None }) {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+    let state = app.state::<ShellState>();
+    let tray_guard = state.tray.lock().unwrap();
+    if let Some(tray) = tray_guard.as_ref() {
+        let _ = tray.set_menu(Some(menu));
+    }
 }
 
 /// Called when the main window's close button is pressed. Returns true if it was hidden instead.

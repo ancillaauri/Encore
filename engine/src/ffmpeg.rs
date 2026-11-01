@@ -224,6 +224,7 @@ pub fn concat_list_parts(parts: &[PartFiles]) -> String {
     let seg = SEGMENT_SECONDS as f64;
     let mut s = String::from("ffconcat version 1.0\n");
     for part in parts {
+        let mut last: Option<(f64, bool)> = None; // (start of the last file listed, cut with outpoint)
         for (k, f) in part.files.iter().enumerate() {
             let begins = (part.first_index + k as u64) as f64 * seg;
             if let Some(keep) = part.keep_secs {
@@ -233,10 +234,21 @@ pub fn concat_list_parts(parts: &[PartFiles]) -> String {
             }
             let p = f.to_string_lossy().replace('\\', "/").replace('\'', "'\\''");
             s.push_str(&format!("file '{p}'\n"));
+            let mut cut = false;
             if let Some(keep) = part.keep_secs {
                 if keep < begins + seg - 0.0005 {
                     s.push_str(&format!("outpoint {:.6}\n", keep - begins));
+                    cut = true;
                 }
+            }
+            last = Some((begins, cut));
+        }
+        // The part stopped before the next one took over (e.g. a game's window closed, so its
+        // capture ended a moment before the new one started). Stretch its last file to the
+        // hand-over so everything after stays in time with the audio; players hold the last frame.
+        if let (Some(keep), Some((begins, false))) = (part.keep_secs, last) {
+            if keep > begins + seg + 0.0005 {
+                s.push_str(&format!("duration {:.6}\n", keep - begins));
             }
         }
     }
@@ -454,6 +466,21 @@ mod tests {
         let (w, h) = output_size(1001, 1001, Resolution::P720);
         assert!(w % 2 == 0 && h % 2 == 0);
         assert_eq!(output_size(0, 0, Resolution::Native), (2, 2));
+    }
+
+    #[test]
+    fn a_part_that_stopped_early_keeps_its_slot() {
+        // Part 1 has only 2 segments (4 s) but part 2 took over at 5 s: its last file is stretched.
+        let parts = vec![
+            PartFiles { files: vec![PathBuf::from("a0.mkv"), PathBuf::from("a1.mkv")], first_index: 0, keep_secs: Some(5.0) },
+            PartFiles { files: vec![PathBuf::from("b0.mkv")], first_index: 0, keep_secs: None },
+        ];
+        let list = concat_list_parts(&parts);
+        assert!(list.contains("file 'a1.mkv'\nduration 3.000000\n"), "{list}");
+        // A normal hand-over (the part reached the moment) is cut with outpoint, no duration.
+        let normal = vec![PartFiles { files: vec![PathBuf::from("a0.mkv"), PathBuf::from("a1.mkv"), PathBuf::from("a2.mkv")], first_index: 0, keep_secs: Some(5.0) }];
+        let l2 = concat_list_parts(&normal);
+        assert!(l2.contains("file 'a2.mkv'\noutpoint 1.000000\n") && !l2.contains("duration"), "{l2}");
     }
 
     #[test]
