@@ -80,6 +80,17 @@ pub struct Engine {
     focus_candidate: Option<(u64, Instant)>,
     /// Whether the current recording follows the focus (desktop, "follow" setting).
     following: bool,
+    /// A recording made from a running instant-replay session (it shares the capture).
+    clip: Option<Clip>,
+    /// Start times of saves still reading the replay session's files (they mustn't be deleted).
+    pins: Arc<Mutex<Vec<u64>>>,
+}
+
+/// A recording taken from the instant-replay capture: from `from` until it is stopped.
+struct Clip {
+    from: u64,
+    out_path: PathBuf,
+    label: String,
 }
 
 /// How long the focus must stay on another monitor before the recording moves there.
@@ -136,6 +147,8 @@ impl Engine {
             focus: None,
             focus_candidate: None,
             following: false,
+            clip: None,
+            pins: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -169,7 +182,7 @@ impl Engine {
             "start_recording" => self.start_recording(&c.args),
             "stop_recording" => {
                 // Reply first so the interface can show "Saving..." while the file is assembled.
-                if self.active.is_none() {
+                if !self.is_recording() {
                     Err("Not recording.".into())
                 } else {
                     send(&reply_ok(id, json!({ "saving": true })));
@@ -177,9 +190,12 @@ impl Engine {
                     return false;
                 }
             }
-            "start_replay" | "stop_replay" | "save_replay" => {
-                Err("Instant replay arrives in a later update.".into())
+            "start_replay" => self.start_replay(&c.args),
+            "stop_replay" => {
+                self.stop_replay();
+                Ok(self.status())
             }
+            "save_replay" => self.save_replay(),
             "shutdown" => {
                 send(&reply_ok(id, json!({})));
                 self.shutdown();
@@ -194,29 +210,39 @@ impl Engine {
         false
     }
 
+    fn is_recording(&self) -> bool {
+        self.clip.is_some() || self.active.as_ref().map(|a| !a.is_replay()).unwrap_or(false)
+    }
+
     fn status(&mut self) -> Value {
         let focus = self.focus.and_then(monitor_id);
-        match &self.active {
-            None => json!({ "state": "idle", "recording": null, "focus_monitor": focus }),
-            Some(a) => json!({
-                "focus_monitor": focus,
-                "state": "recording",
-                "recording": {
-                    "label": a.label,
-                    "encoder": a.encoder.name(),
-                    "pipeline": a.pipeline,
-                    "width": a.width,
-                    "height": a.height,
-                    "fps": a.fps(),
-                    "started_unix_ms": a.started_unix_ms,
-                    "elapsed_ms": a.elapsed_ms(),
-                    "out_path": a.out_path.display().to_string(),
-                    "audio_tracks": a.track_titles(),
-                    "monitor": match a.target() { Target::Monitor { handle } => monitor_id(handle), _ => None },
-                    "following": self.following,
-                }
+        let replay = match &self.active {
+            Some(a) if a.is_replay() => json!({ "on": true, "seconds": self.settings.replay_seconds, "label": a.label }),
+            _ => json!({ "on": false }),
+        };
+        let recording = match &self.active {
+            Some(a) if self.is_recording() => json!({
+                "label": a.label,
+                "encoder": a.encoder.name(),
+                "pipeline": a.pipeline,
+                "width": a.width,
+                "height": a.height,
+                "fps": a.fps(),
+                "started_unix_ms": a.started_unix_ms,
+                "elapsed_ms": a.elapsed_ms(),
+                "out_path": self.clip.as_ref().map(|c| &c.out_path).unwrap_or(&a.out_path).display().to_string(),
+                "audio_tracks": a.track_titles(),
+                "monitor": match a.target() { Target::Monitor { handle } => monitor_id(handle), _ => None },
+                "following": self.following,
             }),
-        }
+            _ => Value::Null,
+        };
+        json!({
+            "state": if self.is_recording() { "recording" } else { "idle" },
+            "recording": recording,
+            "replay": replay,
+            "focus_monitor": focus,
+        })
     }
 
     fn set_settings(&mut self, patch: &Value) -> Result<Value, String> {
@@ -237,9 +263,36 @@ impl Engine {
     }
 
     fn start_recording(&mut self, args: &Value) -> Result<Value, String> {
-        if self.active.is_some() {
+        if self.is_recording() {
             return Err("Already recording.".into());
         }
+        if let Some(a) = &self.active {
+            // Instant replay is running: the recording comes from the same capture, from now on.
+            let now = platform::now_hns();
+            let out_path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &a.label, platform::local_time());
+            let info = json!({
+                "label": a.label,
+                "source": a.label,
+                "encoder": a.encoder.name(),
+                "pipeline": a.pipeline,
+                "width": a.width,
+                "height": a.height,
+                "fps": a.fps(),
+                "started_unix_ms": recorder::unix_ms(),
+                "audio_tracks": a.track_titles(),
+                "monitor": match a.target() { Target::Monitor { handle } => monitor_id(handle), _ => None },
+                "following": self.following,
+                "from_replay": true,
+            });
+            self.clip = Some(Clip { from: now, out_path, label: a.label.clone() });
+            send_event("recording_started", info.clone());
+            return Ok(info);
+        }
+        self.start_session(args, false)
+    }
+
+    /// Starts a capture: a normal recording, or the instant-replay buffer (`replay`).
+    fn start_session(&mut self, args: &Value, replay: bool) -> Result<Value, String> {
         let caps = self.wait_for_probe(Duration::from_secs(20));
         if !caps.ffmpeg_found {
             return Err(format!("FFmpeg was not found at {}. Reinstalling Encore should fix this.", caps.ffmpeg_path));
@@ -309,7 +362,7 @@ impl Engine {
             preferred,
             &audio_opts,
             self.settings.audio_offset_ms,
-            false,
+            replay,
         )?;
         self.known_pipeline.insert(encoder.name(), active.pipeline);
         let info = json!({
@@ -332,8 +385,80 @@ impl Engine {
         self.active = Some(active);
         self.following = following;
         self.focus_candidate = None;
-        send_event("recording_started", info.clone());
+        if replay {
+            send_event("replay_status", json!({ "on": true, "seconds": self.settings.replay_seconds, "label": info["label"] }));
+        } else {
+            send_event("recording_started", info.clone());
+        }
         Ok(info)
+    }
+
+    fn start_replay(&mut self, args: &Value) -> Result<Value, String> {
+        match &self.active {
+            Some(a) if a.is_replay() => return Ok(self.status()),
+            Some(_) => return Err("Stop the recording first, then turn on instant replay.".into()),
+            None => {}
+        }
+        self.start_session(args, true)?;
+        Ok(self.status())
+    }
+
+    /// Waits (up to a minute) for saves still reading the replay session's files.
+    fn wait_for_saves(&self) {
+        let begun = Instant::now();
+        while !self.pins.lock().unwrap().is_empty() && begun.elapsed() < Duration::from_secs(60) {
+            std::thread::sleep(Duration::from_millis(100));
+        }
+    }
+
+    fn stop_replay(&mut self) {
+        if self.clip.is_some() {
+            self.stop_recording();
+        }
+        if self.active.as_ref().map(|a| a.is_replay()).unwrap_or(false) {
+            self.wait_for_saves();
+            if let Some(a) = self.active.take() {
+                a.discard();
+            }
+            send_event("replay_status", json!({ "on": false }));
+        }
+    }
+
+    /// Saves the last `replay_seconds` without stopping the buffer.
+    fn save_replay(&mut self) -> Result<Value, String> {
+        let Some(a) = self.active.as_ref().filter(|a| a.is_replay()) else {
+            return Err("Instant replay is off. Turn it on first.".into());
+        };
+        let to = platform::now_hns();
+        let from = to.saturating_sub(self.settings.replay_seconds as u64 * 10_000_000);
+        let out_path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &a.label, platform::local_time());
+        self.save_in_background(from, to, out_path, a.label.clone(), true);
+        Ok(json!({ "saving": true }))
+    }
+
+    /// Joins `from..to` of the replay session into `out_path` on a worker thread, so the capture
+    /// and the engine carry on; reports `replay_saved` (or `recording_saved`) when done.
+    fn save_in_background(&self, from: u64, to: u64, out_path: PathBuf, label: String, replay: bool) {
+        let Some(a) = self.active.as_ref() else { return };
+        self.pins.lock().unwrap().push(from);
+        let (ffmpeg, dir, snapshot, pins) = (self.ffmpeg.clone(), a.seg_dir.clone(), a.snapshot(), self.pins.clone());
+        if replay {
+            send_event("replay_saving", json!({}));
+        }
+        std::thread::spawn(move || {
+            let result = recorder::save_window(&ffmpeg, &dir, &snapshot, from, to, &out_path);
+            {
+                let mut p = pins.lock().unwrap();
+                if let Some(i) = p.iter().position(|&x| x == from) {
+                    p.remove(i);
+                }
+            }
+            if replay {
+                report_replay_saved(result, &label);
+            } else {
+                report_saved(result, &label, false);
+            }
+        });
     }
 
     /// Desktop mode: which monitor, per the "monitor" setting. Falls back to the primary monitor.
@@ -372,14 +497,59 @@ impl Engine {
     }
 
     fn stop_recording(&mut self) {
-        if let Some(active) = self.active.take() {
-            let label = active.label.clone();
+        if let Some(clip) = self.clip.take() {
+            // A recording from the replay capture: save its stretch; the buffer keeps running.
             send_event("status", json!({ "state": "saving" }));
-            self.report_saved(active.stop_and_save(&self.ffmpeg), &label, false);
+            self.save_in_background(clip.from, platform::now_hns(), clip.out_path, clip.label, false);
+            return;
+        }
+        match self.active.take() {
+            Some(active) if active.is_replay() => self.active = Some(active),
+            Some(active) => {
+                let label = active.label.clone();
+                send_event("status", json!({ "state": "saving" }));
+                report_saved(active.stop_and_save(&self.ffmpeg), &label, false);
+            }
+            None => {}
         }
     }
 
-    fn report_saved(&self, result: Result<Saved, String>, label: &str, recovered: bool) {
+    /// Instant replay: lets go of video and audio older than anything still needed.
+    fn prune_replay(&self) {
+        let Some(a) = self.active.as_ref().filter(|a| a.is_replay()) else { return };
+        let now = platform::now_hns();
+        // The replay length plus a margin; never past a recording or save still in progress.
+        let mut keep_from = now.saturating_sub((self.settings.replay_seconds as u64 + 6) * 10_000_000);
+        if let Some(c) = &self.clip {
+            keep_from = keep_from.min(c.from);
+        }
+        if let Some(&p) = self.pins.lock().unwrap().iter().min() {
+            keep_from = keep_from.min(p);
+        }
+        // Keep the segment that holds `keep_from` (a save starts at its keyframe).
+        a.prune(keep_from.saturating_sub(3 * 10_000_000));
+    }
+}
+
+fn report_replay_saved(result: Result<Saved, String>, label: &str) {
+    match result {
+        Ok(s) => send_event(
+            "replay_saved",
+            json!({
+                "path": s.path.display().to_string(),
+                "duration_ms": s.duration_ms,
+                "size_bytes": s.size_bytes,
+                "label": label,
+            }),
+        ),
+        Err(e) => {
+            log(&format!("replay save failed: {e}"));
+            send_event("error", json!({ "message": format!("Couldn't save the replay: {e}") }));
+        }
+    }
+}
+
+fn report_saved(result: Result<Saved, String>, label: &str, recovered: bool) {
         match result {
             Ok(s) => send_event(
                 "recording_saved",
@@ -398,6 +568,8 @@ impl Engine {
         }
         send_event("status", json!({ "state": "idle" }));
     }
+
+impl Engine {
 
     /// Keeps track of the monitor being used, and moves a following recording there once the
     /// focus has settled on it.
@@ -448,15 +620,23 @@ impl Engine {
                 ),
             }
         }
+        self.prune_replay();
         let stopped = matches!(self.active.as_mut().map(|a| a.has_exited()), Some(true));
-        if stopped {
+        if stopped && self.active.as_ref().map(|a| a.is_replay()).unwrap_or(false) {
+            // The replay capture stopped (e.g. the recorded window closed): keep anything being
+            // recorded from it, then turn replay off.
+            let detail = self.active.as_ref().map(|a| tail(&a.log_path(), 4)).unwrap_or_default();
+            log(&format!("replay capture ended unexpectedly: {detail}"));
+            send_event("warning", json!({ "message": "Instant replay stopped because what it was capturing went away (for example the window closed). Turn it on again to carry on." }));
+            self.stop_replay();
+        } else if stopped {
             let active = self.active.take().unwrap();
             let detail = tail(&active.log_path(), 4);
             log(&format!("capture ended unexpectedly: {detail}"));
             let reason = if detail.is_empty() { String::new() } else { format!(" FFmpeg said: {detail}") };
             send_event("warning", json!({ "message": format!("Recording stopped unexpectedly (for example the window closed). Saving what was captured.{reason}") }));
             let label = active.label.clone();
-            self.report_saved(active.stop_and_save(&self.ffmpeg), &label, false);
+            report_saved(active.stop_and_save(&self.ffmpeg), &label, false);
         }
     }
 
@@ -466,15 +646,17 @@ impl Engine {
             log(&format!("recovering {}", dir.display()));
             let out_dir = PathBuf::from(&self.settings.output_dir);
             let out_path = recorder::output_path(&out_dir, "Recovered", platform::local_time());
-            self.report_saved(recorder::finalise(&self.ffmpeg, &dir, &out_path, 0), "Recovered", true);
+            report_saved(recorder::finalise(&self.ffmpeg, &dir, &out_path, 0), "Recovered", true);
         }
     }
 
     pub fn shutdown(&mut self) {
-        if self.active.is_some() {
+        if self.is_recording() {
             log("shutting down while recording: saving first");
             self.stop_recording();
         }
+        // Finish any replay saves, then let the buffer go.
+        self.stop_replay();
     }
 }
 

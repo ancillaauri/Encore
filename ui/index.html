@@ -44,6 +44,24 @@
       </div>
 
       <div class="side-body">
+        <section class="sec" id="replay-sec">
+          <h2 class="lab">Instant replay</h2>
+          <label class="srow"><span>Keep the last few minutes</span><input type="checkbox" class="toggle sm" id="replay-on"></label>
+          <label class="srow"><span>Length</span>
+            <select class="dd" id="q-replay" data-setting="replay_seconds" data-number>
+              <option value="30">30 seconds</option>
+              <option value="60">1 minute</option>
+              <option value="120">2 minutes</option>
+              <option value="300">5 minutes</option>
+              <option value="600">10 minutes</option>
+              <option value="900">15 minutes</option>
+              <option value="1200">20 minutes</option>
+            </select>
+          </label>
+          <button type="button" class="btn sm wide" id="save-replay" disabled>Save replay</button>
+          <p class="lock" id="replay-note"></p>
+        </section>
+        <div class="sdiv"></div>
         <section class="sec" id="quick">
           <h2 class="lab">Video</h2>
           <label class="srow"><span>Quality</span>
@@ -245,6 +263,12 @@
               <span class="settext"><span class="setname">Start / stop recording</span></span>
               <button type="button" class="hotkey" id="hotkey-record" data-hotkey="hotkey_record"></button>
               <button type="button" class="btn sm ghost" id="hotkey-record-clear">Clear</button>
+            </div>
+            <div class="setrow">
+              <span class="settext"><span class="setname">Save replay</span>
+                <span class="setsub">Saves the last few minutes while instant replay is on</span></span>
+              <button type="button" class="hotkey" id="hotkey-replay" data-hotkey="hotkey_save_replay"></button>
+              <button type="button" class="btn sm ghost" id="hotkey-replay-clear">Clear</button>
             </div>
           </div>
         </section>

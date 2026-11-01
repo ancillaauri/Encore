@@ -214,6 +214,16 @@ real Videos folder found on another drive (F:\Videos\Encore).
 - Short start/stop sounds (on by default) confirm a hotkey worked without looking.
 - Single instance: launching Encore again brings the running one back.
 
+## 2026-11-01: Instant replay design (0.7.0)
+- One capture at a time: with replay on, a recording is cut from the replay capture (Start to
+  Stop) instead of starting a second capture, which would double the load on the graphics card.
+- Audio is kept in 10-second pieces so old audio can be deleted while capturing; video uses the
+  existing 2-second segments. Saves start at a keyframe (up to 2 s early) and need no re-encoding.
+- Saving runs on a worker thread; the buffer never stops. End-to-end test: a 5.3–11 s window over
+  a monitor switch came out 7.0 s long, switching at 3.0 s, flash and beep together at 5.0 s.
+- Default length 2 minutes; save hotkey Ctrl+Alt+S; the side panel shows the disk it uses.
+- Replay stays on next time if it was on when Encore closed.
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.

@@ -23,10 +23,10 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Pause / resume manual recording | 6 | [ ] |
 | Screenshot hotkey | 6 | [ ] |
 | "Saved" feedback: sound + Windows notification | 6 | [ ] |
-| Instant replay (rolling buffer, configurable length) | 7 | [ ] |
+| Instant replay (rolling buffer, 30 s – 20 min, save hotkey Ctrl+Alt+S, tray item, recording while on shares the capture) | 7 | [~] 0.7.0 |
 | Multiple save hotkeys (e.g. last 30 s / 2 min / full buffer) | 7 | [ ] |
 | Auto-start replay when a game is detected, stop when it closes | 7 | [ ] |
-| Storage: estimated disk use beside replay length, max library size + auto-delete oldest, low-disk warning | 7 | [ ] |
+| Storage: estimated disk use beside replay length [~] 0.7.0; max library size + auto-delete oldest, low-disk warning [ ] | 7 | [~] |
 | Installer + updates (check, download and install from the app; user chooses the update mode) | 8 | [~] |
 | Settings dialog, ≡ menu, side panel (quick settings, saved this session), About, changelog skeleton, first-run setup | 6 | [x] |
 | Companion editor reads our per-app tracks (change on the editor side) | 9 | [ ] |

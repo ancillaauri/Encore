@@ -136,9 +136,21 @@ Audio (steps 4 and 5) — built in batch 2:
 - Audio is encoded to AAC when the recording is saved, so saving a long recording with many
   tracks takes a little while. Encoding during recording is a later optimisation.
 
-Instant replay (step 7):
-- Rolling window of video and audio segments on disk (like ShadowPlay), length set in settings.
-- `save_replay` assembles the last N minutes into an MP4 without stopping the buffer.
+Instant replay (built in 0.7):
+- `start_replay` starts a capture session like a recording, in a `replay-<time>` temp folder. Video
+  is the usual 2 s segments (parts for monitor switches); each audio track is written in 10 s
+  pieces (`a00_full.000123.pcm`, `timeline::ChunkedWriter`).
+- Every engine tick deletes segments and audio pieces older than the replay length plus a margin,
+  never past a recording or save still in progress (`pins`).
+- `save_replay` joins `now - replay_seconds .. now` on a worker thread (`recorder::save_window`):
+  the video starts at the keyframe at or before that moment (up to 2 s extra), is cut exactly at
+  the end and at monitor switches, and the audio is cut from its pieces to match. The buffer keeps
+  running. Reports `replay_saved`.
+- Recording while replay is on uses the same capture: the recording is the stretch from Start to
+  Stop, saved the same way, so there is only ever one capture running.
+- Turning replay off (or quitting) waits for saves, then deletes the session. A replay folder left
+  by a crash is deleted at the next start (not recovered).
+- Settings that change what's captured restart the buffer.
 
 ## File contract (what the companion editor relies on)
 

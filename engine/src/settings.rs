@@ -68,7 +68,16 @@ pub struct Settings {
     pub hotkey_record: String,
     /// Play a short sound when recording starts, stops and saves.
     pub sounds: bool,
+    /// Instant replay: how many seconds a save keeps (the buffer holds a little more).
+    pub replay_seconds: u32,
+    /// Instant replay was on when Encore last closed (the interface turns it back on).
+    pub replay_on: bool,
+    /// Global hotkey to save the replay; empty = none. Read by the shell.
+    pub hotkey_save_replay: String,
 }
+
+/// Replay lengths offered: 30 s to 20 minutes.
+pub const REPLAY_SECONDS: [u32; 7] = [30, 60, 120, 300, 600, 900, 1200];
 
 impl Default for Settings {
     fn default() -> Self {
@@ -91,6 +100,9 @@ impl Default for Settings {
             // Not Alt+F9/F10 (NVIDIA's recorder) or Alt+Z/Alt+R (its overlay).
             hotkey_record: "Ctrl+Alt+R".into(),
             sounds: true,
+            replay_seconds: 120,
+            replay_on: false,
+            hotkey_save_replay: "Ctrl+Alt+S".into(),
         }
     }
 }
@@ -145,6 +157,12 @@ impl Settings {
         if !["manual", "auto_download", "never"].contains(&updated.update_mode.as_str()) {
             return Err("Update mode must be manual, auto_download or never".into());
         }
+        if !REPLAY_SECONDS.contains(&updated.replay_seconds) {
+            return Err(format!("Replay length must be one of {:?} seconds", REPLAY_SECONDS));
+        }
+        if updated.hotkey_save_replay.len() > 64 {
+            return Err("Hotkey is too long".into());
+        }
         if updated.hotkey_record.len() > 64 {
             return Err("Hotkey is too long".into());
         }
@@ -167,6 +185,9 @@ impl Settings {
         }
         if !["manual", "auto_download", "never"].contains(&self.update_mode.as_str()) {
             self.update_mode = "manual".into();
+        }
+        if !REPLAY_SECONDS.contains(&self.replay_seconds) {
+            self.replay_seconds = 120;
         }
         // Not set up yet and still on an old guessed default: use the real Videos folder (it may be
         // on another drive or in OneDrive, where the guess made a new, empty folder).
@@ -238,5 +259,7 @@ mod tests {
         assert!(!s.setup_done); // settings saved before the setup existed still show it once
         assert!(s.close_to_tray && s.sounds);
         assert_eq!(s.hotkey_record, "Ctrl+Alt+R");
+        assert_eq!((s.replay_seconds, s.replay_on), (120, false));
+        assert_eq!(s.hotkey_save_replay, "Ctrl+Alt+S");
     }
 }

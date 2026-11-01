@@ -15,6 +15,8 @@
     windowHandle: 0,
     windowTitle: '',
     focusMonitor: null, // id of the monitor last clicked on (what "follow" records)
+    replay: { on: false }, // instant replay: { on, seconds, label }
+    replayBusy: false,
     phase: 'idle', // idle | starting | recording | saving
     recording: null,
     recent: [],
@@ -374,6 +376,7 @@
     if (state.source === 'window') {
       state.source = 'desktop';
       if (pinnedId() !== m.id) await saveSetting('monitor', `id:${m.id}`);
+      else restartReplay();
     } else {
       await saveSetting('monitor', pinnedId() === m.id ? 'follow' : `id:${m.id}`);
     }
@@ -392,6 +395,7 @@
           state.windowHandle = w.handle;
           state.windowTitle = w.title;
           renderStage();
+          restartReplay();
         },
       }))
       : [{ text: 'No windows found', disabled: true, run: () => {} }];
@@ -424,7 +428,9 @@
       $('detail').textContent = 'Joining the pieces into one file.';
     } else {
       $('what').textContent = describeTarget();
-      $('detail').textContent = state.settings ? `Saved to ${encoreRoot()}` : '';
+      $('detail').textContent = state.settings
+        ? (state.replay.on ? `Instant replay is on \u00b7 saved to ${encoreRoot()}` : `Saved to ${encoreRoot()}`)
+        : '';
       $('timer').textContent = '0:00';
       $('ring-sweep').style.strokeDashoffset = RING;
     }
@@ -434,6 +440,7 @@
     document.querySelectorAll('#quick select, #quick input').forEach((el) => (el.disabled = locked));
     fitPicks();
     syncTray();
+    renderReplay();
   }
 
   function encoderLabel(name) {
@@ -464,6 +471,7 @@
     renderCodecs();
     renderOutputNote();
     renderHotkeys();
+    renderReplay();
     if (!$('setup').hidden) renderSetup();
   }
 
@@ -519,6 +527,7 @@
       state.settings = await bridge.setSettings({ [key]: value });
       if (key === 'audio_mic') renderInputs();
       if (key === 'codec') renderEngineLine();
+      if (CAPTURE_KEYS.includes(key)) restartReplay();
       renderSettings();
       renderStage();
       renderUpdate();
@@ -536,11 +545,8 @@
   // ---------- record / stop ----------
   async function toggleRecording() {
     if (state.phase === 'idle') {
-      let source = { source: 'desktop' };
-      if (state.source === 'window') {
-        if (!state.windowHandle) { toast('Choose an app to record first.', 'warning'); return; }
-        source = { source: 'window', handle: state.windowHandle };
-      }
+      const source = currentSource();
+      if (!source) return;
       state.phase = 'starting';
       renderStage();
       try {
@@ -583,6 +589,7 @@
     const text = h('div', 'rtext');
     const name = h('div', 'rname', shortName(d.path));
     if (d.recovered) name.append(h('span', 'tag', 'recovered'));
+    if (d.replay) name.append(h('span', 'tag replay-live', 'replay'));
     text.append(name, h('div', 'rmeta', d.duration_ms ? `${clock(d.duration_ms)} · ${size(d.size_bytes)}` : size(d.size_bytes)));
     li.append(thumb, text);
     li.onclick = () => bridge.revealFile(d.path).catch((e) => toast(String(e), 'error'));
@@ -614,6 +621,18 @@
         if (data.state === 'saving' && state.phase === 'recording') state.phase = 'saving';
         if (data.state === 'idle' && state.phase === 'saving') state.phase = 'idle';
         renderStage();
+        break;
+      case 'replay_status':
+        state.replay = data || { on: false };
+        renderReplay();
+        renderStage();
+        break;
+      case 'replay_saving':
+        toast(`Saving the last ${replayLength()}…`, 'info', 3000);
+        break;
+      case 'replay_saved':
+        addRecent({ ...data, replay: true });
+        toast(`Saved replay: ${fileName(data.path)}`, 'ok', 5000);
         break;
       case 'focus_monitor':
         state.focusMonitor = data.id || state.focusMonitor;
@@ -869,6 +888,76 @@
   } catch (e) { /* not running in the app */ }
   renderMaximized();
 
+  // ---------- instant replay ----------
+  // What to capture, from the picker: the screen in use / a monitor, or one app.
+  function currentSource() {
+    if (state.source !== 'window') return { source: 'desktop' };
+    if (!state.windowHandle) { toast('Choose an app to record first.', 'warning'); return null; }
+    return { source: 'window', handle: state.windowHandle };
+  }
+  const REPLAY_NAMES = { 30: '30 seconds', 60: 'minute', 120: '2 minutes', 300: '5 minutes', 600: '10 minutes', 900: '15 minutes', 1200: '20 minutes' };
+  function replayLength() {
+    const n = state.settings ? state.settings.replay_seconds : 120;
+    return n === 60 ? 'minute' : REPLAY_NAMES[n] || `${n} seconds`;
+  }
+  function renderReplay() {
+    const s = state.settings;
+    if (!s) return;
+    const on = !!state.replay.on;
+    $('replay-on').checked = on;
+    $('replay-on').disabled = state.replayBusy || (state.phase !== 'idle' && !on);
+    $('save-replay').disabled = !on || state.replayBusy;
+    const key = s.hotkey_save_replay ? s.hotkey_save_replay.replace(/\+/g, ' + ') : null;
+    const disk = sizeText(mbPerMinute(s.quality) * (s.replay_seconds + 6) / 60);
+    $('replay-note').textContent = on
+      ? `On. ${key ? `${key} saves` : 'Save replay keeps'} the last ${replayLength()}. Uses about ${disk} of disk while on.`
+      : 'Off. Turn on to save great moments after they happen.';
+    $('replay-note').classList.toggle('replay-live', on);
+  }
+  async function setReplay(on, remember = true) {
+    if (state.replayBusy) return;
+    state.replayBusy = true;
+    renderReplay();
+    try {
+      if (on) {
+        const src = currentSource();
+        if (!src) throw new Error('');
+        const st = await bridge.startReplay(src);
+        state.replay = (st && st.replay) || { on: true };
+      } else {
+        const st = await bridge.stopReplay();
+        state.replay = (st && st.replay) || { on: false };
+      }
+      if (remember) await saveSetting('replay_on', on);
+    } catch (e) {
+      if (String(e)) toast(String(e).replace(/^Error: ?/, ''), 'error', 10000);
+      state.replay = { on: false };
+    }
+    state.replayBusy = false;
+    renderReplay();
+    renderStage();
+  }
+  // Settings that change what's captured restart the buffer (it starts again from now).
+  const CAPTURE_KEYS = ['codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks'];
+  let replayRestart = null;
+  function restartReplay() {
+    if (!state.replay.on || state.phase !== 'idle') return;
+    clearTimeout(replayRestart);
+    replayRestart = setTimeout(async () => {
+      await setReplay(false, false);
+      await setReplay(true, false);
+    }, 400);
+  }
+  async function saveReplay() {
+    if (!state.replay.on) { toast('Turn on instant replay first (left panel).', 'warning', 5000); return; }
+    try {
+      await bridge.saveReplay();
+      playCue('save');
+    } catch (e) { toast(String(e), 'error', 10000); }
+  }
+  $('replay-on').addEventListener('change', (e) => setReplay(e.target.checked));
+  $('save-replay').addEventListener('click', saveReplay);
+
   // ---------- tray, hotkeys, sounds ----------
   // A short tone pair: rising when recording starts, falling when it stops.
   let audioCtx = null;
@@ -876,7 +965,7 @@
     if (!state.settings || !state.settings.sounds) return;
     try {
       audioCtx = audioCtx || new AudioContext();
-      const notes = kind === 'start' ? [660, 880] : [880, 587];
+      const notes = kind === 'start' ? [660, 880] : kind === 'save' ? [988, 988] : [880, 587];
       notes.forEach((f, i) => {
         const t = audioCtx.currentTime + i * 0.11;
         const o = audioCtx.createOscillator();
@@ -978,9 +1067,11 @@
     renderHotkeys();
   }));
   bridge.onHotkey((action) => {
+    if (action === 'save_replay') { saveReplay(); return; }
     if (action !== 'toggle_record') return;
     if (state.phase === 'idle' || state.phase === 'recording') toggleRecording();
   });
+  $('hotkey-replay-clear').addEventListener('click', () => { stopListening(); saveHotkey('hotkey_save_replay', ''); });
 
   // ---------- first-run setup ----------
   const BPP = { high: 0.30, medium: 0.18, low: 0.10 }; // same as the engine (ffmpeg::bitrate_kbps)
@@ -1060,6 +1151,7 @@
       renderSettings();
       const status = await bridge.getStatus();
       state.focusMonitor = status.focus_monitor || null;
+      state.replay = status.replay || { on: false };
       if (status.state === 'recording') {
         state.recording = { ...status.recording, source: status.recording.label };
         state.phase = 'recording';
@@ -1070,6 +1162,8 @@
     await refreshMonitors();
     await refreshInputs();
     if (state.settings && !state.settings.setup_done && state.phase === 'idle') openSetup();
+    // Instant replay was on last time: turn it back on.
+    if (state.settings && state.settings.replay_on && !state.replay.on && state.phase === 'idle') setReplay(true, false);
     // Capabilities arrive as an event, but may have been sent before we were listening.
     for (let i = 0; i < 40 && !(state.caps && state.caps.probed); i++) {
       try { state.caps = await bridge.getCapabilities(); } catch (e) { /* engine still starting */ }

@@ -260,6 +260,10 @@ body.side-collapsed .layout { grid-template-columns: 80px minmax(0, 1fr); }
 .linkbtn { background: none; border: 0; color: var(--acc); cursor: pointer; font-size: 12px; padding: 2px 4px; font-weight: 500; }
 .linkbtn:hover { text-decoration: underline; }
 .lock { margin: 6px 0 0; font-size: 11.5px; color: var(--dim); }
+.btn.wide { width: 100%; margin-top: 8px; }
+#replay-sec .btn.wide:not(:disabled) { border-color: rgba(88, 101, 242, .55); background: rgba(88, 101, 242, .12); color: #e0e3ff; font-weight: 600; }
+#replay-sec .btn.wide:not(:disabled):hover { background: rgba(88, 101, 242, .2); border-color: var(--acc); }
+.replay-live { color: #9aa3ff; }
 .sdiv { height: 1px; background: var(--line); margin: 14px 18px 0; }
 .recent { list-style: none; margin: 0 -8px; padding: 0; }
 .recent li { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; cursor: pointer; }

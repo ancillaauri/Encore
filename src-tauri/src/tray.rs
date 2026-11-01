@@ -22,9 +22,12 @@ pub struct ShellState {
     told_about_tray: AtomicBool,
     tray: Mutex<Option<TrayIcon<Wry>>>,
     record_item: Mutex<Option<MenuItem<Wry>>>,
-    /// The hotkey registered for start/stop recording, as the person wrote it.
-    record_hotkey: Mutex<String>,
+    /// Registered hotkeys by setting name (e.g. "hotkey_record" -> "Ctrl+Alt+R").
+    hotkeys: Mutex<std::collections::HashMap<String, String>>,
 }
+
+/// Each hotkey setting and the action its press sends to the interface.
+const HOTKEYS: [(&str, &str); 2] = [("hotkey_record", "toggle_record"), ("hotkey_save_replay", "save_replay")];
 
 pub fn show_window(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
@@ -37,8 +40,9 @@ pub fn show_window(app: &AppHandle) {
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open Encore", true, None::<&str>)?;
     let record = MenuItem::with_id(app, "record", "Start recording", true, None::<&str>)?;
+    let replay = MenuItem::with_id(app, "replay", "Save replay", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Encore", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &record, &PredefinedMenuItem::separator(app)?, &quit])?;
+    let menu = Menu::with_items(app, &[&open, &record, &replay, &PredefinedMenuItem::separator(app)?, &quit])?;
     let mut builder = TrayIconBuilder::with_id("main")
         .tooltip("Encore")
         .menu(&menu)
@@ -47,6 +51,9 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
             "open" => show_window(app),
             "record" => {
                 let _ = app.emit("hotkey", "toggle_record");
+            }
+            "replay" => {
+                let _ = app.emit("hotkey", "save_replay");
             }
             "quit" => app.exit(0),
             _ => {}
@@ -135,27 +142,34 @@ pub fn apply(app: &AppHandle, settings: &Value) -> Vec<String> {
     let close = settings.get("close_to_tray").and_then(|v| v.as_bool()).unwrap_or(true);
     state.close_to_tray.store(close, Ordering::Relaxed);
 
-    let wanted = settings.get("hotkey_record").and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
-    let mut current = state.record_hotkey.lock().unwrap();
+    let mut registered = state.hotkeys.lock().unwrap();
     let mut problems = Vec::new();
-    if *current != wanted {
-        let gs = app.global_shortcut();
+    let gs = app.global_shortcut();
+    for (setting, action) in HOTKEYS {
+        let wanted = settings.get(setting).and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
+        let current = registered.get(setting).cloned().unwrap_or_default();
+        if current == wanted {
+            continue;
+        }
         if !current.is_empty() {
             let _ = gs.unregister(current.as_str());
         }
-        current.clear();
-        if !wanted.is_empty() {
-            let result = gs.on_shortcut(wanted.as_str(), |app, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
-                    let _ = app.emit("hotkey", "toggle_record");
-                }
-            });
-            match result {
-                Ok(()) => *current = wanted.clone(),
-                Err(e) => problems.push(format!(
-                    "The hotkey {wanted} couldn't be set up ({e}). Another app may be using it; pick a different one in Settings → Hotkeys."
-                )),
+        registered.remove(setting);
+        if wanted.is_empty() {
+            continue;
+        }
+        let result = gs.on_shortcut(wanted.as_str(), move |app, _shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                let _ = app.emit("hotkey", action);
             }
+        });
+        match result {
+            Ok(()) => {
+                registered.insert(setting.to_string(), wanted);
+            }
+            Err(e) => problems.push(format!(
+                "The hotkey {wanted} couldn't be set up ({e}). Another app may be using it; pick a different one in Settings → Hotkeys."
+            )),
         }
     }
     problems

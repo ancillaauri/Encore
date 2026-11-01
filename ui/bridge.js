@@ -7,7 +7,7 @@
   window.bridge = {
     startRecording: (source) => call('start_recording', source),
     stopRecording: () => call('stop_recording'),
-    startReplay: () => call('start_replay'),
+    startReplay: (source) => call('start_replay', source),
     stopReplay: () => call('stop_replay'),
     saveReplay: () => call('save_replay'),
     getStatus: () => call('get_status'),
