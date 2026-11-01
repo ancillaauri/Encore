@@ -270,6 +270,14 @@ mod win {
     fn open_client(source: &Source) -> Result<AudioClient, String> {
         match source {
             Source::FullMix => {
+                // Everything except Encore itself, so its start/stop/save sounds aren't recorded.
+                // Needs a recent Windows; otherwise the whole output device is recorded as before.
+                if let Some(shell) = shell_pid(&platform::processes()) {
+                    match AudioClient::new_application_loopback_client(shell, false) {
+                        Ok(c) => return Ok(c),
+                        Err(err) => log(&format!("desktop audio without Encore's sounds not available ({err}); recording all of it")),
+                    }
+                }
                 let en = e(DeviceEnumerator::new())?;
                 let dev = e(en.get_default_device(&Direction::Render))?;
                 e(dev.get_iaudioclient())
@@ -410,17 +418,30 @@ mod win {
         Ok(apps)
     }
 
+    /// The Encore app (the shell that started this engine), if that's how the engine was started.
+    fn shell_pid(procs: &std::collections::HashMap<u32, platform::ProcInfo>) -> Option<u32> {
+        let parent = procs.get(&std::process::id())?.parent;
+        let exe = procs.get(&parent)?.exe.to_ascii_lowercase();
+        (exe == "encore.exe").then_some(parent)
+    }
+
     fn own_processes() -> HashSet<u32> {
-        // Encore's own processes (the app shell, this engine, FFmpeg) are never recorded as apps.
+        // Encore's own processes are never recorded as apps: the app and everything it started
+        // (its window's WebView2 processes, which play Encore's sounds; this engine; FFmpeg).
         let me = std::process::id();
         let procs = platform::processes();
-        let mut own: HashSet<u32> = HashSet::from([me]);
-        if let Some(p) = procs.get(&me) {
-            own.insert(p.parent);
-        }
-        for (pid, p) in &procs {
-            if p.parent == me {
-                own.insert(*pid);
+        let top = shell_pid(&procs).unwrap_or(me);
+        let mut own: HashSet<u32> = HashSet::from([me, top]);
+        // Add children until nothing new turns up (process trees are shallow).
+        loop {
+            let before = own.len();
+            for (pid, p) in &procs {
+                if own.contains(&p.parent) && p.parent != *pid {
+                    own.insert(*pid);
+                }
+            }
+            if own.len() == before {
+                break;
             }
         }
         own

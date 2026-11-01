@@ -1,23 +1,21 @@
-## Encore 0.7.6 (beta), test build 14: hotkeys in League, right lengths in messages
+## Encore 0.7.7 (beta), test build 15: Encore's sounds stay out of your recordings
 
 ### What's changed
-- **Hotkeys in games like League of Legends.** Encore used Windows' standard hotkey system, which
-  some games block while they're in front. It now watches the keys itself, the way other
-  recorders do, so hotkeys work whatever is in front. One difference: the keys now also reach the
-  game, so choose combinations the game doesn't use (the defaults should be fine in most games).
-- If the same keys are set for two actions, Encore says so.
-- **Replay messages show the right length.** Saving with the 30-second hotkey now says "Saving
-  the last 30 seconds" and "Saved replay (30 seconds)", instead of the replay length.
-- Every hotkey press is noted in the log, so if one ever seems to do nothing we can tell whether
-  Encore saw it.
+- **Encore's own sounds aren't recorded.** The start, stop and save sounds used to end up in the
+  desktop audio track. Desktop audio now records everything except Encore.
+- **No more "Microsoft Edge WebView2" track.** That was Encore's own window; Split App Tracks now
+  leaves it out.
+- From 0.7.6: hotkeys work in games like League of Legends, and replay messages show the length
+  you saved.
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.7.6).
+Update from inside Encore (≡ → Help → Update to 0.7.7).
 
 ### Test checklist
-1. In a League match, with instant replay on: Ctrl+Alt+S, Ctrl+Alt+1, Ctrl+Alt+2. Each should
-   beep and save. Also Ctrl+Alt+R to start and stop a recording.
-2. Check the messages show the length you asked for.
-3. In Settings → Hotkeys, set a new key: pressing it while choosing shouldn't save anything.
-4. If a hotkey does nothing, send `%LOCALAPPDATA%\Encore\logs\engine.log` (look for
-  "hotkey … pressed").
+1. With sounds on, play some music, record 20 seconds (start and stop with Ctrl+Alt+R) and save a
+   replay during it. In the file: the music is there, the beeps aren't, in Full mix and Desktop
+   audio.
+2. No "Microsoft Edge WebView2" track.
+3. Everything else in desktop audio still there (game, Discord, browser).
+4. If desktop audio is silent or missing something, send the log: look for "desktop audio without
+   Encore's sounds not available".

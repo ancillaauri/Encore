@@ -323,3 +323,11 @@ Both have hardware-accelerated GPU scheduling on.
 - While a new hotkey is being chosen in Settings, presses don't trigger actions.
 - Replay messages now give the length actually saved ("Saving the last 30 seconds", "Saved replay
   (30 seconds)"), not the replay length.
+
+## 2026-11-01: Encore's own sounds left out of recordings (0.7.7)
+- Desktop audio is now captured as "everything except Encore" (Windows process loopback in
+  exclude mode, aimed at the Encore app and everything it started), so the start/stop/save sounds
+  aren't recorded. On a Windows too old for that, it falls back to recording the whole output
+  device, as before, and says so in the log.
+- Split App Tracks skips every process Encore started (its window's WebView2 processes included),
+  so there's no "Microsoft Edge WebView2" track any more.
