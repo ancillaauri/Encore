@@ -1,21 +1,27 @@
-## Encore 0.7.7 (beta), test build 15: Encore's sounds stay out of your recordings
+## Encore 0.8.0 (beta), test build 16: Ultra, start with Windows, working folder
 
-### What's changed
-- **Encore's own sounds aren't recorded.** The start, stop and save sounds used to end up in the
-  desktop audio track. Desktop audio now records everything except Encore.
-- **No more "Microsoft Edge WebView2" track.** That was Encore's own window; Split App Tracks now
-  leaves it out.
-- From 0.7.6: hotkeys work in games like League of Legends, and replay messages show the length
-  you saved.
+### What's new
+- **Ultra quality.** What was High is now called **Ultra** (same quality, still the default), and
+  there's a new **High** between Ultra and Medium: very close in quality, files about a fifth
+  smaller. If you had High selected, you're now on Ultra, so nothing changes until you pick.
+- **Start Encore when Windows starts** (Settings → General). Encore opens in the tray, so hotkeys
+  and instant replay are ready straight away. Works with "Start Encore as administrator" too, with
+  no prompt.
+- **Working folder** (Settings → Saving). Where recordings are written while they're being made,
+  and where instant replay keeps its last few minutes. It used to always be on C:; you can now
+  pick a bigger or faster drive. Encore makes an "Encore temp" folder inside the one you choose.
+- **Settings contents.** Settings has a list of sections on the left: click one to jump to it.
+  The section you're looking at is highlighted.
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.7.7).
+Update from inside Encore (≡ → Help → Update to 0.8.0).
 
 ### Test checklist
-1. With sounds on, play some music, record 20 seconds (start and stop with Ctrl+Alt+R) and save a
-   replay during it. In the file: the music is there, the beeps aren't, in Full mix and Desktop
-   audio.
-2. No "Microsoft Edge WebView2" track.
-3. Everything else in desktop audio still there (game, Discord, browser).
-4. If desktop audio is silent or missing something, send the log: look for "desktop audio without
-   Encore's sounds not available".
+1. Quality shows **Ultra** (left panel and Settings → Video). Try High: files should be a bit
+   smaller and still look great.
+2. Settings → General → turn on **Start Encore when Windows starts**, then restart the PC: Encore
+   should be in the tray (no window), running as administrator, with instant replay on if it was
+   on before.
+3. Settings → Saving → **Working folder** → Browse… and pick a folder on another drive. Turn
+   instant replay on: an "Encore temp" folder should appear there and fill up. Default puts it back.
+4. Settings contents: click each section; scroll and check the highlight follows.

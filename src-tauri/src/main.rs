@@ -7,6 +7,7 @@
 mod admin;
 mod engine_link;
 mod hotkeys;
+mod startup;
 mod tray;
 mod updater;
 
@@ -126,6 +127,12 @@ fn main() {
             app.manage(Arc::new(link));
             updater::start(app.handle().clone());
             fit_to_screen(app.handle());
+            // Started with Windows: stay in the tray.
+            if startup::start_hidden() {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.hide();
+                }
+            }
             tray::setup(app.handle())?;
             tray::start(app.handle().clone());
             hotkeys::start(app.handle().clone());
@@ -150,6 +157,8 @@ fn main() {
             tray::restart_as_admin,
             admin::admin_status,
             admin::set_start_as_admin,
+            startup::autostart_status,
+            startup::set_autostart,
             tray::apply_shell_settings,
             updater::get_update,
             updater::check_for_updates,

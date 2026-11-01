@@ -331,3 +331,18 @@ Both have hardware-accelerated GPU scheduling on.
   device, as before, and says so in the log.
 - Split App Tracks skips every process Encore started (its window's WebView2 processes included),
   so there's no "Microsoft Edge WebView2" track any more.
+
+## 2026-11-01: Ultra quality, working folder, start with Windows, settings contents (0.8.0)
+- Quality: the old High (0.30 bits per pixel) is now **Ultra** and stays the default. A new
+  **High** (0.24) sits between it and Medium (0.18). Settings files from before are moved over
+  once (`settings_version` 1): a saved "high" becomes "ultra", so nobody's quality changes.
+- Defaults stay as they are; people tune to their own PCs.
+- Working folder (`work_dir`, Settings → Saving): where recordings in progress and the instant
+  replay buffer go. Empty = %LOCALAPPDATA%\Encore\temp. A chosen folder gets an "Encore temp"
+  folder inside. Leftovers from a crash are recovered from both. Can't change while recording;
+  instant replay restarts in the new place.
+- Start with Windows: a value in the current user's Run key starting Encore with `--autostart`,
+  which keeps the window hidden (tray only). With "Start as administrator" on, the hand-over to the
+  elevated copy passes this on through a short-lived marker file.
+- Settings has a contents list on the left: click a section to jump to it; the section in view is
+  highlighted. Hidden on narrow windows.

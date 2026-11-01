@@ -30,6 +30,8 @@
     // { elevated, start_as_admin }
     adminStatus: () => T.core.invoke('admin_status'),
     setStartAsAdmin: (on) => T.core.invoke('set_start_as_admin', { on }),
+    autostartStatus: () => T.core.invoke('autostart_status'),
+    setAutostart: (on) => T.core.invoke('set_autostart', { on }),
     applyShellSettings: () => T.core.invoke('apply_shell_settings'),
     onHotkey: (callback) => T.event.listen('hotkey', (e) => callback(e.payload)),
     appVersion: () => T.app.getVersion(),

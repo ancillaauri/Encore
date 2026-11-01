@@ -256,6 +256,14 @@ impl Engine {
         if updated.output_dir != self.settings.output_dir {
             check_writable(&paths::encore_root(&PathBuf::from(&updated.output_dir)))?;
         }
+        if updated.work_dir != self.settings.work_dir {
+            if self.is_recording() {
+                return Err("Stop the recording first, then change where Encore works.".into());
+            }
+            if !updated.work_dir.trim().is_empty() {
+                check_writable(&paths::work_root(&updated.work_dir))?;
+            }
+        }
         // Setup finished: now make the Encore folder where they chose.
         if updated.setup_done && !self.settings.setup_done {
             let root = paths::encore_root(&PathBuf::from(&updated.output_dir));
@@ -364,7 +372,7 @@ impl Engine {
             kbps,
             &label,
             out_path,
-            &paths::temp_dir(),
+            &self.work_root(),
             preferred,
             &audio_opts,
             self.settings.audio_offset_ms,
@@ -657,9 +665,19 @@ impl Engine {
         }
     }
 
-    /// Saves recordings left in the temp folder by a crash or power cut.
+    /// Where recordings in progress and the instant replay buffer go (setting `work_dir`).
+    fn work_root(&self) -> PathBuf {
+        paths::work_root(&self.settings.work_dir)
+    }
+
+    /// Saves recordings left in the working folder by a crash or power cut (the default one, and
+    /// the chosen one if different).
     pub fn recover_leftovers(&self) {
-        for dir in recorder::leftover_sessions(&paths::temp_dir()) {
+        let mut roots = vec![paths::temp_dir()];
+        if self.work_root() != roots[0] {
+            roots.push(self.work_root());
+        }
+        for dir in roots.iter().flat_map(|r| recorder::leftover_sessions(r)) {
             log(&format!("recovering {}", dir.display()));
             let out_dir = PathBuf::from(&self.settings.output_dir);
             let out_path = recorder::output_path(&out_dir, "Recovered", platform::local_time());

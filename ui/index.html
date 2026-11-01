@@ -66,6 +66,7 @@
           <h2 class="lab">Video</h2>
           <label class="srow"><span>Quality</span>
             <select class="dd" id="q-quality" data-setting="quality">
+              <option value="ultra">Ultra</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low (smaller files)</option>
@@ -149,14 +150,16 @@
 
   <!-- Settings -->
   <div id="settings" class="overlay" hidden>
-    <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="dlg wide" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <div class="dlg-head">
         <h2 id="settings-title">Settings</h2>
         <button type="button" class="ibtn" data-close aria-label="Close" title="Close (Esc)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
         </button>
       </div>
-      <div class="dlg-scroll">
+      <div class="dlg-body">
+        <nav class="setnav" id="setnav" aria-label="Settings sections"></nav>
+        <div class="dlg-scroll" id="settings-scroll">
         <section class="setsec">
           <h3>Video</h3>
           <div class="setcard">
@@ -186,7 +189,8 @@
             </label>
             <label class="setrow"><span class="setname">Quality</span>
               <select class="dd" id="quality" data-setting="quality">
-                <option value="high">High</option>
+                <option value="ultra">Ultra</option>
+              <option value="high">High</option>
                 <option value="medium">Medium</option>
                 <option value="low">Low (smaller files)</option>
               </select>
@@ -230,6 +234,15 @@
                 <button type="button" class="btn sm ghost" id="open-output">Open</button>
               </div>
             </div>
+            <div class="setrow">
+              <span class="settext"><span class="setname">Working folder</span>
+                <span class="setsub wrap" id="work-note"></span></span>
+              <div class="with-button grow">
+                <input id="work-dir" type="text" spellcheck="false" readonly>
+                <button type="button" class="btn sm" id="browse-work">Browse…</button>
+                <button type="button" class="btn sm ghost" id="default-work">Default</button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -247,6 +260,11 @@
               <span class="settext"><span class="setname">Quit Encore</span>
                 <span class="setsub wrap">Hotkeys stop working until you open Encore again.</span></span>
             </button>
+          </div>
+          <div class="setcard spaced">
+            <label class="setrow"><span class="settext"><span class="setname">Start Encore when Windows starts</span>
+              <span class="setsub wrap">Opens in the tray, so hotkeys and instant replay are ready straight away.</span></span>
+              <input type="checkbox" class="toggle" id="autostart"></label>
           </div>
           <div class="setcard spaced">
             <label class="setrow"><span class="settext"><span class="setname">Start Encore as administrator</span>
@@ -382,6 +400,7 @@
             </div>
           </div>
         </section>
+        </div>
       </div>
     </div>
   </div>
@@ -429,6 +448,10 @@
       <div class="sstep" data-step="2" hidden>
         <p class="slead">How should recordings look?</p>
         <div class="setcard" role="radiogroup" aria-label="Quality">
+          <button type="button" class="setrow setopt" role="radio" data-quality="ultra">
+            <span class="radio" aria-hidden="true"></span>
+            <span class="settext"><span class="setname">Ultra</span><span class="setsub" data-size="ultra"></span></span>
+          </button>
           <button type="button" class="setrow setopt" role="radio" data-quality="high">
             <span class="radio" aria-hidden="true"></span>
             <span class="settext"><span class="setname">High</span><span class="setsub" data-size="high"></span></span>

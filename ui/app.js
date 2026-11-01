@@ -278,7 +278,30 @@
   function renderOutputNote() {
     const root = encoreRoot();
     if (root) $('output-note').textContent = `Encore makes a folder called Encore here, with a folder inside for Desktop and each game or app: ${root}\\Desktop, ${root}\\Warframe…`;
+    renderWorkDir();
   }
+  // Working folder: where recordings are written while they're being made, and where instant
+  // replay keeps its last few minutes. Empty = Encore's own folder (AppData on C:).
+  function renderWorkDir() {
+    const s = state.settings;
+    if (!s) return;
+    const custom = (s.work_dir || '').trim();
+    $('work-dir').value = custom ? `${custom.replace(/\\$/, '')}\\Encore temp` : 'Default (on the C: drive)';
+    $('default-work').disabled = !custom;
+    const replay = sizeText(mbPerMinute(s.quality) * (s.replay_seconds + 6) / 60);
+    $('work-note').textContent = `Where recordings are written while they\u2019re being made, and where instant replay keeps its last few minutes (about ${replay} at your settings). Choose a drive with plenty of free space; an SSD is best. Encore makes an \u201cEncore temp\u201d folder inside.`;
+  }
+  async function setWorkDir(dir) {
+    if (state.phase === 'recording') { toast('Stop the recording first, then change the working folder.', 'warning', 6000); return; }
+    await saveSetting('work_dir', dir);
+  }
+  $('browse-work').addEventListener('click', async () => {
+    try {
+      const dir = await bridge.pickFolder(state.settings && state.settings.work_dir ? state.settings.work_dir : '');
+      if (dir) await setWorkDir(dir);
+    } catch (e) { toast(String(e), 'error'); }
+  });
+  $('default-work').addEventListener('click', () => setWorkDir(''));
 
   // ---------- what will be / is being recorded ----------
   const following = () => !state.settings || state.settings.monitor === 'follow';
@@ -794,7 +817,7 @@
     lastFocus = document.activeElement;
     ov.hidden = false;
     requestAnimationFrame(() => ov.classList.add('on'));
-    if (id === 'settings') { renderSettings(); renderUpdate(); refreshInputs(); refreshAdmin(); }
+    if (id === 'settings') { renderSettings(); renderUpdate(); refreshInputs(); refreshAdmin(); refreshAutostart(); }
     if (id === 'changelog') renderChangelog();
     if (id === 'about') $('about-title').textContent = state.version ? `Encore ${state.version}` : 'Encore';
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -942,7 +965,7 @@
     renderStage();
   }
   // Settings that change what's captured restart the buffer (it starts again from now).
-  const CAPTURE_KEYS = ['codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks'];
+  const CAPTURE_KEYS = ['work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks'];
   let replayRestart = null;
   function restartReplay() {
     if (!state.replay.on || state.phase !== 'idle') return;
@@ -1173,7 +1196,7 @@
   });
 
   // ---------- first-run setup ----------
-  const BPP = { high: 0.30, medium: 0.18, low: 0.10 }; // same as the engine (ffmpeg::bitrate_kbps)
+  const BPP = { ultra: 0.30, high: 0.24, medium: 0.18, low: 0.10 }; // same as the engine (ffmpeg::bitrate_kbps)
   const CODEC_FACTOR = { h264: 1, hevc: 0.7, av1: 0.6 };
   // Output size for the main monitor at a resolution setting (never upscaled), like the engine.
   function outputSize(res) {
@@ -1212,7 +1235,7 @@
     document.querySelectorAll('#setup [data-quality]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.quality === s.quality)));
     document.querySelectorAll('#setup [data-size]').forEach((el) => {
       const q = el.dataset.size;
-      const what = { high: 'Best for clips you\u2019ll share', medium: 'Good quality, smaller files', low: 'Smallest files' }[q];
+      const what = { ultra: 'Best quality, biggest files', high: 'Great quality, a fifth smaller', medium: 'Good quality, smaller files', low: 'Smallest files' }[q];
       el.textContent = `${what}. About ${sizeText(mbPerMinute(q))} per minute at ${h}p ${s.fps} fps.`;
     });
   }
@@ -1256,6 +1279,58 @@
     }
   }
   $('start-admin').addEventListener('change', (e) => setStartAsAdmin(e.target.checked));
+
+  // ---------- settings contents (click to jump; the current section is highlighted) ----------
+  (function buildSettingsNav() {
+    const scroller = $('settings-scroll');
+    const nav = $('setnav');
+    const sections = [...scroller.querySelectorAll('.setsec')];
+    const links = sections.map((sec) => {
+      const name = sec.querySelector('h3').textContent;
+      sec.id = sec.id || `set-${name.toLowerCase().replace(/[^a-z]+/g, '-')}`;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = name;
+      b.addEventListener('click', () => {
+        scroller.scrollTo({ top: sec.offsetTop - 4 });
+        mark(sections.indexOf(sec));
+        holdUntil = Date.now() + 600; // let the smooth scroll finish before following it
+      });
+      nav.appendChild(b);
+      return b;
+    });
+    let holdUntil = 0;
+    function mark(i) { links.forEach((l, j) => l.setAttribute('aria-current', String(i === j))); }
+    function follow() {
+      if (Date.now() < holdUntil) return;
+      const top = scroller.scrollTop + 40;
+      let current = 0;
+      sections.forEach((sec, i) => { if (sec.offsetTop <= top) current = i; });
+      // At the very bottom, the last section counts as current even if it's short.
+      if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) current = sections.length - 1;
+      mark(current);
+    }
+    scroller.addEventListener('scroll', follow, { passive: true });
+    window.addEventListener('resize', follow);
+    mark(0);
+  })();
+
+  // ---------- start with Windows ----------
+  async function refreshAutostart() {
+    try { $('autostart').checked = !!(await bridge.autostartStatus()); } catch { /* not available */ }
+  }
+  $('autostart').addEventListener('change', async (e) => {
+    const on = e.target.checked;
+    e.target.disabled = true;
+    try {
+      await bridge.setAutostart(on);
+      toast(on ? 'Encore will start in the tray when Windows starts.' : 'Encore won\u2019t start with Windows any more.', 'ok');
+    } catch (err) {
+      toast(String(err), 'error');
+    }
+    e.target.disabled = false;
+    refreshAutostart();
+  });
 
   async function finishSetup() {
     if (state.settings && !state.settings.setup_done) await saveSetting('setup_done', true);

@@ -28,6 +28,7 @@ pub enum Resolution {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Quality {
+    Ultra,
     High,
     Medium,
     Low,
@@ -78,6 +79,13 @@ pub struct Settings {
     pub hotkey_save_30s: String,
     pub hotkey_save_60s: String,
     pub hotkey_save_custom: String,
+    /// Folder for work in progress (recordings being made, the instant replay buffer); empty =
+    /// Encore's own folder in %LOCALAPPDATA%. A folder "Encore temp" is made inside the chosen one.
+    pub work_dir: String,
+    /// Bumped when a stored value changes meaning. 1: the old "high" quality became "ultra".
+    /// Missing in older settings files, so it reads as 0 there.
+    #[serde(default)]
+    pub settings_version: u32,
     /// Length saved by the custom hotkey, in seconds (capped at the replay length when saving).
     pub replay_custom_seconds: u32,
     /// Sound for each moment (one of SOUND_NAMES; "none" = silent) and its volume, 0–100.
@@ -93,6 +101,8 @@ pub struct Settings {
 /// Sounds the interface can play (it synthesises them; no sound files).
 pub const SOUND_NAMES: [&str; 9] = ["rise", "fall", "double", "pop", "bell", "blip", "click", "shutter", "none"];
 
+pub const SETTINGS_VERSION: u32 = 1;
+
 /// Shortest and longest custom save length.
 pub const CUSTOM_SECONDS: std::ops::RangeInclusive<u32> = 5..=1200;
 
@@ -106,7 +116,7 @@ impl Default for Settings {
             codec: Codec::H264,
             fps: 60,
             resolution: Resolution::Native,
-            quality: Quality::High,
+            quality: Quality::Ultra,
             capture_cursor: true,
             monitor: "follow".into(),
             audio_full_mix: true,
@@ -127,6 +137,8 @@ impl Default for Settings {
             hotkey_save_60s: "Ctrl+Alt+2".into(),
             hotkey_save_custom: "Ctrl+Alt+3".into(),
             replay_custom_seconds: 90,
+            work_dir: String::new(),
+            settings_version: SETTINGS_VERSION,
             sound_start: "rise".into(),
             sound_stop: "fall".into(),
             sound_save: "double".into(),
@@ -235,6 +247,14 @@ impl Settings {
         if !CUSTOM_SECONDS.contains(&self.replay_custom_seconds) {
             self.replay_custom_seconds = 90;
         }
+        // Before 1: there were three qualities and "high" was the top one. It's now called Ultra
+        // (same bitrate), with a new High below it.
+        if self.settings_version < 1 {
+            if self.quality == Quality::High {
+                self.quality = Quality::Ultra;
+            }
+            self.settings_version = 1;
+        }
         let d = Settings::default();
         for (snd, def) in [(&mut self.sound_start, d.sound_start), (&mut self.sound_stop, d.sound_stop), (&mut self.sound_save, d.sound_save)] {
             if !SOUND_NAMES.contains(&snd.as_str()) {
@@ -261,6 +281,22 @@ impl Settings {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn old_high_becomes_ultra_once() {
+        let old: Settings = serde_json::from_value(json!({"quality": "high", "fps": 60})).unwrap();
+        assert_eq!(old.settings_version, 0);
+        let n = old.normalised();
+        assert_eq!((n.quality, n.settings_version), (Quality::Ultra, 1));
+        // Chosen after the change: stays High.
+        let new: Settings = serde_json::from_value(json!({"quality": "high", "settings_version": 1})).unwrap();
+        assert_eq!(new.normalised().quality, Quality::High);
+        // Medium and Low are unchanged.
+        let med: Settings = serde_json::from_value(json!({"quality": "medium"})).unwrap();
+        assert_eq!(med.normalised().quality, Quality::Medium);
+        assert_eq!(Settings::default().quality, Quality::Ultra);
+        assert!(Settings::default().apply_patch(&json!({"quality": "ultra"})).is_ok());
+    }
 
     #[test]
     fn patch_updates_only_given_keys() {

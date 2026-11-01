@@ -33,6 +33,17 @@ pub fn temp_dir() -> PathBuf {
     local_dir().join("temp")
 }
 
+/// The working folder: Encore's own temp folder, or "Encore temp" inside the folder chosen in
+/// Settings (so Encore never fills or cleans up someone's folder directly).
+pub fn work_root(chosen: &str) -> PathBuf {
+    let chosen = chosen.trim();
+    if chosen.is_empty() {
+        temp_dir()
+    } else {
+        PathBuf::from(chosen).join("Encore temp")
+    }
+}
+
 pub fn log_dir() -> PathBuf {
     local_dir().join("logs")
 }

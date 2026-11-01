@@ -89,7 +89,8 @@ pub fn output_size(src_w: u32, src_h: u32, res: Resolution) -> (u32, u32) {
 /// Target bitrate in kbit/s. Bits per pixel per frame, adjusted for codec efficiency.
 pub fn bitrate_kbps(width: u32, height: u32, fps: u32, quality: Quality, codec: Codec) -> u32 {
     let bpp = match quality {
-        Quality::High => 0.30,
+        Quality::Ultra => 0.30,
+        Quality::High => 0.24,
         Quality::Medium => 0.18,
         Quality::Low => 0.10,
     };
@@ -457,12 +458,15 @@ mod tests {
 
     #[test]
     fn bitrate_is_sensible() {
-        let b = bitrate_kbps(1920, 1080, 60, Quality::High, Codec::H264);
+        let b = bitrate_kbps(1920, 1080, 60, Quality::Ultra, Codec::H264);
         assert!((30_000..=45_000).contains(&b), "{b}");
-        assert!(bitrate_kbps(1920, 1080, 60, Quality::High, Codec::Av1) < b);
+        let h = bitrate_kbps(1920, 1080, 60, Quality::High, Codec::H264);
+        let m = bitrate_kbps(1920, 1080, 60, Quality::Medium, Codec::H264);
+        assert!(m < h && h < b, "High sits between Medium and Ultra: {m} {h} {b}");
+        assert!(bitrate_kbps(1920, 1080, 60, Quality::Ultra, Codec::Av1) < b);
         assert!(bitrate_kbps(1920, 1080, 60, Quality::Low, Codec::H264) < b);
         assert_eq!(bitrate_kbps(320, 200, 30, Quality::Low, Codec::H264), 2_000);
-        assert_eq!(bitrate_kbps(7680, 4320, 240, Quality::High, Codec::H264), 150_000);
+        assert_eq!(bitrate_kbps(7680, 4320, 240, Quality::Ultra, Codec::H264), 150_000);
     }
 
     #[test]

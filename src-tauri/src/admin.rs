@@ -211,6 +211,7 @@ pub fn hand_over_if_wanted() -> bool {
         if !wanted() || win::is_elevated() {
             return false;
         }
+        crate::startup::remember_hidden_for_handover();
         win::run_task()
     }
     #[cfg(not(windows))]
