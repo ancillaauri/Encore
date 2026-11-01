@@ -580,3 +580,11 @@ Agreed design for game detection (to build next):
   any visible window still above it is logged by program ("covered by …"). Also: the "Saving the
   last 1 minute…" message drew as a tiny circle: a toast's kind "info" clashed with the (i) icon's
   `.info` class. Toast kinds are now `t-info`, `t-ok`, `t-warning`, `t-error`.
+- 0.9.14: confirmed by test. With top priority on, notifications were placed, on top and drawn
+  (nothing covered them) but never reached the screen; with it off, every one showed (the timer a
+  little laggy). The WebView2 drawing them runs at normal graphics priority, behind both a game
+  using all of the card and a top-priority capture. The engine now gives Encore's own
+  msedgewebview2.exe processes high graphics priority (checked every 3 s for new ones; only the
+  one using the graphics card accepts it, the others get 20 tries). High is above the game, below
+  the top-priority capture. Same test showed high priority isn't enough for Warframe on this PC
+  even capped at 120 fps: 63 s behind, 123 s to catch up, a 60 s Echo of 7.6 MB.

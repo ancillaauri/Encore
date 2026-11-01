@@ -1,3 +1,14 @@
+## Encore 0.9.14 (beta), test build 35: notifications with top priority
+
+### Fixed
+- **Notifications didn't appear with Top graphics priority on.** They were drawn but the
+  graphics card never got round to showing them while the game and the capture had it busy.
+  Encore's own windows now get a higher place on the graphics card (above the game, still below
+  the capture), so notifications appear, and their timers run smoothly.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.14).
+
 ## Encore 0.9.13 (beta), test build 34: notifications stay on top
 
 ### Fixed

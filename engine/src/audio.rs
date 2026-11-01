@@ -246,8 +246,13 @@ pub fn list_apps() -> Vec<AudioApp> {
     Vec::new()
 }
 
+#[cfg(not(windows))]
+pub fn own_processes() -> std::collections::HashSet<u32> {
+    std::collections::HashSet::new()
+}
+
 #[cfg(windows)]
-pub use win::{list_apps, list_inputs, start};
+pub use win::{list_apps, list_inputs, own_processes, start};
 
 #[cfg(windows)]
 mod win {
@@ -429,7 +434,7 @@ mod win {
         (exe == "encore.exe").then_some(parent)
     }
 
-    fn own_processes() -> HashSet<u32> {
+    pub fn own_processes() -> HashSet<u32> {
         // Encore's own processes are never recorded as apps: the app and everything it started
         // (its window's WebView2 processes, which play Encore's sounds; this engine; FFmpeg).
         let me = std::process::id();

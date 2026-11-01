@@ -163,6 +163,9 @@ mod other {
     pub fn try_gpu_priority(_pid: u32) -> Result<String, String> {
         Err("not on Windows".into())
     }
+    pub fn try_gpu_priority_at(_pid: u32, _top: bool) -> Result<String, String> {
+        Err("not on Windows".into())
+    }
     pub fn is_elevated() -> bool {
         false
     }
@@ -674,7 +677,11 @@ mod win {
     /// opened the graphics card, so the caller retries for a few seconds after FFmpeg starts.
     /// Ok and Err both carry a line for the log, error codes included.
     pub fn try_gpu_priority(pid: u32) -> Result<String, String> {
-        let top = super::gpu_top();
+        try_gpu_priority_at(pid, super::gpu_top())
+    }
+
+    /// As try_gpu_priority, choosing the level: realtime (`top`) or high.
+    pub fn try_gpu_priority_at(pid: u32, top: bool) -> Result<String, String> {
         type SetGpuPriority = unsafe extern "system" fn(*mut c_void, i32) -> i32;
         const PROCESS_ALL_ACCESS: u32 = 0x001F_FFFF;
         const GPU_HIGH: i32 = 4;
