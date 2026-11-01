@@ -102,6 +102,13 @@
       </div>
 
       <div class="side-foot">
+        <div class="pcrow">
+          <button type="button" class="dnd pcap" id="pcap" aria-pressed="false">
+            <span class="dnd-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5 5 13.5h6l-1 8 8-11h-6l1-8z"/></svg></span>
+            <span class="dnd-text"><span class="dnd-name">Priority Capture</span><span class="dnd-sub" id="pcap-sub">Off</span></span>
+          </button>
+          <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Puts Encore’s recording ahead of everything else on your graphics card, including the game. Turn it on for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and Echoes don’t fall behind. While it’s on, other programs that use the graphics card, on any screen, may slow down or freeze. The same switch is in Settings → Advanced.">i</span>
+        </div>
         <button type="button" class="dnd" id="dnd" aria-pressed="false" title="Do not disturb: Encore's notifications stay hidden">
           <span class="dnd-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/></svg></span>
           <span class="dnd-text"><span class="dnd-name">Do not disturb</span><span class="dnd-sub" id="dnd-sub">Off</span></span>
@@ -111,6 +118,9 @@
       <div class="rail">
         <button type="button" class="railbtn" data-open="settings" tabindex="-1" data-rail-tip="Settings">
           <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span>
+        </button>
+        <button type="button" class="railbtn dndrail pcaprail" id="rail-pcap" tabindex="-1" data-rail-tip="Priority Capture" aria-pressed="false">
+          <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5 5 13.5h6l-1 8 8-11h-6l1-8z"/></svg></span>
         </button>
         <button type="button" class="railbtn dndrail" id="rail-dnd" tabindex="-1" data-rail-tip="Do not disturb" aria-pressed="false">
           <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/></svg></span>
@@ -563,13 +573,13 @@
         <section class="setsec">
           <h3>Advanced</h3>
           <div class="setcard">
-            <label class="setrow"><span class="settext"><span class="setname">Top graphics priority</span>
-              <span class="setsub wrap">For games that use all of your graphics card. Off is right for most games.</span></span>
+            <label class="setrow"><span class="settext"><span class="setname">Priority Capture</span>
+              <span class="setsub wrap">For games that put a heavy load on your graphics card, or less powerful graphics cards. Off is right for most games. Also at the bottom of the side panel.</span></span>
               <input type="checkbox" class="toggle" id="gpu-realtime"></label>
           </div>
           <div class="caution" role="note">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.2h.01"/></svg>
-            <p><strong>Use with care.</strong> This puts Encore's capture ahead of everything else on your graphics card, including the game and Windows. It can stop recordings and Echoes falling behind in very demanding games. On a PC with an unstable graphics driver it can make the screen go black for a moment, or freeze the PC. If either happens, turn this off. Works best with Start Encore as administrator on.</p>
+            <p><strong>Use with care.</strong> This puts Encore's recording ahead of everything else on your graphics card, including the game and Windows. While it's on, other programs that use the graphics card, on any screen, may slow down or freeze. On a PC with an unstable graphics driver it can also make the screen go black for a moment, or freeze the PC. If that happens, turn it off. Works best with Start Encore as administrator on.</p>
           </div>
         </section>
         </div>
@@ -586,15 +596,20 @@
     </div>
   </div>
 
-  <!-- Confirm: top graphics priority -->
-  <div id="gpu-confirm" class="modal-ov" hidden>
-    <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="gpu-confirm-title" aria-describedby="gpu-confirm-body">
+  <!-- Priority Capture: the first time it's turned on -->
+  <div id="pcap-confirm" class="modal-ov" hidden>
+    <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="pcap-title">
       <button type="button" class="modal-x" data-close aria-label="Cancel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
-      <h2 id="gpu-confirm-title">Turn on top graphics priority?</h2>
-      <div class="modal-body"><p id="gpu-confirm-body">Encore's capture will go ahead of your game and Windows on the graphics card. If your screen goes black or the PC freezes while recording, come back here and turn it off.</p></div>
+      <h2 id="pcap-title">Before you turn on Priority Capture</h2>
+      <div class="modal-body">
+        <p>Priority Capture puts Encore's recording ahead of everything else on your graphics card, including your game. Use it for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and Echoes don't fall behind.</p>
+        <p><strong>While it's on, other programs that use the graphics card, such as videos, streams or games on your other screens, may slow down, stutter or freeze</strong> until you turn it off.</p>
+        <p>On a PC with an unstable graphics driver it can also make the screen go black for a moment, or freeze the PC. If that happens, turn it off.</p>
+        <label class="understand"><input type="checkbox" id="pcap-understand"> I understand</label>
+      </div>
       <div class="modal-btns">
-        <button type="button" class="mbtn" id="gpu-cancel">Cancel</button>
-        <button type="button" class="mbtn primary" id="gpu-ok">Turn on</button>
+        <button type="button" class="mbtn" id="pcap-cancel">Cancel</button>
+        <button type="button" class="mbtn primary" id="pcap-ok" disabled>Turn on</button>
       </div>
     </div>
   </div>

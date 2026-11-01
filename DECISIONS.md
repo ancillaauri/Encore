@@ -605,3 +605,15 @@ Agreed design for game detection (to build next):
 - 0.9.16: Settings → Notifications → Size: Normal (1×), 1.25×, 1.5×, 1.75×, 2× (`notify_size`,
   percent), on top of the screen's own scale; Show a test uses it. The notification appearing a
   few seconds after the save sound (it waits for the file) is left as it is for now.
+
+## 2026-11-01: Priority Capture (0.9.17)
+- Top graphics priority is now called **Priority Capture**, with a switch in the side panel above
+  Do not disturb (lightning bolt, glowing amber when on, "On: recording comes first"), an (i),
+  and a bolt in the collapsed side panel. The Settings → Advanced switch is the same setting.
+- Wording names no game: for games that put a heavy load on the graphics card, or less powerful
+  graphics cards; and says what actually happens to other programs: those that use the graphics
+  card, on any screen, may slow down or freeze.
+- The first time it's turned on (from either place) a dialog explains it and "Turn on" stays
+  greyed out until "I understand" is ticked (`priority_capture_understood`); after that it
+  switches straight away. This replaces the old ask-every-time confirmation in Settings.
+- The falling-behind message now ends "Priority Capture (bottom left) fixes it."

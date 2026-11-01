@@ -1,6 +1,6 @@
 [package]
 name = "encore-engine"
-version = "0.9.16"
+version = "0.9.17"
 edition = "2021"
 description = "Encore recorder engine: capture, encoding and file assembly"
 license = "MIT"

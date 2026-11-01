@@ -1480,6 +1480,11 @@
     $('rail-dnd').dataset.railTip = s.do_not_disturb ? 'Do not disturb: On' : 'Do not disturb: Off';
     $('game-on').removeAttribute('title');
     $('game-on').dataset.tip = s.game_detection ? 'Game detection: On. Click to turn off.' : 'Game detection: Off. Click to record games on their own as they open.';
+    const pc = !!s.gpu_realtime;
+    for (const id of ['pcap', 'rail-pcap']) $(id).setAttribute('aria-pressed', String(pc));
+    $('pcap-sub').textContent = pc ? 'On: recording comes first' : 'Off';
+    $('pcap').dataset.tip = pc ? 'Priority Capture: On. Click to turn off.' : 'Priority Capture: Off. Click to turn on.';
+    $('rail-pcap').dataset.railTip = pc ? 'Priority Capture: On' : 'Priority Capture: Off';
     const dnd = !!s.do_not_disturb;
     for (const id of ['dnd', 'rail-dnd']) $(id).setAttribute('aria-pressed', String(dnd));
     $('dnd-sub').textContent = dnd ? 'On: notifications paused' : 'Off';
@@ -1590,17 +1595,33 @@
   bridge.onTrayGame((id) => lockGame(id === 'unlock' ? null : Number(id)));
 
   // Settings → Games: always / never lists, and the two choices.
-  // ---------- Advanced: top graphics priority (asks first when turning on) ----------
-  $('gpu-realtime').addEventListener('change', (e) => {
-    if (!e.target.checked) { saveSetting('gpu_realtime', false); return; }
-    e.target.checked = false; // stays off until confirmed
-    openDialog('gpu-confirm');
-  });
-  $('gpu-cancel').addEventListener('click', () => closeDialog($('gpu-confirm')));
-  $('gpu-ok').addEventListener('click', async () => {
-    closeDialog($('gpu-confirm'));
+  // ---------- Priority Capture (side panel and Settings → Advanced; the same setting) ----------
+  // The first time it's turned on, the person ticks "I understand" first.
+  async function setPriorityCapture(on) {
+    const s = state.settings;
+    if (!s) return;
+    if (!on) { await saveSetting('gpu_realtime', false); return; }
+    if (!s.priority_capture_understood) {
+      $('pcap-understand').checked = false;
+      $('pcap-ok').disabled = true;
+      openDialog('pcap-confirm');
+      return;
+    }
     await saveSetting('gpu_realtime', true);
-    toast('Top graphics priority is on.', 'ok', 4000);
+  }
+  for (const id of ['pcap', 'rail-pcap']) $(id).addEventListener('click', () => setPriorityCapture(!(state.settings && state.settings.gpu_realtime)));
+  $('gpu-realtime').addEventListener('change', (e) => {
+    const want = e.target.checked;
+    e.target.checked = !!(state.settings && state.settings.gpu_realtime); // follows the setting once saved
+    setPriorityCapture(want);
+  });
+  $('pcap-understand').addEventListener('change', (e) => { $('pcap-ok').disabled = !e.target.checked; });
+  $('pcap-cancel').addEventListener('click', () => closeDialog($('pcap-confirm')));
+  $('pcap-ok').addEventListener('click', async () => {
+    closeDialog($('pcap-confirm'));
+    await saveSetting('priority_capture_understood', true);
+    await saveSetting('gpu_realtime', true);
+    toast('Priority Capture is on.', 'ok', 4000);
   });
 
   // The capture fell behind real time: told once per game (or once while on the desktop).
@@ -1612,7 +1633,7 @@
     behindToldFor = key;
     const who = game || 'Your game';
     const text = `${who} is using all of your graphics card, so Encore can’t keep up. Capping the game’s frame rate a little below your monitor’s usually fixes it.`;
-    toast(`Recording is falling behind. ${text}${data && data.top_priority ? '' : ' Settings → Advanced has a stronger option.'}`, 'warning', 15000);
+    toast(`Recording is falling behind. ${text}${data && data.top_priority ? '' : ' Priority Capture (bottom left) fixes it.'}`, 'warning', 15000);
     notify('problem', 'Recording is falling behind', text);
   }
 

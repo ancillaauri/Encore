@@ -136,6 +136,8 @@ pub struct Settings {
     /// Windows). Off: high. For games that use all of the graphics card; can freeze a PC with an
     /// unstable graphics driver, so it's opt-in.
     pub gpu_realtime: bool,
+    /// Priority Capture's warning has been read and "I understand" ticked (asked once).
+    pub priority_capture_understood: bool,
     /// Notification size, in percent of normal (one of NOTIFY_SIZES), on top of the screen's own
     /// scale.
     pub notify_size: u32,
@@ -212,6 +214,7 @@ impl Default for Settings {
             notify_game: true,
             notify_problems: true,
             gpu_realtime: false,
+            priority_capture_understood: false,
             notify_size: 100,
         }
     }

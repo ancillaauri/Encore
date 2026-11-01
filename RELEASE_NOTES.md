@@ -1,3 +1,16 @@
+## Encore 0.9.17 (beta), test build 38: Priority Capture
+
+### What's new
+- **Priority Capture,** at the bottom of the side panel above Do not disturb. It's the same as
+  Settings → Advanced (now called Priority Capture there too): it puts the recording first on
+  the graphics card, for games that put a heavy load on it or less powerful graphics cards.
+  The (i) explains what it does.
+- **The first time you turn it on,** Encore explains what it does and asks you to tick "I
+  understand". After that it switches on and off straight away.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.17).
+
 ## Encore 0.9.16 (beta), test build 37: notification size
 
 ### What's new

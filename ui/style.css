@@ -940,3 +940,13 @@ body.gd-wait .ps.rec-tag { color: #8fdca5; }
 .caution svg { flex: none; width: 18px; height: 18px; margin-top: 1px; fill: none; stroke: #ffd27a; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px rgba(240, 178, 50, .6)); }
 .caution p { margin: 0; font-size: 12.5px; line-height: 1.5; color: #d9d2bf; user-select: text; }
 .caution strong { color: #ffd27a; }
+
+/* ---------- Priority Capture (side panel, above Do not disturb) ---------- */
+.pcrow { position: relative; }
+/* The (i) sits just after the name (outside the button, which can't hold another control). */
+.pcrow .info { position: absolute; left: 174px; top: 11px; }
+.pcap[aria-pressed="true"] svg, .pcaprail[aria-pressed="true"] svg { stroke: #ffd27a; filter: drop-shadow(0 0 2px rgba(240, 178, 50, .95)) drop-shadow(0 0 7px rgba(240, 178, 50, .55)); }
+.pcap[aria-pressed="true"] .dnd-ic { background: rgba(240, 178, 50, .10); box-shadow: inset 0 0 0 1px rgba(255, 210, 122, .28); }
+.pcap[aria-pressed="true"] .dnd-sub { color: #ffd27a; }
+.understand { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(240, 178, 50, .45); background: rgba(240, 178, 50, .07); color: var(--text); font-weight: 600; cursor: pointer; }
+.understand input { width: 18px; height: 18px; accent-color: #f0b232; margin: 0; }
