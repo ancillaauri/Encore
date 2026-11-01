@@ -401,6 +401,7 @@ Agreed design for game detection (to build next):
   option has an icon whose lines glow: Full System Audio (was "Desktop audio"; PC and monitor)
   and Split Application Audio (was "Split App Tracks"; mixer sliders) glow blue when on and soft
   red when off; Microphone glows green when on and red, with a line through it, when off. Split
-  Application Audio has an (i) explaining it on hover. Switches use the monitors' lighter blue.
+  Application Audio has an (i) explaining it on hover. The icons are the switches (no sliders):
+  click the icon to turn the option on or off. Other switches use the monitors' lighter blue.
   Only the labels changed: the tracks in the files keep their names ("Desktop audio" etc.), so the
   editor's handling is unchanged.

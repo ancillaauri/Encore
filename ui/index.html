@@ -75,22 +75,19 @@
         <div class="sdiv"></div>
         <section class="sec" id="quick-audio">
           <h2 class="lab">Audio</h2>
-          <label class="srow arow blue">
-            <span class="aic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="12.5" height="9" rx="1.5"/><path d="M6 18.5h5.5M8.75 14v4.5"/><rect x="17" y="4" width="4.5" height="15" rx="1.2"/><path d="M18.4 7.5h1.7M18.4 10h1.7"/></svg></span>
+          <div class="srow arow blue">
             <span class="atext">Full System Audio</span>
-            <input type="checkbox" class="toggle sm" data-setting="audio_full_mix">
-          </label>
-          <label class="srow arow mic">
-            <span class="aic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/><path class="slash" d="M4.5 4.5l15 15"/></svg></span>
+            <label class="aic" data-tip="Full System Audio: click to turn on or off"><input type="checkbox" class="aswitch" aria-label="Full System Audio" data-setting="audio_full_mix"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="12.5" height="9" rx="1.5"/><path d="M6 18.5h5.5M8.75 14v4.5"/><rect x="17" y="4" width="4.5" height="15" rx="1.2"/><path d="M18.4 7.5h1.7M18.4 10h1.7"/></svg></label>
+          </div>
+          <div class="srow arow mic">
             <span class="atext">Microphone</span>
-            <input type="checkbox" class="toggle sm" data-setting="audio_mic">
-          </label>
-          <label class="srow arow blue">
-            <span class="aic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 20v-6M6 9V4M12 20v-9M12 6V4M18 20v-4M18 11V4"/><path d="M4 11.5h4M10 8.5h4M16 13.5h4"/></svg></span>
+            <label class="aic" data-tip="Microphone: click to turn on or off"><input type="checkbox" class="aswitch" aria-label="Microphone" data-setting="audio_mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/><path class="slash" d="M4.5 4.5l15 15"/></svg></label>
+          </div>
+          <div class="srow arow blue">
             <span class="atext">Split Application Audio
-              <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Gives every app that makes sound its own audio track (your game, Discord, Spotify, your browser…), as well as the full mix. In the editor you can then turn each one up, down or off on its own.">i</span></span>
-            <input type="checkbox" class="toggle sm" data-setting="audio_app_tracks">
-          </label>
+              <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Gives every application that produces sound its own separate audio track, as well as the full mix. You can use an editor to adjust or mute the tracks.">i</span></span>
+            <label class="aic" data-tip="Split Application Audio: click to turn on or off"><input type="checkbox" class="aswitch" aria-label="Split Application Audio" data-setting="audio_app_tracks"><svg viewBox="0 0 24 24"><path d="M6 20v-6M6 9V4M12 20v-9M12 6V4M18 20v-4M18 11V4"/><path d="M4 11.5h4M10 8.5h4M16 13.5h4"/></svg></label>
+          </div>
           <p class="lock" id="lock-note" hidden>Locked while recording</p>
           <button type="button" class="linkbtn" data-open="settings">All settings</button>
         </section>

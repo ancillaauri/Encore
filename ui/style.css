@@ -773,9 +773,13 @@ body.side-collapsed .side-foot { display: none; }
 /* ---------- side panel audio rows: icons whose lines glow (on / off) ---------- */
 .arow { justify-content: flex-start; gap: 10px; }
 .arow .atext { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
-.arow .toggle { flex: none; }
-.aic { width: 22px; height: 22px; flex: none; display: grid; place-items: center; }
-.aic svg { width: 20px; height: 20px; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s ease, filter .25s ease; }
+/* The icon is the switch: the real checkbox is hidden but still there for the keyboard. */
+.aswitch { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.arow .aic { cursor: pointer; }
+.aic { width: 34px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; transition: background .15s ease; }
+.arow .aic:hover { background: #17161a; }
+.arow:has(.aswitch:focus-visible) .aic { outline: 2px solid var(--acc); outline-offset: 1px; }
+.aic svg { width: 21px; height: 21px; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s ease, filter .25s ease; }
 .arow .slash { display: none; }
 /* Full System Audio and Split Application Audio: blue when on, soft red when off */
 .arow.blue .aic svg { stroke: #ff8a8e; filter: drop-shadow(0 0 2px rgba(255, 92, 97, .55)); opacity: .8; }
