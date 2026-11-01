@@ -14,7 +14,10 @@ Encore's own code is under the MIT licence (see LICENSE). The installed app also
   Apache-2.0. https://github.com/tauri-apps/tauri
 
 ## Microsoft Edge WebView2
-- Displays the app's interface; part of Windows 11.
+- Displays the app's interface (not the notifications, which Encore draws itself); part of
+  Windows 11.
 
 ## Rust crates
 - serde, serde_json, windows-sys (MIT or Apache-2.0), wasapi (MIT), and their dependencies.
+- resvg and usvg (MIT or Apache-2.0), tiny-skia (BSD-3-Clause), fontdb and rustybuzz (MIT), and
+  their dependencies: they draw Encore's notifications. https://github.com/linebender/resvg

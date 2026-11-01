@@ -69,7 +69,9 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Discord: your user ID via Discord's local connection (hello message only; no login, nothing private) | Purpose to confirm with the companion editor side; needs a free Discord developer app | [ ] |
 | Lower suggested frame rate in setup for weaker graphics cards | Uses the PC specs collected for the performance log | [ ] |
 | Per-app audio feature named **Split Application Audio** (UI and docs) | | [x] |
-| Notifications over the game, never recorded: hologram card or edge tab by spot, 2 to 10 s timer, up to 3 stacked | 0.9.8; not over exclusive fullscreen games | [x] |
+| Notifications over the game, never recorded: hologram card or edge tab by spot, 2 to 10 s timer, up to 3 stacked, size 1× to 2× | 0.9.8; drawn by Encore on the processor from 0.9.15; not over exclusive fullscreen games | [x] |
+| Priority Capture: realtime graphics priority for the capture, switch in the side panel and Settings → Advanced, one-time "I understand" | 0.9.10 (as Top graphics priority), 0.9.17 | [x] |
+| Warning when the capture falls behind (30 s, or more than 10 s behind) | 0.9.10, 0.9.12 | [x] |
 
 ## Out of scope (decided, with reasons)
 

@@ -22,7 +22,7 @@ use serde_json::Value;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 /// Gap between a card and the screen edge (cards only; edge tabs sit on the edge).
 const MARGIN: f64 = 24.0;

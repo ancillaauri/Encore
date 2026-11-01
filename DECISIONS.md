@@ -617,3 +617,13 @@ Agreed design for game detection (to build next):
   greyed out until "I understand" is ticked (`priority_capture_understood`); after that it
   switches straight away. This replaces the old ask-every-time confirmation in Settings.
 - The falling-behind message now ends "Priority Capture (bottom left) fixes it."
+
+## 2026-11-01: Health check (after notifications and Priority Capture)
+- Interface: no unused styles (`t-error` is built at run time), no unused bridge calls; the unused
+  element ids are labels kept on purpose.
+- Windows build warnings: `Timeline::frames_written` is now test-only; an unused import in
+  notify.rs removed. The priority helper split (`try_gpu_priority_at`), left from the removed
+  WebView2 boost, is undone.
+- Names: the engine's log and comments say Priority Capture; the changelog example says Echoes.
+- README and FEATURES list notifications and Priority Capture; third-party notices list resvg,
+  usvg, tiny-skia, fontdb and rustybuzz (which draw the notifications).

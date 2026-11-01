@@ -449,7 +449,7 @@ impl Behind {
     }
 
     fn check(&mut self, lag: u64, at: Duration, index: usize) {
-        let priority = if platform::gpu_top() { "top priority" } else { "high priority" };
+        let priority = if platform::gpu_top() { "Priority Capture on" } else { "high priority" };
         for n in self.step(lag, at) {
             match n {
                 BehindNews::Slipped(s) => log(&format!("capture part {index} is falling behind: {s} s behind real time ({priority})")),

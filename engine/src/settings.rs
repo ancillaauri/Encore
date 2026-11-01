@@ -132,7 +132,7 @@ pub struct Settings {
     pub notify_saved: bool,
     pub notify_game: bool,
     pub notify_problems: bool,
-    /// Advanced: realtime graphics priority for the capture (top priority, ahead of the game and
+    /// Priority Capture: realtime graphics priority for the capture (ahead of the game and
     /// Windows). Off: high. For games that use all of the graphics card; can freeze a PC with an
     /// unstable graphics driver, so it's opt-in.
     pub gpu_realtime: bool,

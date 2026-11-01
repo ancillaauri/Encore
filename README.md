@@ -11,13 +11,15 @@ A lightweight game and screen recorder for Windows 11, made as a pair with the c
   browser, voice chat), plus Full mix (everything, including your mic), Microphone and Desktop audio.
   Encore's own sounds are never recorded
 - GPU encoding on NVIDIA, AMD and Intel (H.264, HEVC or AV1), with graphics priority so games
-  that use the whole card don't make recordings stutter (needs "Start Encore as administrator")
+  that use the whole card don't make recordings stutter (needs "Start Encore as administrator"),
+  and **Priority Capture** for games that put a heavy load on the card or less powerful cards
 - Saves into an Encore folder wherever you choose, with a folder per game or app
 - Tray icon, start with Windows, start/stop/save sounds you can choose, and a status panel
 - In-app updates, on your terms (tell me, download automatically, or never)
 - **Game detection:** games are recorded on their own as they open (just the game's window), and
   the screen you chose takes over when they close; lock a game when several are open
-- Coming next: Encore's own notifications
+- **Notifications** over your game (never recorded): a card in the corners or an edge tab at the
+  sides, with a timer, stacking up to three, in the size you choose
 
 Status: beta (0.x). See [FEATURES.md](FEATURES.md) for what is built and what is planned.
 

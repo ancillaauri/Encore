@@ -347,7 +347,7 @@ impl Engine {
         updated.save()?;
         platform::set_gpu_top(updated.gpu_realtime);
         if updated.gpu_realtime != self.settings.gpu_realtime {
-            log(&format!("top graphics priority {}", if updated.gpu_realtime { "on" } else { "off" }));
+            log(&format!("Priority Capture {}", if updated.gpu_realtime { "on" } else { "off" }));
         }
         self.settings = updated;
         Ok(serde_json::to_value(&self.settings).unwrap_or(Value::Null))

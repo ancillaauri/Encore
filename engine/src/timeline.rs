@@ -49,6 +49,7 @@ impl<W: Write> Timeline<W> {
         Timeline { origin: origin_hns, written: 0, out }
     }
 
+    #[cfg(test)]
     pub fn frames_written(&self) -> u64 {
         self.written
     }

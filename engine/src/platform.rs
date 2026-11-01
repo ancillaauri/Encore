@@ -5,7 +5,7 @@
 
 use serde::Serialize;
 
-/// Top (realtime) graphics priority for the capture, chosen in Settings → Advanced.
+/// Realtime graphics priority for the capture: Priority Capture (side panel, Settings → Advanced).
 static GPU_TOP: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 pub fn set_gpu_top(on: bool) {
@@ -161,9 +161,6 @@ mod other {
     }
     pub fn raise_cpu_priority(_pid: u32) {}
     pub fn try_gpu_priority(_pid: u32) -> Result<String, String> {
-        Err("not on Windows".into())
-    }
-    pub fn try_gpu_priority_at(_pid: u32, _top: bool) -> Result<String, String> {
         Err("not on Windows".into())
     }
     pub fn is_elevated() -> bool {
@@ -677,11 +674,7 @@ mod win {
     /// opened the graphics card, so the caller retries for a few seconds after FFmpeg starts.
     /// Ok and Err both carry a line for the log, error codes included.
     pub fn try_gpu_priority(pid: u32) -> Result<String, String> {
-        try_gpu_priority_at(pid, super::gpu_top())
-    }
-
-    /// As try_gpu_priority, choosing the level: realtime (`top`) or high.
-    pub fn try_gpu_priority_at(pid: u32, top: bool) -> Result<String, String> {
+        let top = super::gpu_top();
         type SetGpuPriority = unsafe extern "system" fn(*mut c_void, i32) -> i32;
         const PROCESS_ALL_ACCESS: u32 = 0x001F_FFFF;
         const GPU_HIGH: i32 = 4;
@@ -705,7 +698,7 @@ mod win {
                 None => Err(format!("GPU priority unavailable ({admin}, {privilege})")),
                 Some(f) => {
                     let set: SetGpuPriority = std::mem::transmute(f);
-                    // Realtime only when chosen (Settings → Advanced): at that level the capture
+                    // Realtime only with Priority Capture on: at that level the capture
                     // can starve the rest of the system (a full PC freeze was reported with it
                     // on), but high isn't always enough for games that use the whole card.
                     let rt = if top { set(hp as *mut c_void, GPU_REALTIME) } else { -1 };
