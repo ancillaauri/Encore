@@ -124,6 +124,38 @@ pub fn quit_app(app: AppHandle) {
     app.exit(0);
 }
 
+/// Closes Encore and opens it again as administrator (Windows asks first). If the person says no,
+/// Encore opens again normally. The new copy waits for this one to finish saving and exit, so the
+/// one-copy-only rule doesn't stop it.
+#[tauri::command]
+pub fn restart_as_admin(app: AppHandle) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let exe = exe.to_string_lossy().replace('\'', "''");
+        let script = format!(
+            "Wait-Process -Id {pid} -ErrorAction SilentlyContinue; \
+             try {{ Start-Process -FilePath '{exe}' -Verb RunAs -ErrorAction Stop }} \
+             catch {{ Start-Process -FilePath '{exe}' }}",
+            pid = std::process::id()
+        );
+        std::process::Command::new("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", &script])
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn()
+            .map_err(|e| format!("Couldn't restart Encore: {e}"))?;
+        app.exit(0);
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Err("Only available on Windows.".into())
+    }
+}
+
 /// Reads the shell's settings from the engine and applies them: close-to-tray and the hotkeys.
 /// Returns a message for each hotkey that couldn't be registered (e.g. taken by another app).
 #[tauri::command]

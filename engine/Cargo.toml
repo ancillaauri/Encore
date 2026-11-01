@@ -1,6 +1,6 @@
 [package]
 name = "encore-engine"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2021"
 description = "Encore recorder engine: capture, encoding and file assembly"
 license = "MIT"
@@ -25,5 +25,6 @@ windows-sys = { version = "0.59", features = [
   "Win32_System_Performance",
   "Win32_System_Diagnostics_ToolHelp",
   "Win32_Storage_FileSystem",
+  "Win32_Security",
 ] }
 wasapi = "0.26"

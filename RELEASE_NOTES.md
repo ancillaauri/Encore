@@ -1,42 +1,27 @@
-## Encore 0.7.0 (beta), test build 8: instant replay
+## Encore 0.7.1 (beta), test build 9: the stutter fix, properly
 
-### What's new
-- **Instant replay.** Turn it on in the left panel and Encore keeps the last few minutes of
-  whatever is selected (the screen you're using, a monitor or an app). When something great
-  happens, press **Ctrl+Alt+S** (or **Save replay** in the panel or the tray menu) and the last
-  2 minutes are saved, with every audio track, while Encore keeps going.
-  - Length: 30 seconds to 20 minutes. The panel shows how much disk space it uses (High quality,
-    1440p at 120 fps: about 2 GB for 2 minutes). Older footage is deleted as it goes.
-  - Saved replays appear under "Saved this session" with a *replay* tag, in the same folders as
-    recordings.
-  - Recording while replay is on uses the same capture, so there's never a second one slowing
-    things down.
-  - Changing what's recorded or the video settings restarts the buffer (it starts again from now).
-  - If it was on when you closed Encore, it's on again next time.
-  - The save hotkey can be changed in Settings → Hotkeys.
-
-From 0.6.0 (if you haven't updated): the **tray icon**, **closing to the tray**, the **Ctrl+Alt+R**
-hotkey to start and stop recording, start/stop **sounds**, and only one copy of Encore running.
+### What's changed
+- **Game stutter.** The fix from 0.5.2 never applied: Windows only lets Encore raise the
+  recording's priority on the graphics card when Encore runs as administrator, and even then the
+  permission has to be switched on first. Encore now switches it on.
+- **Restart as Administrator.** ≡ → File → Restart as Administrator closes Encore and opens it
+  again with admin rights (Windows asks first). It isn't shown when Encore already has them.
+- **A warning when priority is refused,** once per run, instead of the recording quietly
+  stuttering.
+- The log now says whether Encore is running as administrator, and why priority was refused.
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.7.0). Otherwise download
-`Encore_0.7.0_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
+Update from inside Encore (≡ → Help → Update to 0.7.1). Otherwise download
+`Encore_0.7.1_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
 **More info**, then **Run anyway**.
 
 ### Test checklist
-1. **Replay in a game.** Turn instant replay on, play for 3 minutes, press Ctrl+Alt+S. You should
-   hear a short double beep, then "Saved replay" appears. The file should be about the last
-   2 minutes, smooth, with all audio tracks in sync. Send it if you can.
-2. **Save twice quickly** (two Ctrl+Alt+S a few seconds apart): both files saved.
-3. **Record while replay is on:** Ctrl+Alt+R, play 30 seconds, Ctrl+Alt+R. The recording should be
-   just that stretch.
-4. **Switch monitors** with replay on (click a window on the other screen), then save: the
-   replay should switch at the same moment.
-5. **Turn replay off**, and quit with it on: no errors, and the temp folder
-   `%LOCALAPPDATA%\Encore\temp` should be empty afterwards.
-6. **From 0.6.0:** the tray, closing to the tray, the record hotkey in a game, sounds.
-7. **Still waiting:** the game stutter test (normal vs run as administrator).
+1. After updating, choose ≡ → File → **Restart as Administrator** and say yes to Windows.
+   Encore should reopen, and the menu item should be gone.
+2. Record 20 seconds of uncapped Warframe (V-Sync off). It should be smooth.
+3. Send the clip and `%LOCALAPPDATA%\Encore\logs\engine.log`. The line after
+   "starting capture" should say **GPU priority realtime** or **high**.
+4. Without admin (quit and open normally): starting a recording should show the warning once.
 
 ### What to send back
-Worked / didn't work for each step, any message Encore showed, and if something failed,
-`%LOCALAPPDATA%\Encore\logs\engine.log` (paste that path into File Explorer's address bar).
+Worked / didn't work for each step, the clip, and the log.

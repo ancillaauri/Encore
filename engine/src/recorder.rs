@@ -159,13 +159,31 @@ fn spawn_part(
         .stderr(Stdio::from(log_file))
         .spawn()
         .map_err(|e| format!("Could not start FFmpeg ({}): {e}", ffmpeg_path.display()))?;
-    log(&format!("capture part {index}: {}", platform::boost_capture_priority(child.id())));
+    let priority = platform::boost_capture_priority(child.id());
+    log(&format!("capture part {index}: {priority}"));
+    warn_if_low_priority(&priority);
     let clock = Arc::new(Mutex::new(VideoClock::default()));
     if let Some(stdout) = child.stdout.take() {
         watch_progress(stdout, clock.clone(), manifest.clone(), seg_dir.to_path_buf(), index);
     }
     let stdin = child.stdin.take();
     Ok(Proc { child, stdin, clock, index, log_path, target: spec.target })
+}
+
+/// Tells the person once per run when Windows wouldn't raise the capture's priority, since games
+/// that use the whole graphics card can then make recordings stutter.
+fn warn_if_low_priority(result: &str) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static TOLD: AtomicBool = AtomicBool::new(false);
+    if !result.starts_with("GPU priority refused") || TOLD.swap(true, Ordering::Relaxed) {
+        return;
+    }
+    let message = if platform::is_elevated() {
+        "Windows wouldn't give the recording priority on the graphics card. Games that use the whole card may stutter in recordings."
+    } else {
+        "Encore isn't running as administrator, so Windows won't give the recording priority on the graphics card. Games that use the whole card may stutter in recordings. To fix it, use ≡ → File → Restart as Administrator."
+    };
+    crate::protocol::send_event("warning", serde_json::json!({ "message": message }));
 }
 
 /// Asks an FFmpeg run to finish its current segment and exit; ends it if it hangs.

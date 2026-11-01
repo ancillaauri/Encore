@@ -48,7 +48,12 @@ fn main() {
     platform::init_dpi();
     log::init();
     let ffmpeg_path = ffmpeg::locate(args.ffmpeg.clone());
-    log::log(&format!("engine {} starting, ffmpeg at {}", env!("CARGO_PKG_VERSION"), ffmpeg_path.display()));
+    log::log(&format!(
+        "engine {} starting ({}), ffmpeg at {}",
+        env!("CARGO_PKG_VERSION"),
+        if platform::is_elevated() { "running as administrator" } else { "not running as administrator" },
+        ffmpeg_path.display()
+    ));
 
     if args.selftest {
         std::process::exit(selftest(&ffmpeg_path, args.selftest_capture));

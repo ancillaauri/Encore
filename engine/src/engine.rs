@@ -242,6 +242,7 @@ impl Engine {
             "recording": recording,
             "replay": replay,
             "focus_monitor": focus,
+            "elevated": platform::is_elevated(),
         })
     }
 

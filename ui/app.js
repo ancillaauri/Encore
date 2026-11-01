@@ -763,6 +763,7 @@
         { text: 'Settings', hint: 'Ctrl+Comma', run: () => openDialog('settings') },
         { text: 'Open Recordings Folder', run: () => { if (state.settings) bridge.openFolder(encoreRoot()).catch((e) => toast(String(e), 'error')); } },
         '-',
+        ...(state.elevated ? [] : [{ text: 'Restart as Administrator', run: () => bridge.restartAsAdmin().catch((e) => toast(String(e), 'error')) }]),
         { text: 'Exit', run: () => bridge.quitApp() },
       ] },
       { text: 'View', sub: [
@@ -1151,6 +1152,7 @@
       renderSettings();
       const status = await bridge.getStatus();
       state.focusMonitor = status.focus_monitor || null;
+      state.elevated = !!status.elevated;
       state.replay = status.replay || { on: false };
       if (status.state === 'recording') {
         state.recording = { ...status.recording, source: status.recording.label };

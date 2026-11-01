@@ -126,6 +126,9 @@ mod other {
     pub fn boost_capture_priority(_pid: u32) -> String {
         "not on Windows".into()
     }
+    pub fn is_elevated() -> bool {
+        false
+    }
     pub fn videos_folder() -> Option<std::path::PathBuf> {
         None
     }
@@ -209,8 +212,14 @@ mod win {
     use windows_sys::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
     use windows_sys::Win32::System::SystemInformation::GetLocalTime;
     use windows_sys::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
+    use windows_sys::Win32::Foundation::LUID;
+    use windows_sys::Win32::Security::{
+        AdjustTokenPrivileges, GetTokenInformation, LookupPrivilegeValueW, TokenElevation, LUID_AND_ATTRIBUTES,
+        SE_PRIVILEGE_ENABLED, TOKEN_ADJUST_PRIVILEGES, TOKEN_ELEVATION, TOKEN_PRIVILEGES, TOKEN_QUERY,
+    };
     use windows_sys::Win32::System::Threading::{
-        GetCurrentProcessId, OpenProcess, QueryFullProcessImageNameW, SetPriorityClass,
+        GetCurrentProcess, GetCurrentProcessId, OpenProcess, OpenProcessToken, QueryFullProcessImageNameW,
+        SetPriorityClass,
     };
     use windows_sys::Win32::UI::HiDpi::SetProcessDpiAwarenessContext;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -534,29 +543,90 @@ mod win {
     /// Gives a capture process (FFmpeg) priority on the graphics card and the processor, so a
     /// game using the whole GPU can't starve the capture (which shows up as a choppy recording).
     /// The highest GPU level needs administrator rights; otherwise "high" is used.
+    /// True when Encore is running as administrator (an elevated token).
+    pub fn is_elevated() -> bool {
+        unsafe {
+            let mut token = null_mut();
+            if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
+                return false;
+            }
+            let mut elev: TOKEN_ELEVATION = zeroed();
+            let mut len = 0u32;
+            let ok = GetTokenInformation(
+                token,
+                TokenElevation,
+                &mut elev as *mut _ as *mut c_void,
+                size_of::<TOKEN_ELEVATION>() as u32,
+                &mut len,
+            );
+            CloseHandle(token);
+            ok != 0 && elev.TokenIsElevated != 0
+        }
+    }
+
+    /// Switches on the "increase scheduling priority" right. Administrators hold it, but it starts
+    /// switched off, and Windows checks it before raising a process's graphics priority.
+    fn enable_priority_privilege() -> &'static str {
+        use std::sync::OnceLock;
+        static RESULT: OnceLock<&'static str> = OnceLock::new();
+        RESULT.get_or_init(|| unsafe {
+            let mut token = null_mut();
+            if OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &mut token) == 0 {
+                return "token not opened";
+            }
+            let mut luid: LUID = zeroed();
+            let name = to_wide("SeIncreaseBasePriorityPrivilege");
+            let mut outcome = "privilege not found";
+            if LookupPrivilegeValueW(null(), name.as_ptr(), &mut luid) != 0 {
+                let tp = TOKEN_PRIVILEGES {
+                    PrivilegeCount: 1,
+                    Privileges: [LUID_AND_ATTRIBUTES { Luid: luid, Attributes: SE_PRIVILEGE_ENABLED }],
+                };
+                const ERROR_NOT_ALL_ASSIGNED: u32 = 1300;
+                outcome = if AdjustTokenPrivileges(token, 0, &tp, 0, null_mut(), null_mut()) == 0 {
+                    "privilege change failed"
+                } else if windows_sys::Win32::Foundation::GetLastError() == ERROR_NOT_ALL_ASSIGNED {
+                    "privilege not held"
+                } else {
+                    "privilege on"
+                };
+            }
+            CloseHandle(token);
+            outcome
+        })
+    }
+
+    /// Raises the capture process's CPU and graphics priority so a game using the whole graphics
+    /// card doesn't starve the capture. The result is written to the log, error codes included.
     pub fn boost_capture_priority(pid: u32) -> String {
         type SetGpuPriority = unsafe extern "system" fn(*mut c_void, i32) -> i32;
         const ABOVE_NORMAL_PRIORITY_CLASS: u32 = 0x8000;
         const PROCESS_SET_INFORMATION: u32 = 0x0200;
         const GPU_HIGH: i32 = 4;
         const GPU_REALTIME: i32 = 5;
+        let privilege = enable_priority_privilege();
+        let admin = if is_elevated() { "admin" } else { "not admin" };
         unsafe {
             let hp = OpenProcess(PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
             if hp.is_null() {
-                return "could not open process".into();
+                return format!("GPU priority refused (could not open process; {admin}, {privilege})");
             }
             SetPriorityClass(hp, ABOVE_NORMAL_PRIORITY_CLASS);
             let gdi = LoadLibraryW(to_wide("gdi32.dll").as_ptr());
-            let mut result = "GPU priority unavailable".to_string();
+            let mut result = format!("GPU priority unavailable ({admin}, {privilege})");
             if !gdi.is_null() {
                 if let Some(f) = GetProcAddress(gdi, b"D3DKMTSetProcessSchedulingPriorityClass\0".as_ptr()) {
                     let set: SetGpuPriority = std::mem::transmute(f);
-                    result = if set(hp as *mut c_void, GPU_REALTIME) >= 0 {
-                        "GPU priority realtime".into()
-                    } else if set(hp as *mut c_void, GPU_HIGH) >= 0 {
-                        "GPU priority high".into()
+                    let rt = set(hp as *mut c_void, GPU_REALTIME);
+                    result = if rt >= 0 {
+                        format!("GPU priority realtime ({admin}, {privilege})")
                     } else {
-                        "GPU priority refused".into()
+                        let hi = set(hp as *mut c_void, GPU_HIGH);
+                        if hi >= 0 {
+                            format!("GPU priority high ({admin}, {privilege}; realtime 0x{rt:08x})")
+                        } else {
+                            format!("GPU priority refused ({admin}, {privilege}; realtime 0x{rt:08x}, high 0x{hi:08x})")
+                        }
                     };
                 }
             }

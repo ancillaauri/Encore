@@ -248,3 +248,17 @@ Both have hardware-accelerated GPU scheduling on.
 |---|---|---|---|---|---|---|
 | 2026-10-31 | 0.5.1 | Warframe, 1440p, owner's PC | | | | Capture starved while the game is in front: V-Sync on, no cap → 0–10 new frames/s; capped 30 → every frame captured; capped 120, no V-Sync → froze ~9 s. Game at 90.8 % GPU. |
 | 2026-10-31 | 0.4.x | Deadlock, 1440p 60 fps, editor developer's PC | | | | Smooth: ~47 new frames/s (the game's own rate) |
+
+## 2026-11-01: Graphics priority needs administrator (0.7.1)
+- The logs showed "GPU priority refused" on every capture: without administrator rights Windows
+  refuses both the realtime and the high level, so the 0.5.2 stutter fix never applied. The earlier
+  note that high works without admin was wrong.
+- Administrators hold the right to raise priority, but it starts switched off. Encore now switches
+  it on before asking. The log records whether Encore is running as administrator, whether the
+  right is on, and the error code for each refused level.
+- When priority is refused, Encore says so once per run instead of only logging it.
+- ≡ → File → Restart as Administrator closes Encore and opens it again elevated (Windows asks
+  first; if the answer is no, it opens normally). The new copy waits for the old one to finish
+  saving and exit. Hidden when already elevated.
+- Setting "Run as administrator" in the program's Properties doesn't apply when the updater or
+  the tray copy starts Encore, so the in-app restart is the reliable route for testing.

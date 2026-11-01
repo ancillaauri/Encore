@@ -140,6 +140,7 @@ fn main() {
             pick_folder,
             tray::set_recording_state,
             tray::quit_app,
+            tray::restart_as_admin,
             tray::apply_shell_settings,
             updater::get_update,
             updater::check_for_updates,
