@@ -111,9 +111,9 @@ Game detection (step 6):
 - The detected game names the file, the per-game folder, and its own audio track.
 
 Audio (steps 4 and 5) — built in batch 2:
-- Everything You Hear (the `Desktop audio` track): WASAPI process loopback in exclude mode, aimed
+- Full System Audio (the `Desktop audio` track): WASAPI process loopback in exclude mode, aimed
   at the Encore app, so everything except Encore; on older Windows, loopback on the default output
-  device. Interface names: Everything You Hear, Microphone, Split Application Audio; the track
+  device. Interface names: Full System Audio, Microphone, Split Application Audio; the track
   titles in files stay Full mix / Microphone / Desktop audio / app names (file contract).
 - Microphone: WASAPI capture on the default input device (selectable in settings).
 - Per app: WASAPI process loopback, "include process tree" on the app's top-level process

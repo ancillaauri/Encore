@@ -772,7 +772,7 @@ body.side-collapsed .side-foot { display: none; }
 .arow:has(.aswitch:focus-visible) .aic { outline: 2px solid var(--acc); outline-offset: 1px; }
 .aic svg { width: 21px; height: 21px; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s ease, filter .25s ease; }
 .arow .slash { display: none; }
-/* Everything You Hear and Split Application Audio: blue when on, soft red when off */
+/* Full System Audio and Split Application Audio: blue when on, soft red when off */
 .arow.blue .aic svg { stroke: #ff8a8e; filter: drop-shadow(0 0 2px rgba(255, 92, 97, .55)); opacity: .8; }
 .arow.blue:has(input:checked) .aic svg { stroke: #b4bbff; filter: drop-shadow(0 0 2px rgba(124, 136, 255, .95)) drop-shadow(0 0 6px rgba(110, 120, 255, .5)); opacity: 1; }
 /* Microphone: green when on, red (with a line through) when off */
