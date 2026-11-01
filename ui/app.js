@@ -807,6 +807,12 @@
           renderStage();
         }
         break;
+      case 'priority_capture_off':
+        // Turned itself off (no game for a minute, or a capture error).
+        if (data.settings) { state.settings = data.settings; renderSettings(); }
+        toast(data.message || 'Priority Capture turned off.', 'warning', 10000);
+        notify('problem', 'Priority Capture turned off', data.reason === 'no_game' ? 'No game has been detected for a minute.' : 'The capture stopped with an error while it was on.');
+        break;
       case 'capture_behind':
         captureBehind(data);
         break;
@@ -1118,7 +1124,7 @@
     renderStage();
   }
   // Settings that change what's captured restart the buffer (it starts again from now).
-  const CAPTURE_KEYS = ['gpu_realtime', 'work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks'];
+  const CAPTURE_KEYS = ['work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks'];
   let replayRestart = null;
   // Shown in amber while Echoes restarts for a settings change (it starts again from now).
   function restartReplay() {

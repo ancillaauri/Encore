@@ -627,3 +627,17 @@ Agreed design for game detection (to build next):
 - Names: the engine's log and comments say Priority Capture; the changelog example says Echoes.
 - README and FEATURES list notifications and Priority Capture; third-party notices list resvg,
   usvg, tiny-skia, fontdb and rustybuzz (which draw the notifications).
+
+## 2026-11-01: Priority Capture made safe after a driver update (0.9.18)
+- After a clean install of graphics driver 621.01 and a restart, Encore (0.9.15, started with
+  Windows) began its Echoes capture of the main screen with Priority Capture still on: the
+  screens blacked out and came back every few seconds and a yellow capture border showed, until
+  Encore was closed (log: 20:32:40 to 20:34:47). Priority Capture and Echoes were switched off in
+  the person's settings file so Encore opens safely.
+- Chosen: option A. Priority Capture never starts on: it's switched off whenever Encore starts.
+  It also turns itself off once no game has been detected for a minute (the game closed, or none
+  was found after turning it on), and when a capture stops with an error, or fails to start with a
+  graphics card error, while it's on. The interface is told (`priority_capture_off`): a message
+  and a Problems notification. The (i), Settings and the first-time dialog say so.
+- Turning it on or off now changes the running capture's priority in place
+  (`Active::reprioritise`), so Echoes no longer restarts and keeps what it had.

@@ -107,7 +107,7 @@
             <span class="dnd-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5 5 13.5h6l-1 8 8-11h-6l1-8z"/></svg></span>
             <span class="dnd-text"><span class="dnd-name">Priority Capture</span><span class="dnd-sub" id="pcap-sub">Off</span></span>
           </button>
-          <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Puts Encore’s recording ahead of everything else on your graphics card, including the game. Turn it on for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and Echoes don’t fall behind. While it’s on, other programs that use the graphics card, on any screen, may slow down or freeze. The same switch is in Settings → Advanced.">i</span>
+          <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Puts Encore’s recording ahead of everything else on your graphics card, including the game. Turn it on for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and Echoes don’t fall behind. While it’s on, other programs that use the graphics card, on any screen, may slow down or freeze. It turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error. The same switch is in Settings → Advanced.">i</span>
         </div>
         <button type="button" class="dnd" id="dnd" aria-pressed="false" title="Do not disturb: Encore's notifications stay hidden">
           <span class="dnd-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/></svg></span>
@@ -574,7 +574,7 @@
           <h3>Advanced</h3>
           <div class="setcard">
             <label class="setrow"><span class="settext"><span class="setname">Priority Capture</span>
-              <span class="setsub wrap">For games that put a heavy load on your graphics card, or less powerful graphics cards. Off is right for most games. Also at the bottom of the side panel.</span></span>
+              <span class="setsub wrap">For games that put a heavy load on your graphics card, or less powerful graphics cards. Off is right for most games. Turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error. Also at the bottom of the side panel.</span></span>
               <input type="checkbox" class="toggle" id="gpu-realtime"></label>
           </div>
           <div class="caution" role="note">
@@ -605,6 +605,7 @@
         <p>Priority Capture puts Encore's recording ahead of everything else on your graphics card, including your game. Use it for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and Echoes don't fall behind.</p>
         <p><strong>While it's on, other programs that use the graphics card, such as videos, streams or games on your other screens, may slow down, stutter or freeze</strong> until you turn it off.</p>
         <p>On a PC with an unstable graphics driver it can also make the screen go black for a moment, or freeze the PC. If that happens, turn it off.</p>
+        <p>It turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error.</p>
         <label class="understand"><input type="checkbox" id="pcap-understand"> I understand</label>
       </div>
       <div class="modal-btns">

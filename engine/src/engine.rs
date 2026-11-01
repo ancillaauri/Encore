@@ -88,6 +88,9 @@ pub struct Engine {
     /// Game detection: the games that are open, and which one is locked.
     watch: Watch,
     last_game_scan: Option<Instant>,
+    /// Priority Capture is on and no game is detected: since when (it turns itself off after
+    /// PRIORITY_NO_GAME).
+    no_game_since: Option<Instant>,
     /// Names already worked out for each game process (reading them takes a moment).
     game_names: HashMap<u32, String>,
     /// What the interface last heard about games (to send updates only when something changes).
@@ -145,6 +148,9 @@ fn monitor_id(handle: u64) -> Option<String> {
     platform::list_monitors().into_iter().find(|m| m.handle == handle).map(|m| m.id)
 }
 
+/// Priority Capture turns itself off after this long with no game detected.
+const PRIORITY_NO_GAME: Duration = Duration::from_secs(60);
+
 impl Engine {
     pub fn new(ffmpeg: PathBuf) -> Engine {
         let caps = Arc::new(Mutex::new(Capabilities::default()));
@@ -162,8 +168,16 @@ impl Engine {
             *probe_caps.lock().unwrap() = result;
             send_event("capabilities", value);
         });
-        let settings = Settings::load();
-        platform::set_gpu_top(settings.gpu_realtime);
+        let mut settings = Settings::load();
+        // Priority Capture never starts on: it's only on for the session it's turned on in (a
+        // fresh graphics driver met a realtime capture straight after a restart and the screens
+        // kept blacking out).
+        if settings.gpu_realtime {
+            settings.gpu_realtime = false;
+            let _ = settings.save();
+            log("Priority Capture was on last time: off at start");
+        }
+        platform::set_gpu_top(false);
         Engine {
             ffmpeg,
             settings,
@@ -177,6 +191,7 @@ impl Engine {
             pins: Arc::new(Mutex::new(Vec::new())),
             watch: Watch::default(),
             last_game_scan: None,
+            no_game_since: None,
             game_names: HashMap::new(),
             games_sent: String::new(),
             session_source: "desktop".into(),
@@ -346,10 +361,17 @@ impl Engine {
         }
         updated.save()?;
         platform::set_gpu_top(updated.gpu_realtime);
-        if updated.gpu_realtime != self.settings.gpu_realtime {
+        let changed = updated.gpu_realtime != self.settings.gpu_realtime;
+        if changed {
             log(&format!("Priority Capture {}", if updated.gpu_realtime { "on" } else { "off" }));
         }
         self.settings = updated;
+        if changed {
+            self.no_game_since = None;
+            if let Some(a) = &self.active {
+                a.reprioritise();
+            }
+        }
         Ok(serde_json::to_value(&self.settings).unwrap_or(Value::Null))
     }
 
@@ -797,6 +819,11 @@ impl Engine {
             .filter(|l| !l.contains("minimum update interval") && !l.trim().is_empty())
             .collect();
         log(&format!("switch to {target:?} failed (attempt {n}): {}", reason.join(" / ")));
+        // A graphics card error while Priority Capture is on: turn it off.
+        let lower = detail.to_ascii_lowercase();
+        if ["nvenc", "amf", "qsv", "d3d", "device", "encoder"].iter().any(|w| lower.contains(w)) {
+            self.priority_off("capture_error", "Priority Capture turned off: the capture stopped with an error while it was on.");
+        }
         if n > 1 {
             return; // told them the first time
         }
@@ -975,10 +1002,47 @@ impl Engine {
         }
     }
 
+    /// Priority Capture turns itself off once no game has been detected for PRIORITY_NO_GAME (the
+    /// game closed, or none was found after turning it on).
+    fn priority_watch(&mut self) {
+        if !self.settings.gpu_realtime {
+            self.no_game_since = None;
+            return;
+        }
+        if self.current_game().is_some() {
+            self.no_game_since = None;
+            return;
+        }
+        let since = *self.no_game_since.get_or_insert_with(Instant::now);
+        if since.elapsed() >= PRIORITY_NO_GAME {
+            self.priority_off("no_game", "Priority Capture turned off: no game has been detected for a minute.");
+        }
+    }
+
+    /// Turns Priority Capture off by itself, lowers the running capture, and tells the interface.
+    fn priority_off(&mut self, reason: &str, message: &str) {
+        if !self.settings.gpu_realtime {
+            return;
+        }
+        self.settings.gpu_realtime = false;
+        let _ = self.settings.save();
+        platform::set_gpu_top(false);
+        self.no_game_since = None;
+        log(&format!("Priority Capture off by itself ({reason})"));
+        if let Some(a) = &self.active {
+            a.reprioritise();
+        }
+        send_event(
+            "priority_capture_off",
+            json!({ "reason": reason, "message": message, "settings": serde_json::to_value(&self.settings).unwrap_or(Value::Null) }),
+        );
+    }
+
     /// Called regularly from the main loop: follows games and the focus, notices if FFmpeg
     /// stopped on its own.
     pub fn tick(&mut self) {
         self.follow_games();
+        self.priority_watch();
         self.follow_focus();
         if let Some(event) = self.active.as_mut().and_then(|a| a.poll()) {
             match event {
@@ -1000,12 +1064,14 @@ impl Engine {
             // recorded from it, then turn replay off.
             let detail = self.active.as_ref().map(|a| tail(&a.log_path(), 4)).unwrap_or_default();
             log(&format!("replay capture ended unexpectedly: {detail}"));
+            self.priority_off("capture_error", "Priority Capture turned off: the capture stopped with an error while it was on.");
             send_event("warning", json!({ "message": "Echoes stopped because what it was capturing went away (for example the window closed). Turn it on again to carry on." }));
             self.stop_replay();
         } else if stopped {
             let active = self.active.take().unwrap();
             let detail = tail(&active.log_path(), 4);
             log(&format!("capture ended unexpectedly: {detail}"));
+            self.priority_off("capture_error", "Priority Capture turned off: the capture stopped with an error while it was on.");
             let reason = if detail.is_empty() { String::new() } else { format!(" FFmpeg said: {detail}") };
             send_event("warning", json!({ "message": format!("Recording stopped unexpectedly (for example the window closed). Saving what was captured.{reason}") }));
             let label = active.label.clone();

@@ -500,6 +500,18 @@ impl Active {
         self.pending.as_ref().map(|p| p.target)
     }
 
+    /// Sets the graphics priority of the running capture again (after Priority Capture changed),
+    /// so a part already running doesn't keep realtime until the next one starts.
+    pub fn reprioritise(&self) {
+        for p in std::iter::once(&self.proc).chain(self.pending.iter()) {
+            let (pid, index) = (p.child.id(), p.index);
+            match platform::try_gpu_priority(pid) {
+                Ok(line) => log(&format!("capture part {index}: {line} (priority changed)")),
+                Err(e) => log(&format!("capture part {index}: {e} (priority changed)")),
+            }
+        }
+    }
+
     /// Non-blocking check: true if FFmpeg has stopped on its own (crash, window closed, etc.).
     pub fn has_exited(&mut self) -> bool {
         matches!(self.proc.child.try_wait(), Ok(Some(_)))

@@ -1,3 +1,16 @@
+## Encore 0.9.18 (beta), test build 39: Priority Capture made safe
+
+### Changed
+- **Priority Capture is always off when Encore starts,** including when it starts with Windows.
+  Turn it on for the session when you need it.
+- **It turns itself off** once no game has been detected for a minute, and if the capture hits an
+  error while it's on. You're told when it does.
+- **Switching it on or off no longer restarts Echoes,** so you keep what's already saved up.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.18). This update also includes 0.9.16 and
+0.9.17 (notification size, the Priority Capture switch, and a tidy-up).
+
 ## Encore 0.9.17 (beta), test build 38: Priority Capture
 
 ### What's new
