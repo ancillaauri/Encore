@@ -390,7 +390,7 @@
     const row2 = document.querySelector('.picks2');
     const stage = document.querySelector('.stage');
     // Too wide (the row never wraps, it overflows) or too tall for the stage.
-    const tooBig = () => row.scrollWidth > row.clientWidth + 1 || (stage && stage.scrollHeight > stage.clientHeight + 1);
+    const tooBig = () => row.scrollWidth > row.clientWidth + 1 || $('pick-follow').getBoundingClientRect().left < row.getBoundingClientRect().left - 1 || (stage && stage.scrollHeight > stage.clientHeight + 1);
     // Larger windows get larger monitors, up to MON_MAX.
     monBase = stage && stage.clientHeight > 820 ? MON_MAX : 150;
     for (const r of [row, row2]) r.classList.remove('compact', 'tight');

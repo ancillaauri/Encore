@@ -386,3 +386,6 @@ Agreed design for game detection (to build next):
   under it. Right, **Status**: one line per feature with a coloured light (Standing by /
   Recording / Saving; Following you / Locked to screen / Application; Instant replay; audio tracks
   while recording; Saving to). A divider that fades at both ends separates it from What to record.
+- 0.8.4: the monitors are centred on the page, with Follow just to their left (it no longer
+  pulls them off centre). The Game tile is gone: Game detection is the switch at the top, and
+  when it finds games they'll appear as tiles next to Select Application, to see and lock.
