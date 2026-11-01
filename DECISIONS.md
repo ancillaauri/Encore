@@ -303,3 +303,12 @@ Both have hardware-accelerated GPU scheduling on.
   (Ctrl+Alt+1), the last minute (Ctrl+Alt+2) or a custom length (Ctrl+Alt+3, default 90 seconds,
   5 seconds to 20 minutes, set in seconds or minutes). A save never goes past the replay length;
   Settings says so when the custom length is longer. All four save from the same buffer.
+
+## 2026-11-01: Sound choices (0.7.5)
+- Settings → Sounds: a sound and a volume for recording started, recording stopped and replay
+  saved, with Play to hear it, plus the existing on/off switch (moved here from General). Eight
+  sounds plus "No sound", made in the interface with Web Audio, so there are no sound files to
+  license. Volume 50 is the level the old fixed sounds used.
+- Known: the sounds come out of Encore's own window, so the desktop-audio track (and an
+  "Encore"/WebView2 app track) can pick them up. To do: leave Encore's own audio out of recordings
+  (Windows can capture "everything except this app").

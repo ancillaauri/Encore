@@ -655,3 +655,9 @@ body.recording .pick:not(.rec), body.saving .pick { opacity: .55; }
   :root { --side-w: 250px; }
   .engine-line { display: none; }
 }
+
+/* ---------- sounds ---------- */
+.soundrow { gap: 10px; }
+.soundrow .settext { flex: 1; }
+input[type="range"].vol { width: 120px; flex: none; accent-color: var(--acc); cursor: pointer; }
+#sound-rows.off { opacity: .45; }

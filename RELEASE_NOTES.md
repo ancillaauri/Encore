@@ -1,28 +1,24 @@
-## Encore 0.7.4 (beta), test build 12: save-length hotkeys
+## Encore 0.7.5 (beta), test build 13: choose your sounds
 
 ### What's new
-- **Save just the bit you want.** New hotkeys for instant replay (Settings → Hotkeys):
-  - **Ctrl+Alt+1**: save the last 30 seconds
-  - **Ctrl+Alt+2**: save the last minute
-  - **Ctrl+Alt+3**: save a custom length you choose (in seconds or minutes, up to 20 minutes)
-  - **Ctrl+Alt+S** still saves the whole replay length.
-  A save can't be longer than the replay length set in the left panel; if the custom length is
-  longer, Settings says so and it saves the whole replay instead. Each hotkey can be changed or
-  cleared.
-- Turning on "Start Encore as administrator" while Encore already has admin rights now confirms it
-  (it used to say nothing).
+- **Settings → Sounds.** Pick the sound and volume for each moment:
+  - recording started
+  - recording stopped
+  - replay saved
+  Choose from Rising chime, Falling chime, Double beep, Pop, Bell, Blip, Click, Camera shutter or
+  No sound. Press **Play** to hear one; changing a sound or letting go of a slider plays it too.
+  The "Play sounds" switch moved here from General.
+- From 0.7.4: hotkeys to save the last 30 seconds (Ctrl+Alt+1), the last minute (Ctrl+Alt+2) or a
+  custom length (Ctrl+Alt+3).
+
+### Known
+- The sounds can be picked up in recordings (in the desktop audio track). Leaving Encore's own
+  sounds out is next.
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.7.4). Encore restarts with admin rights
-automatically if "Start Encore as administrator" is on.
+Update from inside Encore (≡ → Help → Update to 0.7.5).
 
 ### Test checklist
-1. Turn instant replay on, play for 2 minutes, then press Ctrl+Alt+1, Ctrl+Alt+2 and Ctrl+Alt+3:
-   three files of about 30 seconds, 1 minute and 90 seconds.
-2. Set the custom length to 5 minutes with a 2-minute replay: Settings should warn, and Ctrl+Alt+3
-   should save 2 minutes.
-3. Hotkeys inside a League match (with Encore running as administrator).
-4. After updating: Encore should reopen with admin rights and no prompt.
-
-### What to send back
-Worked / didn't work for each step, and the log if something failed.
+1. Settings → Sounds: try each sound with Play, and move the sliders.
+2. Pick different sounds, then record and save a replay: you should hear your choices.
+3. Turn Play sounds off: the rows dim and nothing plays.

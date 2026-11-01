@@ -249,11 +249,6 @@
             </button>
           </div>
           <div class="setcard spaced">
-            <label class="setrow"><span class="settext"><span class="setname">Play sounds</span>
-              <span class="setsub">A short sound when recording starts and stops</span></span>
-              <input type="checkbox" class="toggle" data-setting="sounds"></label>
-          </div>
-          <div class="setcard spaced">
             <label class="setrow"><span class="settext"><span class="setname">Start Encore as administrator</span>
               <span class="setsub wrap" id="start-admin-note">Keeps game recordings smooth when a game uses all of your graphics card. Windows asks for permission once, not every time.</span></span>
               <input type="checkbox" class="toggle" id="start-admin"></label>
@@ -297,6 +292,65 @@
               </span>
               <button type="button" class="hotkey" data-hotkey="hotkey_save_custom"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_custom">Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="setsec">
+          <h3>Sounds</h3>
+          <p class="setnote">A short sound for each moment. Pick one, set its volume, and press Play to hear it.</p>
+          <div class="setcard">
+            <label class="setrow"><span class="settext"><span class="setname">Play sounds</span></span>
+              <input type="checkbox" class="toggle" data-setting="sounds"></label>
+          </div>
+          <div class="setcard spaced" id="sound-rows">
+            <div class="setrow soundrow">
+              <span class="settext"><span class="setname">Recording started</span></span>
+              <select class="dd" data-setting="sound_start" aria-label="Recording started: sound">
+                  <option value="rise">Rising chime</option>
+                  <option value="fall">Falling chime</option>
+                  <option value="double">Double beep</option>
+                  <option value="pop">Pop</option>
+                  <option value="bell">Bell</option>
+                  <option value="blip">Blip</option>
+                  <option value="click">Click</option>
+                  <option value="shutter">Camera shutter</option>
+                  <option value="none">No sound</option>
+              </select>
+              <input type="range" class="vol" min="0" max="100" step="5" data-setting="volume_start" data-number aria-label="Recording started: volume">
+              <button type="button" class="btn sm ghost" data-preview="start" aria-label="Play recording started sound">Play</button>
+            </div>
+            <div class="setrow soundrow">
+              <span class="settext"><span class="setname">Recording stopped</span></span>
+              <select class="dd" data-setting="sound_stop" aria-label="Recording stopped: sound">
+                  <option value="rise">Rising chime</option>
+                  <option value="fall">Falling chime</option>
+                  <option value="double">Double beep</option>
+                  <option value="pop">Pop</option>
+                  <option value="bell">Bell</option>
+                  <option value="blip">Blip</option>
+                  <option value="click">Click</option>
+                  <option value="shutter">Camera shutter</option>
+                  <option value="none">No sound</option>
+              </select>
+              <input type="range" class="vol" min="0" max="100" step="5" data-setting="volume_stop" data-number aria-label="Recording stopped: volume">
+              <button type="button" class="btn sm ghost" data-preview="stop" aria-label="Play recording stopped sound">Play</button>
+            </div>
+            <div class="setrow soundrow">
+              <span class="settext"><span class="setname">Replay saved</span></span>
+              <select class="dd" data-setting="sound_save" aria-label="Replay saved: sound">
+                  <option value="rise">Rising chime</option>
+                  <option value="fall">Falling chime</option>
+                  <option value="double">Double beep</option>
+                  <option value="pop">Pop</option>
+                  <option value="bell">Bell</option>
+                  <option value="blip">Blip</option>
+                  <option value="click">Click</option>
+                  <option value="shutter">Camera shutter</option>
+                  <option value="none">No sound</option>
+              </select>
+              <input type="range" class="vol" min="0" max="100" step="5" data-setting="volume_save" data-number aria-label="Replay saved: volume">
+              <button type="button" class="btn sm ghost" data-preview="save" aria-label="Play replay saved sound">Play</button>
             </div>
           </div>
         </section>

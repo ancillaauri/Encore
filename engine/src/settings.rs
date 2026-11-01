@@ -80,7 +80,18 @@ pub struct Settings {
     pub hotkey_save_custom: String,
     /// Length saved by the custom hotkey, in seconds (capped at the replay length when saving).
     pub replay_custom_seconds: u32,
+    /// Sound for each moment (one of SOUND_NAMES; "none" = silent) and its volume, 0–100.
+    /// Played by the interface when `sounds` is on.
+    pub sound_start: String,
+    pub sound_stop: String,
+    pub sound_save: String,
+    pub volume_start: u32,
+    pub volume_stop: u32,
+    pub volume_save: u32,
 }
+
+/// Sounds the interface can play (it synthesises them; no sound files).
+pub const SOUND_NAMES: [&str; 9] = ["rise", "fall", "double", "pop", "bell", "blip", "click", "shutter", "none"];
 
 /// Shortest and longest custom save length.
 pub const CUSTOM_SECONDS: std::ops::RangeInclusive<u32> = 5..=1200;
@@ -116,6 +127,12 @@ impl Default for Settings {
             hotkey_save_60s: "Ctrl+Alt+2".into(),
             hotkey_save_custom: "Ctrl+Alt+3".into(),
             replay_custom_seconds: 90,
+            sound_start: "rise".into(),
+            sound_stop: "fall".into(),
+            sound_save: "double".into(),
+            volume_start: 50,
+            volume_stop: 50,
+            volume_save: 50,
         }
     }
 }
@@ -181,6 +198,14 @@ impl Settings {
         if !CUSTOM_SECONDS.contains(&updated.replay_custom_seconds) {
             return Err("Custom length must be between 5 seconds and 20 minutes".into());
         }
+        for snd in [&updated.sound_start, &updated.sound_stop, &updated.sound_save] {
+            if !SOUND_NAMES.contains(&snd.as_str()) {
+                return Err(format!("Unknown sound: {snd}"));
+            }
+        }
+        if [updated.volume_start, updated.volume_stop, updated.volume_save].iter().any(|v| *v > 100) {
+            return Err("Volume must be between 0 and 100".into());
+        }
         if updated.hotkey_record.len() > 64 {
             return Err("Hotkey is too long".into());
         }
@@ -209,6 +234,15 @@ impl Settings {
         }
         if !CUSTOM_SECONDS.contains(&self.replay_custom_seconds) {
             self.replay_custom_seconds = 90;
+        }
+        let d = Settings::default();
+        for (snd, def) in [(&mut self.sound_start, d.sound_start), (&mut self.sound_stop, d.sound_stop), (&mut self.sound_save, d.sound_save)] {
+            if !SOUND_NAMES.contains(&snd.as_str()) {
+                *snd = def;
+            }
+        }
+        for v in [&mut self.volume_start, &mut self.volume_stop, &mut self.volume_save] {
+            *v = (*v).min(100);
         }
         // Not set up yet and still on an old guessed default: use the real Videos folder (it may be
         // on another drive or in OneDrive, where the guess made a new, empty folder).
@@ -284,5 +318,7 @@ mod tests {
         assert_eq!(s.hotkey_save_replay, "Ctrl+Alt+S");
         assert_eq!((s.hotkey_save_30s.as_str(), s.hotkey_save_60s.as_str(), s.hotkey_save_custom.as_str()), ("Ctrl+Alt+1", "Ctrl+Alt+2", "Ctrl+Alt+3"));
         assert_eq!(s.replay_custom_seconds, 90);
+        assert_eq!((s.sound_start.as_str(), s.sound_stop.as_str(), s.sound_save.as_str()), ("rise", "fall", "double"));
+        assert_eq!((s.volume_start, s.volume_stop, s.volume_save), (50, 50, 50));
     }
 }

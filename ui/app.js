@@ -472,6 +472,7 @@
     renderOutputNote();
     renderHotkeys();
     renderReplay();
+    renderSounds();
     if (!$('setup').hidden) renderSetup();
   }
 
@@ -960,27 +961,82 @@
   $('save-replay').addEventListener('click', () => saveReplay());
 
   // ---------- tray, hotkeys, sounds ----------
-  // A short tone pair: rising when recording starts, falling when it stops.
+  // Sounds are made here (no sound files): each is a few short tones or a burst of noise.
+  // Volume 0–100; 50 is the old fixed level.
   let audioCtx = null;
-  function playCue(kind) {
-    if (!state.settings || !state.settings.sounds) return;
+  const SOUNDS = {
+    rise: [{ f: 660, t: 0 }, { f: 880, t: 0.11 }],
+    fall: [{ f: 880, t: 0 }, { f: 587, t: 0.11 }],
+    double: [{ f: 988, t: 0 }, { f: 988, t: 0.11 }],
+    pop: [{ f: 420, to: 950, t: 0, d: 0.07 }],
+    bell: [{ f: 1318, t: 0, d: 0.7, wave: 'triangle' }, { f: 2636, t: 0, d: 0.4, g: 0.35 }],
+    blip: [{ f: 1250, t: 0, d: 0.05, wave: 'square', g: 0.35 }],
+    click: [{ noise: true, t: 0, d: 0.018, hp: 2500 }],
+    shutter: [{ noise: true, t: 0, d: 0.05, hp: 1200 }, { noise: true, t: 0.09, d: 0.07, hp: 800, g: 0.8 }],
+    none: [],
+  };
+  function playSound(name, volume) {
+    const parts = SOUNDS[name] || [];
+    if (!parts.length || !volume) return;
     try {
       audioCtx = audioCtx || new AudioContext();
-      const notes = kind === 'start' ? [660, 880] : kind === 'save' ? [988, 988] : [880, 587];
-      notes.forEach((f, i) => {
-        const t = audioCtx.currentTime + i * 0.11;
-        const o = audioCtx.createOscillator();
+      const now = audioCtx.currentTime + 0.01;
+      const peak = 0.24 * (volume / 100);
+      for (const p of parts) {
+        const t = now + p.t;
+        const d = p.d || 0.1;
         const g = audioCtx.createGain();
-        o.type = 'sine';
-        o.frequency.value = f;
+        const level = peak * (p.g || 1);
         g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(0.12, t + 0.012);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
-        o.connect(g).connect(audioCtx.destination);
-        o.start(t);
-        o.stop(t + 0.11);
-      });
+        g.gain.linearRampToValueAtTime(level, t + 0.006);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+        let src;
+        if (p.noise) {
+          const len = Math.ceil(audioCtx.sampleRate * d);
+          const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+          src = audioCtx.createBufferSource();
+          src.buffer = buf;
+          const hp = audioCtx.createBiquadFilter();
+          hp.type = 'highpass';
+          hp.frequency.value = p.hp || 1000;
+          src.connect(hp).connect(g);
+        } else {
+          src = audioCtx.createOscillator();
+          src.type = p.wave || 'sine';
+          src.frequency.setValueAtTime(p.f, t);
+          if (p.to) src.frequency.exponentialRampToValueAtTime(p.to, t + d);
+          src.connect(g);
+        }
+        g.connect(audioCtx.destination);
+        src.start(t);
+        src.stop(t + d + 0.02);
+      }
     } catch (e) { /* no sound device: not important */ }
+  }
+  // kind: start | stop | save
+  function playCue(kind) {
+    const s = state.settings;
+    if (!s || !s.sounds) return;
+    playSound(s[`sound_${kind}`] || 'none', s[`volume_${kind}`] ?? 50);
+  }
+  document.querySelectorAll('[data-preview]').forEach((b) => b.addEventListener('click', () => {
+    const s = state.settings;
+    if (!s) return;
+    const k = b.dataset.preview;
+    playSound(s[`sound_${k}`] || 'none', s[`volume_${k}`] ?? 50);
+  }));
+  // Hear the new volume when the slider is let go, and the new sound when it's picked.
+  document.querySelectorAll('#sound-rows [data-setting]').forEach((el) => el.addEventListener('change', () => {
+    const row = el.closest('.soundrow');
+    playSound(row.querySelector('select').value, Number(row.querySelector('.vol').value));
+  }));
+  function renderSounds() {
+    const s = state.settings;
+    if (!s) return;
+    $('sound-rows').classList.toggle('off', !s.sounds);
+    document.querySelectorAll('#sound-rows select, #sound-rows input, #sound-rows button').forEach((el) => (el.disabled = !s.sounds));
   }
 
   let trayRecording = false;
