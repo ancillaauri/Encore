@@ -34,10 +34,9 @@ The interface calls only these. Each shell provides its own implementation of th
 | Function | Purpose |
 |---|---|
 | `startRecording()` / `stopRecording()` | Manual recording |
-| `startReplay()` / `stopReplay()` / `saveReplay()` | Instant replay buffer |
+| `startReplay()` / `stopReplay()` / `saveReplay()` | Echoes (the instant replay buffer) |
 | `getStatus()` | Current state (idle / recording / replay on, elapsed time, disk use) |
 | `getSettings()` / `setSettings(obj)` | Read/write settings |
-| `listAudioApps()` | Apps currently making sound, for the settings screen |
 | `listMonitors()` / `listWindows()` | Capture targets for the source picker |
 | `getCapabilities()` | FFmpeg version, whether window/monitor capture is supported, available encoders |
 | `openFolder(path)` | Show a recording in Explorer |
@@ -53,7 +52,7 @@ Reply:   `{"id": 7, "ok": true, "result": {...}}` or `{"id": 7, "ok": false, "er
 Event:   `{"event": "recording_saved", "data": {"path": "D:\\Recordings\\...mp4"}}`
 
 Commands: `start_recording`, `stop_recording`, `start_replay`, `stop_replay`, `save_replay`,
-`get_status`, `get_settings`, `set_settings`, `list_audio_apps`, `list_monitors`, `list_windows`,
+`get_status`, `get_settings`, `set_settings`, `list_monitors`, `list_windows`,
 `get_capabilities`, `shutdown`. If the engine's stdin closes (the shell exited), it finishes any
 recording in progress, saves it, and exits.
 
@@ -139,7 +138,7 @@ Audio (steps 4 and 5) — built in batch 2:
 - Audio is encoded to AAC when the recording is saved, so saving a long recording with many
   tracks takes a little while. Encoding during recording is a later optimisation.
 
-Instant replay (built in 0.7):
+Echoes, the instant replay (built in 0.7; called Echoes from 0.9.1; "replay" in the code):
 - `start_replay` starts a capture session like a recording, in a `replay-<time>` temp folder. Video
   is the usual 2 s segments (parts for monitor switches); each audio track is written in 10 s
   pieces (`a00_full.000123.pcm`, `timeline::ChunkedWriter`).
@@ -249,8 +248,8 @@ FFmpeg part before the next one starts; the join stretches that part's last file
 the concat list) so everything after stays in time with the audio. Each part carries a label
 (game name or "Desktop"); saves and recordings are named after the label on screen for most of the
 saved stretch. Settings: `game_pick` (newest / focused), `game_end` (continue / stop),
-`games_always`, `games_never`, `replay_on_desktop` (off: replay waits for a game and its buffer is
-dropped when games close), hotkeys `hotkey_lock_game`, `hotkey_next_game`. Select Application
-(`source: window`) pauses detection. Commands: `list_games`, `lock_game`, `lock_focused_game`,
+`games_always`, `games_never`, `desktop_capture` (off, games only: Echoes waits for a game and its
+buffer is dropped when games close; recordings end with their game; recording with no game is refused), hotkeys `hotkey_lock_game`, `hotkey_next_game`. Select Application
+(`source: window`) pauses detection. Commands: `lock_game`, `lock_focused_game`,
 `next_game`; event `games` (list, active, locked, paused) and `game_switched`.
 Not yet: telling the person when a game in exclusive full screen captures black.

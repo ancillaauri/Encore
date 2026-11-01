@@ -8,7 +8,7 @@ and FEATURES.md for what is planned.
 A Windows 11 screen recorder for games, designed to pair with a companion clip editor app. Two modes:
 
 - Manual recording: hotkey to start, hotkey to stop.
-- Instant replay: always recording in the background, hotkey saves the last N minutes.
+- Echoes (instant replay): always recording in the background, hotkey saves the last N minutes.
 
 Every recording carries separate audio tracks: full mix, microphone, and one track per app
 (game, Spotify, browser, Discord, etc.) so each can be adjusted independently when editing.

@@ -19,7 +19,6 @@
     listMonitors: () => call('list_monitors'),
     listWindows: () => call('list_windows'),
     // Game detection
-    listGames: () => call('list_games'),
     lockGame: (pid) => call('lock_game', { pid: pid ?? null }),
     lockFocusedGame: () => call('lock_focused_game'),
     nextGame: () => call('next_game'),

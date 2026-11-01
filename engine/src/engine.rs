@@ -209,7 +209,6 @@ impl Engine {
             "get_capabilities" => Ok(serde_json::to_value(self.caps()).unwrap_or(Value::Null)),
             "list_monitors" => Ok(serde_json::to_value(platform::list_monitors()).unwrap_or(Value::Null)),
             "list_windows" => Ok(serde_json::to_value(platform::list_windows()).unwrap_or(Value::Null)),
-            "list_audio_apps" => Ok(serde_json::to_value(audio::list_apps()).unwrap_or(Value::Null)),
             "list_audio_inputs" => Ok(serde_json::to_value(audio::list_inputs()).unwrap_or(Value::Null)),
             "start_recording" => self.start_recording(&c.args),
             "stop_recording" => {
@@ -228,7 +227,6 @@ impl Engine {
                 Ok(self.status())
             }
             "save_replay" => self.save_replay(&c.args),
-            "list_games" => Ok(self.games_json()),
             // Lock onto a game ({"pid": n}) or unlock ({"pid": null}).
             "lock_game" => {
                 let pid = c.args.get("pid").and_then(|v| v.as_u64()).map(|p| p as u32);
