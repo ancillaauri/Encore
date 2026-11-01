@@ -1145,7 +1145,9 @@
         if (restart === 'now' && !busyNow()) { await bridge.restartAsAdmin(); return; }
         toast('Done. Encore will start as administrator from now on. Restart it to start now.', 'ok', 12000,
           { label: 'Restart now', run: () => { if (busyNow()) toast('Stop recording first, then restart.', 'info'); else bridge.restartAsAdmin().catch((e) => toast(String(e), 'error')); } });
-      } else if (!on) {
+      } else if (on) {
+        toast('Done. Encore will start as administrator from now on, with no prompt.', 'ok', 6000);
+      } else {
         toast('Encore will start normally from now on.', 'ok');
       }
     } catch (e) {
