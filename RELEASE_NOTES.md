@@ -1,3 +1,14 @@
+## Encore 0.9.22 (beta), test build 43: small fixes
+
+### Fixed
+- With Desktop Capture off, the note under the screens no longer says the highlighted screen is
+  used again when the game closes. It says Encore waits for the next game.
+- Removed a line under Settings → Audio that repeated what Split Application Audio says.
+- The **Echo** tag on saved clips is now purple.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.22).
+
 ## Encore 0.9.21 (beta), test build 42: menu and sidebar tidy-up
 
 ### Changed

@@ -689,3 +689,10 @@ Agreed design for game detection (to build next):
   (setting `pcap_in_sidebar`, on by default). Hiding it doesn't turn it off; Settings still has it.
 - Bug reports: left for now. The plan is an in-app form that sends to a small hosted worker,
   which files a GitHub issue, so reporters don't need a GitHub account.
+
+## 2026-11-01: Small wording and colour fixes (0.9.22)
+- Settings → Audio no longer has a line under the heading; Split Application Audio already says
+  what separate tracks are for.
+- With Desktop Capture off, the note under the screens says Encore waits for the next game when
+  the game closes, instead of saying the highlighted screen is used again.
+- The "Echo" tag on clips in Saved this session is purple with a soft glow, not yellow.

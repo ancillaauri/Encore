@@ -387,7 +387,7 @@
     else if (recording) note = '';
     else if (state.source === 'window' && state.settings && state.settings.game_detection) note = 'Only this window is recorded, even when you alt-tab. Game detection is paused until you pick Follow or a monitor.';
     else if (state.source === 'window') note = 'Only this window is recorded, even when you alt-tab. Pick Follow or a monitor to record a screen instead.';
-    else if (gameActive()) note = `${state.phase === 'recording' ? 'Recording' : 'Records'} ${gameActive().name}. The highlighted screen is used again when it closes.`;
+    else if (gameActive()) note = `${state.phase === 'recording' ? 'Recording' : 'Records'} ${gameActive().name}.${gamesOnly() ? ' Encore waits for the next game when it closes.' : ' The highlighted screen is used again when it closes.'}`;
     else if (gameWaiting()) note = 'Game detection is on: the green screen is recorded until a game opens.';
     else if (gamesOnly()) note = '';
     else if (pin) note = 'Always records this monitor. Pick Follow to record whichever screen you click on.';
