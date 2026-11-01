@@ -1361,6 +1361,17 @@
   function renderToggles() {
     const s = state.settings;
     if (!s) return;
+    // Hovering an icon switch says its state in words, so nobody has to rely on the colours.
+    document.querySelectorAll('.arow .aic').forEach((lab) => {
+      const box = lab.querySelector('input');
+      const on = box.checked;
+      lab.dataset.tip = `${box.getAttribute('aria-label')}: ${on ? 'On' : 'Off'}. Click to turn ${on ? 'off' : 'on'}.`;
+    });
+    $('dnd').removeAttribute('title');
+    $('dnd').dataset.tip = s.do_not_disturb ? 'Do not disturb: On. Encore\u2019s notifications are paused. Click to turn off.' : 'Do not disturb: Off. Click to pause Encore\u2019s notifications.';
+    $('rail-dnd').dataset.railTip = s.do_not_disturb ? 'Do not disturb: On' : 'Do not disturb: Off';
+    $('game-on').removeAttribute('title');
+    $('game-on').dataset.tip = s.game_detection ? 'Game detection: On. Click to turn off.' : 'Game detection: Off. Click to record games on their own as they open.';
     const dnd = !!s.do_not_disturb;
     for (const id of ['dnd', 'rail-dnd']) $(id).setAttribute('aria-pressed', String(dnd));
     $('dnd-sub').textContent = dnd ? 'On: notifications paused' : 'Off';
@@ -1369,11 +1380,18 @@
     $('gb-sub').textContent = game ? 'Scanning for games' : 'Off';
     $('gamebar').classList.toggle('on', game);
   }
-  for (const id of ['dnd', 'rail-dnd']) $(id).addEventListener('click', () => {
-    if (state.settings) saveSetting('do_not_disturb', !state.settings.do_not_disturb);
+  // After a click the tip under the mouse shows the new state.
+  function refreshTipFor(el) { setTimeout(() => { if (el.matches(':hover')) { tip.el = el; showTip(el, el.dataset.tip); } }, 80); }
+  document.querySelectorAll('.arow .aic input').forEach((box) => box.addEventListener('change', () => setTimeout(() => { renderToggles(); refreshTipFor(box.closest('.aic')); }, 0)));
+  for (const id of ['dnd', 'rail-dnd']) $(id).addEventListener('click', async () => {
+    if (!state.settings) return;
+    await saveSetting('do_not_disturb', !state.settings.do_not_disturb);
+    refreshTipFor($(id));
   });
-  $('game-on').addEventListener('click', () => {
-    if (state.settings) saveSetting('game_detection', !state.settings.game_detection);
+  $('game-on').addEventListener('click', async () => {
+    if (!state.settings) return;
+    await saveSetting('game_detection', !state.settings.game_detection);
+    refreshTipFor($('game-on'));
   });
 
   // ---------- settings contents (click to jump; the current section is highlighted) ----------
