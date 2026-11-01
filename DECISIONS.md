@@ -196,6 +196,11 @@ the Encore folder is made when setup finishes or at the first recording. Menus s
 dialog (dropdowns in the setup opened behind it). The top bar names the encoder actually used
 (NVIDIA, then AMD, then Intel), since PCs with a processor's built-in graphics list two.
 
+## 2026-11-01: Feature name; Discord voice split dropped
+The per-app audio feature is called **Split App Tracks**. Splitting Discord voice chat into a
+track per person is dropped at the companion editor's request (none of the available methods
+suited it). Discord user ID stays in the backlog until its purpose is confirmed.
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.
@@ -207,5 +212,16 @@ dialog (dropdowns in the setup opened behind it). The top bar names the encoder 
 ## Performance log
 Record idle RAM, CPU while recording, and game FPS (with and without recording) after batches 1, 2 and 3.
 
+Test PCs (from DxDiag, 2026-11-01):
+
+| PC | Graphics | Processor | RAM | Monitors (in use) | Windows |
+|---|---|---|---|---|---|
+| Owner's | NVIDIA RTX 3060 Ti, 8 GB | Intel Core i9-9900K | 32 GB | ED323QUR 2560×1440 at 75 Hz; LS32AG55x 2560×1440 at 120 Hz (supports 165 Hz) | 11 Pro 23H2 (22631) |
+| Companion editor developer's | NVIDIA RTX 5080, 16 GB (+ AMD Radeon graphics in the processor) | AMD Ryzen 7 9800X3D | 64 GB | AORUS FI27Q-P 2560×1440 at 165 Hz; ZOWIE XL 1920×1080 at 120 Hz; ZOWIE RL 1920×1080 at 60 Hz | 11 Pro (26200) |
+
+Both have hardware-accelerated GPU scheduling on.
+
 | Date | Batch | Game / test | Idle RAM | CPU recording | FPS off / on | Notes |
 |---|---|---|---|---|---|---|
+| 2026-10-31 | 0.5.1 | Warframe, 1440p, owner's PC | | | | Capture starved while the game is in front: V-Sync on, no cap → 0–10 new frames/s; capped 30 → every frame captured; capped 120, no V-Sync → froze ~9 s. Game at 90.8 % GPU. |
+| 2026-10-31 | 0.4.x | Deadlock, 1440p 60 fps, editor developer's PC | | | | Smooth: ~47 new frames/s (the game's own rate) |

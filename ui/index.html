@@ -73,7 +73,7 @@
           <h2 class="lab">Audio</h2>
           <label class="srow"><span>Desktop audio</span><input type="checkbox" class="toggle sm" data-setting="audio_full_mix"></label>
           <label class="srow"><span>Microphone</span><input type="checkbox" class="toggle sm" data-setting="audio_mic"></label>
-          <label class="srow"><span>Track for each app</span><input type="checkbox" class="toggle sm" data-setting="audio_app_tracks"></label>
+          <label class="srow" title="A separate audio track for each app that makes sound"><span>Split App Tracks</span><input type="checkbox" class="toggle sm" data-setting="audio_app_tracks"></label>
           <p class="lock" id="lock-note" hidden>Locked while recording</p>
           <button type="button" class="linkbtn" data-open="settings">All settings</button>
         </section>
@@ -193,7 +193,8 @@
             <label class="setrow" id="mic-row"><span class="setname">Which microphone</span>
               <select class="dd" id="mic-device"></select>
             </label>
-            <label class="setrow"><span class="setname">Separate track for each app</span>
+            <label class="setrow"><span class="settext"><span class="setname">Split App Tracks</span>
+                <span class="setsub">A separate audio track for each app that makes sound (game, music, voice chat), so you can adjust each one when editing</span></span>
               <input type="checkbox" id="audio-apps" data-setting="audio_app_tracks" class="toggle">
             </label>
           </div>
@@ -332,8 +333,8 @@
           <label class="setrow"><span class="settext"><span class="setname">Microphone</span>
             <span class="setsub">Your voice, on its own track</span></span>
             <input type="checkbox" class="toggle" data-setting="audio_mic"></label>
-          <label class="setrow"><span class="settext"><span class="setname">A track for each app</span>
-            <span class="setsub">Turn your game, music or voice chat up or down when editing</span></span>
+          <label class="setrow"><span class="settext"><span class="setname">Split App Tracks</span>
+            <span class="setsub">A track for each app, so you can turn your game, music or voice chat up or down when editing</span></span>
             <input type="checkbox" class="toggle" data-setting="audio_app_tracks"></label>
         </div>
         <p class="snote">You can change all of this later in Settings.</p>

@@ -15,7 +15,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Quality settings: resolution (native/downscaled), frame rate up to 144, quality/bitrate presets | 3 | [~] |
 | Full desktop audio + microphone tracks | 4 | [~] |
 | Microphone choice (push-to-talk comes with hotkeys) | 4 | [~] |
-| One audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [~] |
+| Split App Tracks: one audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [~] |
 | Global hotkeys, tray icon, settings screen | 6 | [ ] |
 | Game detection (auto + always/never list + pick a window) | 6 | [ ] |
 | Recording moves to the monitor you click on, mid-recording, with no gap | 6 | [x] 0.5 |
@@ -67,9 +67,8 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Custom bitrate option + expected size per minute beside Quality | Presets stay as the default | [ ] |
 | Apps on a non-default sound device (e.g. Discord on a headset) get their own track | Today only apps on the default output are found | [ ] |
 | Discord: your user ID via Discord's local connection (hello message only; no login, nothing private) | Purpose to confirm with the companion editor side; needs a free Discord developer app | [ ] |
-| Discord: a track per person in voice chat, split by Discord's who's-talking signal; overlaps go to a "Several people" track | Needs Discord voice-read permission (testers only until Discord approves the app); alternative: recording bot | [ ] |
 | Lower suggested frame rate in setup for weaker graphics cards | Uses the PC specs collected for the performance log | [ ] |
-| Name for the per-app audio feature ("Split Tracks" proposed) | Waiting on the owner | [ ] |
+| Per-app audio feature named **Split App Tracks** (UI and docs) | | [x] |
 
 ## Out of scope (decided, with reasons)
 
