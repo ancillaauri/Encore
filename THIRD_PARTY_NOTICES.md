@@ -10,10 +10,11 @@ Encore's own code is under the MIT licence (see LICENSE). The installed app also
   FFmpeg source code: https://ffmpeg.org/download.html
 
 ## Tauri
-- The app framework. Licence: MIT or Apache-2.0. https://github.com/tauri-apps/tauri
+- The app framework, with its updater, window-state and dialog plugins. Licence: MIT or
+  Apache-2.0. https://github.com/tauri-apps/tauri
 
 ## Microsoft Edge WebView2
 - Displays the app's interface; part of Windows 11.
 
 ## Rust crates
-- serde, serde_json (MIT or Apache-2.0), windows-sys (MIT or Apache-2.0), and their dependencies.
+- serde, serde_json, windows-sys (MIT or Apache-2.0), wasapi (MIT), and their dependencies.

@@ -7,15 +7,15 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 
 | Feature | Build step | Status |
 |---|---|---|
-| Manual recording (start/stop) | 3 | [~] |
+| Manual recording (start/stop) | 3 | [x] |
 | Capture modes: Game window / Desktop (toggle style TBC) | 3, 6 | [ ] |
 | Monitor selection for Desktop mode: follow the screen you click on (default) or always one monitor | 3 | [x] 0.5 |
 | "What's being recorded" indicator (tray + window) | 6 | [ ] |
 | Codec choice: H.264 default, HEVC and AV1 optional | 3 | [~] |
 | Quality settings: resolution (native/downscaled), frame rate up to 144, quality/bitrate presets | 3 | [~] |
-| Full desktop audio + microphone tracks | 4 | [~] |
+| Full desktop audio + microphone tracks | 4 | [x] |
 | Microphone choice (push-to-talk comes with hotkeys) | 4 | [~] |
-| Split App Tracks: one audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [~] |
+| Split App Tracks: one audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [x] |
 | Global hotkeys, tray icon, settings screen | 6 | [ ] |
 | Game detection (auto + always/never list + pick a window) | 6 | [ ] |
 | Recording moves to the monitor you click on, mid-recording, with no gap | 6 | [x] 0.5 |
@@ -28,7 +28,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Auto-start replay when a game is detected, stop when it closes | 7 | [ ] |
 | Storage: estimated disk use beside replay length, max library size + auto-delete oldest, low-disk warning | 7 | [ ] |
 | Installer + updates (check, download and install from the app; user chooses the update mode) | 8 | [~] |
-| Settings dialog, ≡ menu, collapsible "What to record" panel, About, changelog skeleton | 6 | [~] |
+| Settings dialog, ≡ menu, side panel (quick settings, saved this session), About, changelog skeleton, first-run setup | 6 | [x] |
 | Companion editor reads our per-app tracks (change on the editor side) | 9 | [ ] |
 
 ## Found in testing (0.3.0 desktop test, 2026-10-31)

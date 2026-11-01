@@ -11,8 +11,11 @@ Every push to `main` runs the Windows build in GitHub Actions (`.github/workflow
 4. Runs the engine self-test on the build machine (diagnostic only: build machines have no GPU).
 5. Uploads the installer as a build artifact.
 
-A release is published by running the workflow manually with a `release_tag` (e.g. `v0.2.2`).
+A release is published by running the workflow manually with a `release_tag` (e.g. `v0.5.4`).
 It is published as the latest release, with `latest.json`, which installed copies check for updates.
+Release runs and push runs queue separately, so a push never cancels a release build.
+After each release: download the assets, check the update signature against the public key, and
+check the installer contains the app, the engine and FFmpeg.
 
 ## Update signing
 
