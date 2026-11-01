@@ -14,8 +14,8 @@
         "title": "Encore",
         "width": 1500,
         "height": 920,
-        "minWidth": 980,
-        "minHeight": 640,
+        "minWidth": 1100,
+        "minHeight": 700,
         "center": true,
         "decorations": false,
         "shadow": true

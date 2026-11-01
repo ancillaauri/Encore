@@ -44,23 +44,6 @@
       </div>
 
       <div class="side-body">
-        <section class="sec" id="replay-sec">
-          <h2 class="lab">Instant replay</h2>
-          <label class="srow"><span>Length</span>
-            <select class="dd" id="q-replay" data-setting="replay_seconds" data-number>
-              <option value="30">30 seconds</option>
-              <option value="60">1 minute</option>
-              <option value="120">2 minutes</option>
-              <option value="300">5 minutes</option>
-              <option value="600">10 minutes</option>
-              <option value="900">15 minutes</option>
-              <option value="1200">20 minutes</option>
-            </select>
-          </label>
-          <button type="button" class="btn sm wide" id="save-replay" disabled>Save replay</button>
-          <p class="lock" id="replay-note"></p>
-        </section>
-        <div class="sdiv"></div>
         <section class="sec" id="quick">
           <h2 class="lab">Video</h2>
           <label class="srow"><span>Quality</span>
@@ -104,9 +87,19 @@
         </section>
       </div>
 
+      <div class="side-foot">
+        <button type="button" class="dnd" id="dnd" aria-pressed="false" title="Do not disturb: Encore's notifications stay hidden">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/></svg>
+          <span class="dnd-text"><span class="dnd-name">Do not disturb</span><span class="dnd-sub" id="dnd-sub">Off</span></span>
+        </button>
+      </div>
+
       <div class="rail">
         <button type="button" class="railbtn" data-open="settings" tabindex="-1" data-rail-tip="Settings">
           <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span>
+        </button>
+        <button type="button" class="railbtn dndrail" id="rail-dnd" tabindex="-1" data-rail-tip="Do not disturb" aria-pressed="false">
+          <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/></svg></span>
         </button>
         <button type="button" class="railbtn" id="rail-folder" tabindex="-1" data-rail-tip="Open recordings folder">
           <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg></span>
@@ -116,23 +109,26 @@
 
     <section class="stage" aria-label="Recording">
       <div class="hero">
-        <div class="hero-side hero-left">
-          <h2 class="hlab">Switches</h2>
+        <div class="hero-side hero-left" id="replay-sec">
+          <h2 class="hlab">Instant replay</h2>
           <label class="qs" title="Keeps the last few minutes so you can save great moments after they happen">
             <span class="qs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/></svg></span>
-            <span class="qs-text"><span class="qs-name">Instant replay</span><span class="qs-sub" id="qs-replay-sub">Off</span></span>
+            <span class="qs-text"><span class="qs-name">Keep the last few minutes</span><span class="qs-sub" id="qs-replay-sub">Off</span></span>
             <input type="checkbox" class="toggle sm" id="replay-on">
           </label>
-          <label class="qs soon" title="Arrives in the next update">
-            <span class="qs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/></svg></span>
-            <span class="qs-text"><span class="qs-name">Game detection</span><span class="qs-sub">Next update</span></span>
-            <input type="checkbox" class="toggle sm" disabled>
+          <label class="hrow"><span>Length</span>
+            <select class="dd" id="q-replay" data-setting="replay_seconds" data-number>
+              <option value="30">30 seconds</option>
+              <option value="60">1 minute</option>
+              <option value="120">2 minutes</option>
+              <option value="300">5 minutes</option>
+              <option value="600">10 minutes</option>
+              <option value="900">15 minutes</option>
+              <option value="1200">20 minutes</option>
+            </select>
           </label>
-          <label class="qs soon" title="Arrives with notifications">
-            <span class="qs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg></span>
-            <span class="qs-text"><span class="qs-name">Do not disturb</span><span class="qs-sub">With notifications</span></span>
-            <input type="checkbox" class="toggle sm" disabled>
-          </label>
+          <button type="button" class="btn sm wide" id="save-replay" disabled>Save replay</button>
+          <p class="lock" id="replay-note"></p>
         </div>
 
         <div class="hero-mid">
@@ -166,13 +162,18 @@
           <span class="pn">Follow</span><span class="ps">The screen you click</span>
         </button>
         <div class="mons" id="mons"></div>
-      </div>
-      <div class="picks picks2" id="picks2" role="group" aria-label="Applications and games">
         <button type="button" class="pick" id="pick-app" role="radio" aria-checked="false" aria-haspopup="menu">
           <span class="app"><span class="bar"></span><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 9h16"/></svg></span></span>
           <span class="neck"></span><span class="beam"></span>
           <span class="pn">Select Application</span><span class="ps" id="pick-app-sub">Choose</span>
         </button>
+      </div>
+      <div class="gamebar" id="gamebar">
+        <button type="button" class="gb-switch" id="game-on" aria-pressed="false" title="Game detection: record games on their own as they open">
+          <span class="gb-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/><path d="M8 11.5v2M7 12.5h2M15.5 12h.01M17.5 13h.01"/></svg></span>
+          <span class="qs-text"><span class="qs-name">Game detection</span><span class="qs-sub" id="gb-sub">Off</span></span>
+        </button>
+        <div class="gb-games" id="gb-games"></div>
       </div>
       <p class="pnote" id="pick-note"></p>
     </section>

@@ -164,7 +164,7 @@ the monitors as holograms laid out as in Windows, then "One app" and "Game" tile
 being recorded glows red. "Game" shows "Coming soon" until game detection is built.
 
 ## 2026-10-31: Window size matches the editor
-Opens at 1500x920 (shrunk to fit smaller screens), minimum 980x640, and reopens at the size and
+Opens at 1500x920 (shrunk to fit smaller screens), minimum 1100x700 (was 980x640), and reopens at the size and
 place it was closed at, as the editor does. The monitor picker stays on one line at any size.
 
 ## 2026-10-31: In-game stutter, save folder, audio size (0.5.2)
@@ -389,3 +389,11 @@ Agreed design for game detection (to build next):
 - 0.8.4: the monitors are centred on the page, with Follow just to their left (it no longer
   pulls them off centre). The Game tile is gone: Game detection is the switch at the top, and
   when it finds games they'll appear as tiles next to Select Application, to see and lock.
+- Layout (with the game detection build): Instant replay's controls moved to the top-left panel;
+  Do not disturb is a single button at the bottom of the side panel (moon glows soft red when
+  on); Game detection is a bar under the screens whose controller icon is the button (glows soft
+  purple), with the games it finds as chips beside it. Select Application sits right of the
+  monitors, mirroring Follow. Status lines are one line each. In small windows Follow and Select
+  Application shrink before the monitors do.
+- Minimum window size 1100x700: the smallest at which everything fits without scrolling with three
+  monitors, a recording running and two games found (checked in a browser at each size).

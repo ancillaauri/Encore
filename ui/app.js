@@ -387,23 +387,24 @@
   // Keeps the picker on one line: shrinks the monitors until everything fits the stage.
   function fitPicks() {
     const row = $('picks');
-    const row2 = document.querySelector('.picks2');
     const stage = document.querySelector('.stage');
     // Too wide (the row never wraps, it overflows) or too tall for the stage.
-    const tooBig = () => row.scrollWidth > row.clientWidth + 1 || $('pick-follow').getBoundingClientRect().left < row.getBoundingClientRect().left - 1 || (stage && stage.scrollHeight > stage.clientHeight + 1);
+    const tooBig = () => row.scrollWidth > row.clientWidth + 1
+      || $('pick-follow').getBoundingClientRect().left < row.getBoundingClientRect().left - 1
+      || $('pick-app').getBoundingClientRect().right > row.getBoundingClientRect().right + 1
+      || (stage && stage.scrollHeight > stage.clientHeight + 1);
     // Larger windows get larger monitors, up to MON_MAX.
     monBase = stage && stage.clientHeight > 820 ? MON_MAX : 150;
-    for (const r of [row, row2]) r.classList.remove('compact', 'tight');
+    row.classList.remove('compact', 'tight');
     renderPicks();
-    while (monBase > 70 && tooBig()) {
+    // Follow and Select Application shrink first, so the monitors stay the biggest things here.
+    for (const cls of ['compact', 'tight']) {
+      if (!tooBig()) return;
+      row.classList.add(cls);
+    }
+    while (monBase > 100 && tooBig()) {
       monBase -= 10;
       renderPicks();
-    }
-    // Still too big: smaller tiles, then smaller still.
-    for (const cls of ['compact', 'tight']) {
-      if (!tooBig()) break;
-      row.classList.add(cls);
-      row2.classList.add(cls);
     }
   }
   try { new ResizeObserver(() => fitPicks()).observe(document.querySelector('.stage')); } catch (e) { /* older engine */ }
@@ -511,6 +512,8 @@
       const m = targetMonitor();
       add('acc', 'Following you', m ? `On ${m.name}` : 'The screen you click');
     }
+    // Game detection
+    if (s && s.game_detection) add('acc', 'Game detection', 'Scanning for games');
     // Instant replay
     if (state.replay && state.replay.on) add('good', 'Instant replay', `Holding the last ${replayLength()}`);
     else add('', 'Instant replay', 'Off');
@@ -519,6 +522,7 @@
     if (tracks.length) add('', `${tracks.length} audio track${tracks.length === 1 ? '' : 's'}`, tracks.join(', '));
     // Where files go
     if (s) add('', 'Saving to', encoreRoot());
+    if (s && s.do_not_disturb) add('quiet', 'Do not disturb', 'Notifications paused');
     list.textContent = '';
     for (const r of rows) {
       const li = h('li', r.kind);
@@ -558,6 +562,7 @@
     renderHotkeys();
     renderReplay();
     renderSounds();
+    renderToggles();
     if (!$('setup').hidden) renderSetup();
   }
 
@@ -1345,6 +1350,25 @@
     }
   }
   $('start-admin').addEventListener('change', (e) => setStartAsAdmin(e.target.checked));
+
+  // ---------- Do not disturb and game detection buttons (click to turn on/off; the icon glows) ----------
+  function renderToggles() {
+    const s = state.settings;
+    if (!s) return;
+    const dnd = !!s.do_not_disturb;
+    for (const id of ['dnd', 'rail-dnd']) $(id).setAttribute('aria-pressed', String(dnd));
+    $('dnd-sub').textContent = dnd ? 'On: notifications paused' : 'Off';
+    const game = !!s.game_detection;
+    $('game-on').setAttribute('aria-pressed', String(game));
+    $('gb-sub').textContent = game ? 'Scanning for games' : 'Off';
+    $('gamebar').classList.toggle('on', game);
+  }
+  for (const id of ['dnd', 'rail-dnd']) $(id).addEventListener('click', () => {
+    if (state.settings) saveSetting('do_not_disturb', !state.settings.do_not_disturb);
+  });
+  $('game-on').addEventListener('click', () => {
+    if (state.settings) saveSetting('game_detection', !state.settings.game_detection);
+  });
 
   // ---------- settings contents (click to jump; the current section is highlighted) ----------
   (function buildSettingsNav() {

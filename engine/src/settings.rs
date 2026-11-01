@@ -79,6 +79,10 @@ pub struct Settings {
     pub hotkey_save_30s: String,
     pub hotkey_save_60s: String,
     pub hotkey_save_custom: String,
+    /// Do not disturb: Encore's own notices stay hidden (the side panel's moon button).
+    pub do_not_disturb: bool,
+    /// Game detection: games are found and recorded on their own; otherwise the chosen screen.
+    pub game_detection: bool,
     /// Folder for work in progress (recordings being made, the instant replay buffer); empty =
     /// Encore's own folder in %LOCALAPPDATA%. A folder "Encore temp" is made inside the chosen one.
     pub work_dir: String,
@@ -137,6 +141,8 @@ impl Default for Settings {
             hotkey_save_60s: "Ctrl+Alt+2".into(),
             hotkey_save_custom: "Ctrl+Alt+3".into(),
             replay_custom_seconds: 90,
+            do_not_disturb: false,
+            game_detection: false,
             work_dir: String::new(),
             settings_version: SETTINGS_VERSION,
             sound_start: "rise".into(),
