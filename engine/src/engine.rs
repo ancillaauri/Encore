@@ -620,13 +620,10 @@ impl Engine {
             // Named after what was on screen for most of it (e.g. the game).
             send_event("status", json!({ "state": "saving" }));
             let now = platform::now_hns();
-            let (out_path, label) = match self.active.as_ref().map(|a| a.label_for(clip.from, now)) {
-                Some(l) if l != clip.label => {
-                    let _ = std::fs::remove_file(&clip.out_path);
-                    (recorder::output_path(&PathBuf::from(&self.settings.output_dir), &l, clip.local), l)
-                }
-                _ => (clip.out_path, clip.label),
-            };
+            // The name is picked now, not when the recording started: an Echo saved in the
+            // meantime may have taken the name chosen then, and it must never be overwritten.
+            let label = self.active.as_ref().map(|a| a.label_for(clip.from, now)).unwrap_or(clip.label);
+            let out_path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &label, clip.local);
             self.save_in_background(clip.from, now, out_path, label, false);
             return;
         }
