@@ -26,6 +26,9 @@
     setRecordingState: (recording, label) => T.core.invoke('set_recording_state', { recording, label: label || null }),
     quitApp: () => T.core.invoke('quit_app'),
     restartAsAdmin: () => T.core.invoke('restart_as_admin'),
+    // { elevated, start_as_admin }
+    adminStatus: () => T.core.invoke('admin_status'),
+    setStartAsAdmin: (on) => T.core.invoke('set_start_as_admin', { on }),
     applyShellSettings: () => T.core.invoke('apply_shell_settings'),
     onHotkey: (callback) => T.event.listen('hotkey', (e) => callback(e.payload)),
     appVersion: () => T.app.getVersion(),

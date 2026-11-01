@@ -57,7 +57,27 @@ fn update_mode(app: &AppHandle) -> String {
         .unwrap_or_else(|| "manual".into())
 }
 
+/// Looks for an update, trying a second time after a short wait if GitHub can't be reached (a
+/// brief network blip, or the check running just as the PC's connection comes up).
 async fn find_update(app: &AppHandle) -> Result<Option<Update>, String> {
+    match find_update_once(app).await {
+        Ok(found) => Ok(found),
+        Err(first) => {
+            eprintln!("update check failed, trying again: {first}");
+            tokio_sleep(Duration::from_secs(3)).await;
+            find_update_once(app).await.map_err(|e| {
+                eprintln!("update check failed again: {e}");
+                "Couldn't reach GitHub to check for updates. Check your internet connection and try again.".to_string()
+            })
+        }
+    }
+}
+
+async fn tokio_sleep(d: Duration) {
+    let _ = tauri::async_runtime::spawn_blocking(move || std::thread::sleep(d)).await;
+}
+
+async fn find_update_once(app: &AppHandle) -> Result<Option<Update>, String> {
     let handle = app.clone();
     app.updater_builder()
         // Runs just before the installer takes over: the engine saves any recording and exits.

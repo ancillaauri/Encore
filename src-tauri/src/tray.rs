@@ -124,7 +124,8 @@ pub fn quit_app(app: AppHandle) {
     app.exit(0);
 }
 
-/// Closes Encore and opens it again as administrator (Windows asks first). If the person says no,
+/// Closes Encore and opens it again as administrator. If "Start Encore as administrator" is on,
+/// the scheduled task reopens it with no prompt; otherwise Windows asks, and if the person says no
 /// Encore opens again normally. The new copy waits for this one to finish saving and exit, so the
 /// one-copy-only rule doesn't stop it.
 #[tauri::command]
@@ -134,11 +135,18 @@ pub fn restart_as_admin(app: AppHandle) -> Result<(), String> {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-        let exe = exe.to_string_lossy().replace('\'', "''");
+        let exe = exe.to_string_lossy().trim_start_matches(r"\\?\").replace('\'', "''");
+        let start = if crate::admin::wanted() {
+            format!(
+                "schtasks.exe /Run /TN '{}' | Out-Null; if ($LASTEXITCODE -ne 0) {{ Start-Process -FilePath '{exe}' -Verb RunAs }}",
+                crate::admin::TASK_NAME
+            )
+        } else {
+            format!("Start-Process -FilePath '{exe}' -Verb RunAs -ErrorAction Stop")
+        };
         let script = format!(
             "Wait-Process -Id {pid} -ErrorAction SilentlyContinue; \
-             try {{ Start-Process -FilePath '{exe}' -Verb RunAs -ErrorAction Stop }} \
-             catch {{ Start-Process -FilePath '{exe}' }}",
+             try {{ {start} }} catch {{ Start-Process -FilePath '{exe}' }}",
             pid = std::process::id()
         );
         std::process::Command::new("powershell.exe")

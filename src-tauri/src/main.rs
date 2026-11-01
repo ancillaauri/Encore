@@ -4,6 +4,7 @@
 //! Encore app shell: window, engine process, and a thin bridge to the interface.
 //! Keep this thin: no recording logic here (see ARCHITECTURE.md).
 
+mod admin;
 mod engine_link;
 mod tray;
 mod updater;
@@ -103,6 +104,10 @@ fn fit_to_screen(app: &tauri::AppHandle) {
 }
 
 fn main() {
+    // "Start Encore as administrator": hand over to the elevated copy before anything opens.
+    if admin::hand_over_if_wanted() {
+        return;
+    }
     let app = tauri::Builder::default()
         // Must be first: opening Encore while it's already running (e.g. hidden in the tray)
         // brings the existing window back instead of starting a second copy.
@@ -141,6 +146,8 @@ fn main() {
             tray::set_recording_state,
             tray::quit_app,
             tray::restart_as_admin,
+            admin::admin_status,
+            admin::set_start_as_admin,
             tray::apply_shell_settings,
             updater::get_update,
             updater::check_for_updates,

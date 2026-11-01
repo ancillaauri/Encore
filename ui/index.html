@@ -253,6 +253,11 @@
               <span class="setsub">A short sound when recording starts and stops</span></span>
               <input type="checkbox" class="toggle" data-setting="sounds"></label>
           </div>
+          <div class="setcard spaced">
+            <label class="setrow"><span class="settext"><span class="setname">Start Encore as administrator</span>
+              <span class="setsub wrap" id="start-admin-note">Keeps game recordings smooth when a game uses all of your graphics card. Windows asks for permission once, not every time.</span></span>
+              <input type="checkbox" class="toggle" id="start-admin"></label>
+          </div>
         </section>
 
         <section class="setsec">
@@ -379,7 +384,11 @@
             </select>
           </label>
         </div>
-        <p class="snote">Tip: if a game uses all of your graphics card, recordings can stutter. Capping the game's frame rate a little below your screen's (for example 120 on a 144 Hz screen) keeps them smooth.</p>
+        <div class="setcard spaced">
+          <label class="setrow"><span class="settext"><span class="setname">Smooth game recordings</span>
+            <span class="setsub wrap">Starts Encore as administrator, so games that use all of your graphics card don't make recordings stutter. Windows asks for permission once when you finish setup.</span></span>
+            <input type="checkbox" class="toggle" id="setup-admin" checked></label>
+        </div>
       </div>
 
       <div class="sstep" data-step="3" hidden>

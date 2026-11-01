@@ -272,3 +272,13 @@ Both have hardware-accelerated GPU scheduling on.
   10 s, logging how long it took. The warning only shows if every try fails.
 - With Windows' hardware-accelerated GPU scheduling on, Encore asks for high rather than realtime,
   as realtime can make the whole system stutter in that mode.
+
+## 2026-11-01: Stutter fixed; starting as administrator without prompts (0.7.3)
+- 0.7.2 test (Warframe capped at 120, run as administrator): all 24 seconds had 60 of 60 new frames.
+  Before, the same test dropped to 0–6 a second. Graphics priority, set once FFmpeg has opened the
+  card, is the fix; it needs administrator rights.
+- "Start Encore as administrator" uses a scheduled task approved once, rather than asking on every
+  launch (the "Run as administrator" box) or relaunching with a prompt each time. Setup offers it,
+  on by default for new installs, with one line on why. Off removes the task.
+- Update checks retry once after 3 s; the error says GitHub couldn't be reached instead of showing
+  the raw network error.

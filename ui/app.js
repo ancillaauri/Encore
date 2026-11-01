@@ -721,7 +721,7 @@
       else if (!$('settings').hidden) { /* status line is enough */ } else toast("You're up to date.", 'ok', 4000);
     } catch (e) {
       $('update-status').textContent = 'Could not check for updates.';
-      toast(`Could not check for updates: ${e}`, 'error', 10000);
+      toast(String(e), 'error', 10000);
     }
     btn.disabled = false;
     renderUpdate();
@@ -791,7 +791,7 @@
     lastFocus = document.activeElement;
     ov.hidden = false;
     requestAnimationFrame(() => ov.classList.add('on'));
-    if (id === 'settings') { renderSettings(); renderUpdate(); refreshInputs(); }
+    if (id === 'settings') { renderSettings(); renderUpdate(); refreshInputs(); refreshAdmin(); }
     if (id === 'changelog') renderChangelog();
     if (id === 'about') $('about-title').textContent = state.version ? `Encore ${state.version}` : 'Encore';
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -1120,9 +1120,43 @@
   }
   function openSetup() {
     setupStep = 1;
+    refreshAdmin();
     renderSetup();
     openDialog('setup');
   }
+  // ---------- start as administrator ----------
+  async function refreshAdmin() {
+    try {
+      const a = await bridge.adminStatus();
+      state.elevated = !!a.elevated;
+      state.startAsAdmin = !!a.start_as_admin;
+    } catch { /* not available (e.g. in a browser preview) */ }
+    $('start-admin').checked = !!state.startAsAdmin;
+    $('setup-admin').checked = state.startAsAdmin || !state.settings || !state.settings.setup_done;
+  }
+  function busyNow() { return state.phase !== 'idle'; }
+  async function setStartAsAdmin(on, { restart = 'ask' } = {}) {
+    const box = $('start-admin');
+    box.disabled = true;
+    try {
+      await bridge.setStartAsAdmin(on);
+      state.startAsAdmin = on;
+      if (on && !state.elevated) {
+        if (restart === 'now' && !busyNow()) { await bridge.restartAsAdmin(); return; }
+        toast('Done. Encore will start as administrator from now on. Restart it to start now.', 'ok', 12000,
+          { label: 'Restart now', run: () => { if (busyNow()) toast('Stop recording first, then restart.', 'info'); else bridge.restartAsAdmin().catch((e) => toast(String(e), 'error')); } });
+      } else if (!on) {
+        toast('Encore will start normally from now on.', 'ok');
+      }
+    } catch (e) {
+      toast(String(e), 'error');
+    } finally {
+      box.disabled = false;
+      box.checked = !!state.startAsAdmin;
+    }
+  }
+  $('start-admin').addEventListener('change', (e) => setStartAsAdmin(e.target.checked));
+
   async function finishSetup() {
     if (state.settings && !state.settings.setup_done) await saveSetting('setup_done', true);
   }
@@ -1138,7 +1172,11 @@
   $('setup-back').addEventListener('click', () => { if (setupStep > 1) { setupStep--; renderSetup(); } });
   $('setup-next').addEventListener('click', async () => {
     if (setupStep < 3) { setupStep++; renderSetup(); return; }
+    const want = $('setup-admin').checked;
+    const change = want !== !!state.startAsAdmin;
     closeDialog($('setup'));
+    await finishSetup();
+    if (change) await setStartAsAdmin(want, { restart: 'now' });
   });
   $('setup-skip').addEventListener('click', () => closeDialog($('setup')));
   document.querySelectorAll('#setup [data-quality]').forEach((b) =>
@@ -1153,6 +1191,7 @@
       const status = await bridge.getStatus();
       state.focusMonitor = status.focus_monitor || null;
       state.elevated = !!status.elevated;
+      await refreshAdmin();
       state.replay = status.replay || { on: false };
       if (status.state === 'recording') {
         state.recording = { ...status.recording, source: status.recording.label };

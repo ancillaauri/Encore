@@ -200,10 +200,24 @@ window (single instance). Global hotkeys are registered by the shell from the en
 (`hotkey_record`); a press is sent to the interface as a `hotkey` event, and the interface does
 what clicking the record button would, so the hotkey records whatever is selected.
 
+## Starting as administrator (shell, 0.7.3)
+
+`src-tauri/src/admin.rs`. Raising the capture's graphics priority needs administrator rights.
+"Start Encore as administrator" (Settings → General, and offered in setup) registers a Windows
+scheduled task with no trigger that starts Encore with the account's highest rights
+(`--from-admin-task`). Turning it on or off asks Windows once (schtasks through the "Do you want to
+allow…" prompt, or directly if already elevated). The switch is a marker file,
+`%LOCALAPPDATA%\Encore\start-as-admin`, checked first thing in `main()`: if it's there and this
+copy isn't elevated, Encore runs the task and exits, so it comes back elevated with no prompt. If the
+task is missing, Encore just opens normally. The task-started copy waits 0.4 s so the single-instance
+check doesn't see the copy that's closing. Restart as Administrator uses the task too when it's set
+up, after waiting for the old copy to exit.
+
 ## Updates (shell)
 
 `src-tauri/src/updater.rs`. Checks `releases/latest/download/latest.json` on GitHub according to
-the `update_mode` setting (manual / auto_download / never), 10 seconds after start and every 4 hours.
+the `update_mode` setting (manual / auto_download / never), 10 seconds after start and every 4 hours. A failed check is tried once more after 3 seconds before a
+plain "couldn't reach GitHub" message is shown.
 States sent to the interface as `update-status`: none / available / ready. Installing is refused
 while recording; the engine is shut down (saving any recording) just before the installer runs.
 

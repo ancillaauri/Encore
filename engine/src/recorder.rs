@@ -203,7 +203,7 @@ fn warn_if_low_priority(result: &str) {
     let message = if platform::is_elevated() {
         "Windows wouldn't give the recording priority on the graphics card. Games that use the whole card may stutter in recordings."
     } else {
-        "Encore isn't running as administrator, so Windows won't give the recording priority on the graphics card. Games that use the whole card may stutter in recordings. To fix it, use ≡ → File → Restart as Administrator."
+        "Encore isn't running as administrator, so Windows won't give the recording priority on the graphics card. Games that use the whole card may stutter in recordings. To fix it, turn on Settings → General → Start Encore as administrator."
     };
     crate::protocol::send_event("warning", serde_json::json!({ "message": message }));
 }
