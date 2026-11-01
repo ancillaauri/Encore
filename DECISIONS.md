@@ -312,3 +312,14 @@ Both have hardware-accelerated GPU scheduling on.
 - Known: the sounds come out of Encore's own window, so the desktop-audio track (and an
   "Encore"/WebView2 app track) can pick them up. To do: leave Encore's own audio out of recordings
   (Windows can capture "everything except this app").
+
+## 2026-11-01: Hotkeys read the key state (0.7.6)
+- Hotkeys still didn't work in a League match with Encore running as administrator, so the rights
+  weren't the cause. Windows' RegisterHotKey message never arrives while some games read the
+  keyboard directly. The shell now checks the key state every 10 ms instead (the approach other
+  recorders use), which works whatever is in front. Trade-off: the keys also reach the game (they
+  were swallowed before), so Settings says to pick keys the game doesn't use. A combination set
+  for two actions is reported. Every press is written to the engine log.
+- While a new hotkey is being chosen in Settings, presses don't trigger actions.
+- Replay messages now give the length actually saved ("Saving the last 30 seconds", "Saved replay
+  (30 seconds)"), not the replay length.

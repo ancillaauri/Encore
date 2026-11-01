@@ -6,6 +6,7 @@
 
 mod admin;
 mod engine_link;
+mod hotkeys;
 mod tray;
 mod updater;
 
@@ -115,8 +116,8 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(tray::ShellState::default())
+        .manage(hotkeys::Hotkeys::default())
         // Reopens at the size and place it was closed at, like the companion editor.
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .manage(updater::UpdateState::default())
@@ -127,6 +128,7 @@ fn main() {
             fit_to_screen(app.handle());
             tray::setup(app.handle())?;
             tray::start(app.handle().clone());
+            hotkeys::start(app.handle().clone());
             Ok(())
         })
         .on_window_event(|window, event| {

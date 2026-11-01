@@ -196,6 +196,11 @@ impl Engine {
                 Ok(self.status())
             }
             "save_replay" => self.save_replay(&c.args),
+            // A line from the app shell for the log (e.g. hotkey presses).
+            "note" => {
+                log(c.args.get("message").and_then(|m| m.as_str()).unwrap_or(""));
+                Ok(json!({}))
+            }
             "shutdown" => {
                 send(&reply_ok(id, json!({})));
                 self.shutdown();
@@ -452,7 +457,7 @@ impl Engine {
         self.pins.lock().unwrap().push(from);
         let (ffmpeg, dir, snapshot, pins) = (self.ffmpeg.clone(), a.seg_dir.clone(), a.snapshot(), self.pins.clone());
         if replay {
-            send_event("replay_saving", json!({}));
+            send_event("replay_saving", json!({ "seconds": (to.saturating_sub(from) + 5_000_000) / 10_000_000 }));
         }
         std::thread::spawn(move || {
             let result = recorder::save_window(&ffmpeg, &dir, &snapshot, from, to, &out_path);

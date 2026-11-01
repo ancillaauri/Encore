@@ -10,7 +10,6 @@ use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, Wry};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 const RECORDING_ICON: &[u8] = include_bytes!("../icons/tray-recording.png");
 
@@ -22,8 +21,6 @@ pub struct ShellState {
     told_about_tray: AtomicBool,
     tray: Mutex<Option<TrayIcon<Wry>>>,
     record_item: Mutex<Option<MenuItem<Wry>>>,
-    /// Registered hotkeys by setting name (e.g. "hotkey_record" -> "Ctrl+Alt+R").
-    hotkeys: Mutex<std::collections::HashMap<String, String>>,
 }
 
 /// Each hotkey setting and the action its press sends to the interface.
@@ -188,37 +185,13 @@ pub fn apply(app: &AppHandle, settings: &Value) -> Vec<String> {
     let close = settings.get("close_to_tray").and_then(|v| v.as_bool()).unwrap_or(true);
     state.close_to_tray.store(close, Ordering::Relaxed);
 
-    let mut registered = state.hotkeys.lock().unwrap();
-    let mut problems = Vec::new();
-    let gs = app.global_shortcut();
-    for (setting, action) in HOTKEYS {
-        let wanted = settings.get(setting).and_then(|v| v.as_str()).unwrap_or("").trim().to_string();
-        let current = registered.get(setting).cloned().unwrap_or_default();
-        if current == wanted {
-            continue;
-        }
-        if !current.is_empty() {
-            let _ = gs.unregister(current.as_str());
-        }
-        registered.remove(setting);
-        if wanted.is_empty() {
-            continue;
-        }
-        let result = gs.on_shortcut(wanted.as_str(), move |app, _shortcut, event| {
-            if event.state == ShortcutState::Pressed {
-                let _ = app.emit("hotkey", action);
-            }
-        });
-        match result {
-            Ok(()) => {
-                registered.insert(setting.to_string(), wanted);
-            }
-            Err(e) => problems.push(format!(
-                "The hotkey {wanted} couldn't be set up ({e}). Another app may be using it; pick a different one in Settings → Hotkeys."
-            )),
-        }
-    }
-    problems
+    let wanted = HOTKEYS
+        .iter()
+        .map(|(setting, action)| {
+            (settings.get(*setting).and_then(|v| v.as_str()).unwrap_or("").trim().to_string(), *action)
+        })
+        .collect();
+    app.state::<crate::hotkeys::Hotkeys>().set(wanted)
 }
 
 /// At start: apply the saved settings once the engine is up.

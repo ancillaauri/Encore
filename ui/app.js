@@ -629,12 +629,14 @@
         renderStage();
         break;
       case 'replay_saving':
-        toast(`Saving the last ${replayLength()}…`, 'info', 3000);
+        toast(`Saving the last ${data.seconds ? lengthText(data.seconds) : replayLength()}…`, 'info', 3000);
         break;
-      case 'replay_saved':
+      case 'replay_saved': {
         addRecent({ ...data, replay: true });
-        toast(`Saved replay: ${fileName(data.path)}`, 'ok', 5000);
+        const len = data.duration_ms ? ` (${lengthText(Math.round(data.duration_ms / 1000))})` : '';
+        toast(`Saved replay${len}: ${fileName(data.path)}`, 'ok', 5000);
         break;
+      }
       case 'focus_monitor':
         state.focusMonitor = data.id || state.focusMonitor;
         if (state.phase === 'idle') renderStage();
@@ -1067,6 +1069,7 @@
   // Custom save length: shown in minutes when it's a whole number of minutes, else in seconds.
   function lengthText(sec) {
     if (sec % 60 === 0) return sec === 60 ? '1 minute' : `${sec / 60} minutes`;
+    if (sec === 1) return '1 second';
     return sec < 60 ? `${sec} seconds` : `${Math.floor(sec / 60)} min ${sec % 60} s`;
   }
   function renderCustomLength() {
@@ -1160,6 +1163,7 @@
     renderHotkeys();
   }));
   bridge.onHotkey((action) => {
+    if (listening) return; // choosing a new hotkey in Settings: the keys are for that
     if (action === 'save_replay') { saveReplay(); return; }
     if (action === 'save_replay_30') { saveReplay(30); return; }
     if (action === 'save_replay_60') { saveReplay(60); return; }
