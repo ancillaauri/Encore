@@ -1,20 +1,13 @@
-## Encore 0.9.6 (beta), test build 27: Desktop Capture
+## Encore 0.9.7 (beta), test build 28: setup tidy-up
 
 ### What's changed
-- **Desktop Capture** heads the screens section, with its own glowing icon switch.
-  - **On** (the default): Encore records your chosen screen when no game is open, as before.
-  - **Off**: Encore only records games. The screens dim, Echoes waits for a game, a recording ends
-    when its game closes, and the record button is greyed out until a game opens.
-  - Off needs game detection on (otherwise nothing could be recorded), so turning game detection
-    off turns Desktop Capture back on.
-- The "Until a game opens" choice in the game bar is gone; Desktop Capture replaces it.
-- **Icon switches look like buttons**: each glowing icon sits on a faint tile, tinted when on.
+- Setup is down to 6 pages; the "What to record" page is gone (the main screen explains itself
+  now).
+- The game detection page is up to date with Desktop Capture, and its Desktop Capture switch can
+  only be turned off with game detection on.
+- Echoes' page now says **Shadow every play**.
+- Setup shows your actual hotkeys everywhere (it said Ctrl+Alt+1, 2 and G whatever you'd set).
+- The last page points to **Settings → Hotkeys**, with a button to go straight there.
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.9.6).
-
-### Test checklist
-1. Game detection on, Desktop Capture off, Echoes on: status says "Desktop Capture: Off · waiting
-   for a game", the record button is greyed out. Open Warframe: Echoes starts and record works.
-   Close it: Echoes waits again.
-2. Turn game detection off: Desktop Capture turns itself back on.
+Update from inside Encore (≡ → Help → Update to 0.9.7). ≡ → Help → Run Setup Again to see it.

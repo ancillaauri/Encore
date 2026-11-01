@@ -499,3 +499,8 @@ Agreed design for game detection (to build next):
   game closes" now only applies with Desktop Capture on. Setup's switch is "Desktop Capture".
 - Every glowing icon switch now sits on a faint tile (a tinted one when on), so it reads as a
   button: audio, Echoes, Desktop Capture, game detection, Do not disturb.
+- 0.9.7: setup is 6 pages (the "What to record" page went: the main screen explains itself).
+  Game detection page rewritten for Desktop Capture (its switch greys out without game detection).
+  Echoes headline "Shadow every play" (a nod to ShadowPlay). Every key shown in setup is the one
+  actually set ("no key set" otherwise). Last page: the moon line went; "Change any of them in
+  Settings → Hotkeys" with an Open hotkey settings button.

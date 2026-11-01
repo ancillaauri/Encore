@@ -1378,10 +1378,19 @@
     $('setup-dots').innerHTML = steps.map((_, i) => `<i class="${i + 1 === setupStep ? 'on' : i + 1 < setupStep ? 'done' : ''}"></i>`).join('');
     $('setup-back').disabled = setupStep === 1;
     $('setup-next').textContent = setupStep === total ? 'Start using Encore' : 'Next';
-    const k = (v) => (v ? v.replace(/\+/g, ' + ') : 'not set');
-    $('tour-key-record').textContent = k(s.hotkey_record);
-    $('tour-key-echo').textContent = k(s.hotkey_save_replay);
-    if (s.hotkey_save_replay) $('setup-echo-key').textContent = s.hotkey_save_replay.replace(/\+/g, ' + ');
+    // Every key shown in setup is the one actually set (or says it isn't set).
+    document.querySelectorAll('#setup [data-key]').forEach((el) => {
+      const v = s[el.dataset.key];
+      el.textContent = v ? v.replace(/\+/g, ' + ') : 'no key set';
+      el.classList.toggle('unset', !v);
+    });
+    $('setup-quick-tip').hidden = !s.hotkey_save_30s && !s.hotkey_save_60s;
+    $('setup-lock-tip').hidden = !s.hotkey_lock_game;
+    // Desktop Capture can only be off with game detection on.
+    const gd = $('setup-games').checked;
+    $('setup-desktop').disabled = !gd;
+    if (!gd) $('setup-desktop').checked = true;
+    $('setup-desktop-sub').textContent = gd ? 'When no game is open, record your screen too. Turn off to only record games' : 'Always on without game detection, so there\u2019s something to record';
     $('setup-folder').value = s.output_dir;
     const root = encoreRoot();
     $('setup-folder-note').textContent = `Encore makes a folder called Encore here, with a folder inside for Desktop and each game or app: ${root}\\Desktop, ${root}\\Warframe…`;
@@ -1677,6 +1686,10 @@
   $('setup-back').addEventListener('click', () => { if (setupStep > 1) { setupStep--; renderSetup(); } });
   $('setup-next').addEventListener('click', async () => {
     if (setupStep < document.querySelectorAll('#setup .sstep').length) { setupStep++; renderSetup(); return; }
+    await completeSetup();
+  });
+  // Applies the choices made in setup (also used when leaving early to change hotkeys).
+  async function completeSetup() {
     const want = $('setup-admin').checked;
     const change = want !== !!state.startAsAdmin;
     const echoes = $('setup-echo').checked;
@@ -1691,8 +1704,14 @@
     if (echoes && !state.replay.on && state.phase === 'idle') await setReplay(true);
     else if (!echoes && state.replay.on) await setReplay(false);
     if (change) await setStartAsAdmin(want, { restart: 'now' });
-  });
+  }
   $('setup-skip').addEventListener('click', () => closeDialog($('setup')));
+  $('setup-games').addEventListener('change', renderSetup);
+  $('setup-hotkeys').addEventListener('click', async () => {
+    await completeSetup();
+    openDialog('settings');
+    setTimeout(() => { const sec = document.getElementById('set-hotkeys'); if (sec) $('settings-scroll').scrollTo({ top: sec.offsetTop - 4 }); }, 60);
+  });
   document.querySelectorAll('#setup [data-quality]').forEach((b) =>
     b.addEventListener('click', async () => { await saveSetting('quality', b.dataset.quality); renderSetup(); }));
 

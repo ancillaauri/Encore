@@ -892,3 +892,5 @@ body.gd-wait .ps.rec-tag { color: #8fdca5; }
 .dnd-ic { width: 34px; height: 32px; flex: none; display: grid; place-items: center; }
 .dnd:hover { background: transparent; }
 .gamebar:not(.on) .gb-switch { border-right: 0; padding-right: 4px; }
+.kbd.unset { color: var(--mute); background: rgba(255, 255, 255, .05); font-weight: 500; }
+#setup-hotkeys { margin: 4px 0 6px; }
