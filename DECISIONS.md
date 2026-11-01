@@ -294,5 +294,6 @@ Both have hardware-accelerated GPU scheduling on.
   should move to it on their own, and move back (or stop) when it closes. Several games use this
   launcher-then-game pattern, so detection should go by the game window, not the first program
   that opened.
-- The game runs with administrator rights, so hotkeys from a non-admin Encore don't reach it. With
-  "Start Encore as administrator" on they should.
+- Hotkeys didn't work in a League match. Other recorders report the same, fixed by running as
+  administrator (the match most likely runs with raised rights, which blocks keys from a non-admin
+  app). To confirm with "Start Encore as administrator" on.
