@@ -282,3 +282,17 @@ Both have hardware-accelerated GPU scheduling on.
   on by default for new installs, with one line on why. Off removes the task.
 - Update checks retry once after 3 s; the error says GitHub couldn't be reached instead of showing
   the raw network error.
+
+## 2026-11-01: Notes for game detection (League of Legends)
+- League runs as two programs. The client (LeagueClient.exe with LeagueClientUx.exe and
+  LeagueClientUxRender.exe: lobby, champion select, end-of-game screen) stays open, and each match
+  starts a separate program, League of Legends.exe, in its own window. When the match ends that
+  window closes and the client comes back. (Seen in the logs as "League of Legends" and
+  "League of Legends (TM) Client", then "… Client 2" when a second game process started.)
+- So: the match window is the game; the client is a launcher, not a game. Both should save under
+  one folder, "League of Legends". When the match window appears, capture and instant replay
+  should move to it on their own, and move back (or stop) when it closes. Several games use this
+  launcher-then-game pattern, so detection should go by the game window, not the first program
+  that opened.
+- The game runs with administrator rights, so hotkeys from a non-admin Encore don't reach it. With
+  "Start Encore as administrator" on they should.
