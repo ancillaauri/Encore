@@ -138,6 +138,8 @@ pub struct Settings {
     pub gpu_realtime: bool,
     /// Priority Capture's warning has been read and "I understand" ticked (asked once).
     pub priority_capture_understood: bool,
+    /// Priority Capture's switch is shown at the bottom of the sidebar.
+    pub pcap_in_sidebar: bool,
     /// Notification size, in percent of normal (one of NOTIFY_SIZES), on top of the screen's own
     /// scale.
     pub notify_size: u32,
@@ -215,6 +217,7 @@ impl Default for Settings {
             notify_problems: true,
             gpu_realtime: false,
             priority_capture_understood: false,
+            pcap_in_sidebar: true,
             notify_size: 100,
         }
     }

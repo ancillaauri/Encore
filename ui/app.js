@@ -610,6 +610,7 @@
     renderNotify();
     renderQualityLabels();
     $('gpu-realtime').checked = !!s.gpu_realtime;
+    $('pcap-in-sidebar').checked = s.pcap_in_sidebar !== false;
     if (!$('setup').hidden) renderSetup();
   }
 
@@ -1036,15 +1037,17 @@
     const u = state.update || { status: 'none' };
     const collapsed = document.body.classList.contains('side-collapsed');
     return [
+      { text: 'Settings', hint: 'Ctrl+Comma', run: () => openDialog('settings') },
+      '-',
       { text: 'File', sub: [
-        { text: 'Settings', hint: 'Ctrl+Comma', run: () => openDialog('settings') },
         { text: 'Open Recordings Folder', run: () => { if (state.settings) bridge.openFolder(encoreRoot()).catch((e) => toast(String(e), 'error')); } },
         '-',
         ...(state.elevated ? [] : [{ text: 'Restart as Administrator', run: () => bridge.restartAsAdmin().catch((e) => toast(String(e), 'error')) }]),
         { text: 'Exit', run: () => bridge.quitApp() },
       ] },
       { text: 'View', sub: [
-        { text: 'What to Record', hint: 'Ctrl+B', check: !collapsed, run: () => setSideCollapsed(!collapsed) },
+        { text: 'Sidebar', hint: 'Ctrl+B', check: !collapsed, run: () => setSideCollapsed(!collapsed) },
+        { text: 'Priority Capture in Sidebar', check: pcapShown(), run: () => saveSetting('pcap_in_sidebar', !pcapShown()) },
       ] },
       { text: 'Help', sub: [
         u.status === 'none'
@@ -1110,7 +1113,7 @@
   function setSideCollapsed(collapsed) {
     document.body.classList.toggle('side-collapsed', collapsed);
     $('side-toggle').setAttribute('aria-expanded', String(!collapsed));
-    const label = collapsed ? 'Open What to record' : 'Collapse What to record';
+    const label = collapsed ? 'Open the sidebar' : 'Collapse the sidebar';
     $('side-toggle').removeAttribute('title');
     $('side-toggle').dataset.tip = label;
     $('side-toggle').setAttribute('aria-label', label);
@@ -1615,6 +1618,7 @@
     $('game-on').removeAttribute('title');
     $('game-on').dataset.tip = s.game_detection ? 'Game detection: On. Click to turn off.' : 'Game detection: Off. Click to record games on their own as they open.';
     const pc = !!s.gpu_realtime;
+    document.body.classList.toggle('pcap-hidden', s.pcap_in_sidebar === false);
     for (const id of ['pcap', 'rail-pcap']) $(id).setAttribute('aria-pressed', String(pc));
     $('pcap-sub').textContent = pc ? 'On: recording comes first' : 'Off';
     $('pcap').dataset.tip = pc ? 'Priority Capture: On. Click to turn off.' : 'Priority Capture: Off. Click to turn on.';
@@ -1744,6 +1748,8 @@
     await saveSetting('gpu_realtime', true);
   }
   for (const id of ['pcap', 'rail-pcap']) $(id).addEventListener('click', () => setPriorityCapture(!(state.settings && state.settings.gpu_realtime)));
+  function pcapShown() { return !state.settings || state.settings.pcap_in_sidebar !== false; }
+  $('pcap-in-sidebar').addEventListener('change', (e) => saveSetting('pcap_in_sidebar', e.target.checked));
   $('gpu-realtime').addEventListener('change', (e) => {
     const want = e.target.checked;
     e.target.checked = !!(state.settings && state.settings.gpu_realtime); // follows the setting once saved

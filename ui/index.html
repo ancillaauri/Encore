@@ -8,7 +8,7 @@
 </head>
 <body>
   <header id="titlebar" data-tauri-drag-region>
-    <button type="button" id="menu-btn" class="tb-btn" aria-label="Menu" aria-haspopup="menu" aria-expanded="false" title="Menu">
+    <button type="button" id="menu-btn" class="tb-btn" aria-label="Main Menu" aria-haspopup="menu" aria-expanded="false" title="Main Menu">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg>
     </button>
     <div class="brand" data-tauri-drag-region>
@@ -39,7 +39,7 @@
           <svg class="tg-collapse" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 4.5v15M15.5 9.5 13 12l2.5 2.5"/></svg>
           <svg class="tg-lib" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>
           <svg class="tg-open" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 4.5v15M13 9.5l2.5 2.5-2.5 2.5"/></svg>
-          <span class="sidename">Encore</span>
+          <span class="sidename">Capture</span>
         </button>
       </div>
 
@@ -107,7 +107,7 @@
             <span class="dnd-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5 5 13.5h6l-1 8 8-11h-6l1-8z"/></svg></span>
             <span class="dnd-text"><span class="dnd-name">Priority Capture</span><span class="dnd-sub" id="pcap-sub">Off</span></span>
           </button>
-          <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Puts Encore’s recording ahead of everything else on your graphics card, including the game. Turn it on for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and Echoes don’t fall behind. While it’s on, other programs that use the graphics card, on any screen, may slow down or freeze. It turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error. The same switch is in Settings → Advanced.">i</span>
+          <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Puts Encore’s recording ahead of everything else on your graphics card, including the game. Turn it on for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and Echoes don’t fall behind. While it’s on, other programs that use the graphics card, on any screen, may slow down or freeze. It turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error. The same switch is in Settings → Advanced, where you can also hide it from the sidebar.">i</span>
         </div>
         <button type="button" class="dnd" id="dnd" aria-pressed="false" title="Do not disturb: Encore's notifications stay hidden">
           <span class="dnd-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/></svg></span>
@@ -575,8 +575,11 @@
           <h3>Advanced</h3>
           <div class="setcard">
             <label class="setrow"><span class="settext"><span class="setname">Priority Capture</span>
-              <span class="setsub wrap">For games that put a heavy load on your graphics card, or less powerful graphics cards. Off is right for most games. Turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error. Also at the bottom of the side panel.</span></span>
+              <span class="setsub wrap">For games that put a heavy load on your graphics card, or less powerful graphics cards. Off is right for most games. Turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error. </span></span>
               <input type="checkbox" class="toggle" id="gpu-realtime"></label>
+            <label class="setrow"><span class="settext"><span class="setname">Show Priority Capture in the sidebar</span>
+              <span class="setsub wrap">Puts its switch at the bottom of the sidebar, above Do not disturb. Also in Main Menu → View.</span></span>
+              <input type="checkbox" class="toggle" id="pcap-in-sidebar"></label>
           </div>
           <div class="caution" role="note">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.2h.01"/></svg>

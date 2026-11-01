@@ -81,3 +81,4 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 - Cloud hosting / share links / social feed: server costs, accounts, moderation; a different product.
 - Built-in streaming (Twitch etc.): OBS covers it.
 - Editing effects (slow motion, captions, music): the companion editor's job.
+| Main Menu (Settings at top level), Sidebar naming, Priority Capture hideable from the sidebar | 0.9.21 | [x] |

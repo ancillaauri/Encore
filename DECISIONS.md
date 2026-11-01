@@ -678,3 +678,14 @@ Agreed design for game detection (to build next):
   each other in place.
 - The side panel's scrollbar ran past Priority Capture and Do not disturb: now only the middle of
   the panel scrolls; the top and the bottom row stay put.
+
+## 2026-11-01: Main Menu, sidebar naming, Priority Capture can be hidden (0.9.21)
+- The ≡ menu is called the Main Menu. Settings is at its top level instead of under File.
+- The left panel is called the Sidebar (View → Sidebar, Ctrl+B). Its heading says "Capture"
+  rather than repeating "Encore" from the title bar; it holds what drives the capture (video,
+  audio, what to record) and what it made (saved this session).
+- Priority Capture's switch can be hidden from the sidebar: Settings → Advanced → "Show
+  Priority Capture in the sidebar", or Main Menu → View → Priority Capture in Sidebar
+  (setting `pcap_in_sidebar`, on by default). Hiding it doesn't turn it off; Settings still has it.
+- Bug reports: left for now. The plan is an in-app form that sends to a small hosted worker,
+  which files a GitHub issue, so reporters don't need a GitHub account.

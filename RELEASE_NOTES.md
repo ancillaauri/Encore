@@ -1,3 +1,13 @@
+## Encore 0.9.21 (beta), test build 42: menu and sidebar tidy-up
+
+### Changed
+- The ≡ menu is now the **Main Menu**, with **Settings** at the top instead of under File.
+- The left panel is the **Sidebar** (View → Sidebar, Ctrl+B), headed **Capture**.
+- **Priority Capture can be hidden from the sidebar**: Settings → Advanced, or Main Menu → View.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.21).
+
 ## Encore 0.9.20 (beta), test build 41: tidy up your clips
 
 ### What's new

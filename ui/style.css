@@ -965,3 +965,6 @@ body.gd-wait .ps.rec-tag { color: #8fdca5; }
 @keyframes rdrain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .rtimer { animation: none; } }
 .rinput { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--acc); background: var(--panel2); color: var(--text); outline: none; }
+
+/* Priority Capture hidden from the sidebar (Settings → Advanced, or Main Menu → View) */
+body.pcap-hidden .pcrow, body.pcap-hidden #rail-pcap { display: none; }
