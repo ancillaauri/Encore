@@ -164,9 +164,157 @@ pub fn audio_skip_seconds(origin_hns: u64, video_start_hns: Option<u64>, offset_
     (base + offset_ms as f64 / 1000.0).max(0.0)
 }
 
+/// Bytes per audio frame in the files (stereo, 16-bit).
+pub const FRAME_BYTES: u64 = (CHANNELS * 2) as u64;
+/// Instant replay writes each track in pieces of this many frames (10 seconds), so pieces older
+/// than the replay length can be deleted while recording continues.
+pub const CHUNK_FRAMES: u64 = RATE * 10;
+
+/// The file holding chunk `index` of the track `base` (e.g. `a00_full.pcm` -> `a00_full.000003.pcm`).
+pub fn chunk_path(base: &std::path::Path, index: u64) -> std::path::PathBuf {
+    let stem = base.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    base.with_file_name(format!("{stem}.{index:06}.pcm"))
+}
+
+/// A track file written in 10-second pieces. Pieces that end before `keep_from` (a frame
+/// position, shared with the engine) are deleted as new ones start.
+pub struct ChunkedWriter {
+    base: std::path::PathBuf,
+    pos: u64,
+    current: Option<(u64, std::io::BufWriter<std::fs::File>)>,
+    oldest: u64,
+    keep_from: std::sync::Arc<std::sync::atomic::AtomicU64>,
+}
+
+impl ChunkedWriter {
+    pub fn new(base: std::path::PathBuf, keep_from: std::sync::Arc<std::sync::atomic::AtomicU64>) -> Self {
+        ChunkedWriter { base, pos: 0, current: None, oldest: 0, keep_from }
+    }
+
+    fn prune(&mut self, up_to_chunk: u64) {
+        let keep = self.keep_from.load(std::sync::atomic::Ordering::Relaxed);
+        // A chunk can go once all of it is before `keep` (and it isn't being written).
+        while self.oldest < up_to_chunk && (self.oldest + 1) * CHUNK_FRAMES <= keep {
+            let _ = std::fs::remove_file(chunk_path(&self.base, self.oldest));
+            self.oldest += 1;
+        }
+    }
+}
+
+impl Write for ChunkedWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let chunk_bytes = CHUNK_FRAMES * FRAME_BYTES;
+        let index = self.pos / chunk_bytes;
+        if self.current.as_ref().map(|(i, _)| *i) != Some(index) {
+            if let Some((_, mut w)) = self.current.take() {
+                w.flush()?;
+            }
+            let f = std::fs::OpenOptions::new().create(true).append(true).open(chunk_path(&self.base, index))?;
+            self.current = Some((index, std::io::BufWriter::with_capacity(256 * 1024, f)));
+            self.prune(index);
+        }
+        let room = (chunk_bytes - self.pos % chunk_bytes) as usize;
+        let n = buf.len().min(room);
+        let (_, w) = self.current.as_mut().unwrap();
+        w.write_all(&buf[..n])?;
+        self.pos += n as u64;
+        Ok(n)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        if let Some((_, w)) = self.current.as_mut() {
+            w.flush()?;
+        }
+        Ok(())
+    }
+}
+
+/// Copies frames `from..to` of a chunked track into one plain file, with silence where pieces are
+/// missing (already deleted, or not written yet). Returns the number of frames written.
+pub fn extract_frames(base: &std::path::Path, from: u64, to: u64, out: &std::path::Path) -> io::Result<u64> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut w = std::io::BufWriter::new(std::fs::File::create(out)?);
+    let mut frame = from;
+    let mut buf = vec![0u8; 64 * 1024];
+    while frame < to {
+        let index = frame / CHUNK_FRAMES;
+        let chunk_end = ((index + 1) * CHUNK_FRAMES).min(to);
+        let mut want = (chunk_end - frame) * FRAME_BYTES;
+        if let Ok(mut f) = std::fs::File::open(chunk_path(base, index)) {
+            f.seek(SeekFrom::Start((frame % CHUNK_FRAMES) * FRAME_BYTES))?;
+            while want > 0 {
+                let take = (want as usize).min(buf.len());
+                let n = f.read(&mut buf[..take])?;
+                if n == 0 {
+                    break;
+                }
+                w.write_all(&buf[..n])?;
+                want -= n as u64;
+            }
+        }
+        // Missing or short piece: silence for the rest of it.
+        let zeros = vec![0u8; 64 * 1024];
+        while want > 0 {
+            let n = (want as usize).min(zeros.len());
+            w.write_all(&zeros[..n])?;
+            want -= n as u64;
+        }
+        frame = chunk_end;
+    }
+    w.flush()?;
+    Ok(to.saturating_sub(from))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn chunked_track_rolls_and_extracts() {
+        use std::sync::atomic::AtomicU64;
+        use std::sync::Arc;
+        let dir = std::env::temp_dir().join(format!("encore-chunks-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let base = dir.join("a00_full.pcm");
+        let keep = Arc::new(AtomicU64::new(0));
+        let mut w = ChunkedWriter::new(base.clone(), keep.clone());
+        // 35 s of audio where every frame holds its own second number, written in odd-sized pieces.
+        let total = RATE * 35;
+        let mut f = 0u64;
+        while f < total {
+            let n = 3001.min(total - f);
+            let mut b = Vec::with_capacity((n * FRAME_BYTES) as usize);
+            for i in 0..n {
+                let sec = ((f + i) / RATE) as i16;
+                b.extend_from_slice(&sec.to_le_bytes());
+                b.extend_from_slice(&sec.to_le_bytes());
+            }
+            if f > RATE * 25 {
+                keep.store(RATE * 21, std::sync::atomic::Ordering::Relaxed); // replay wants 21 s on
+            }
+            w.write_all(&b).unwrap();
+            f += n;
+        }
+        w.flush().unwrap();
+        assert!(chunk_path(&base, 3).exists());
+        assert!(!chunk_path(&base, 0).exists() && !chunk_path(&base, 1).exists(), "old pieces deleted");
+        assert!(chunk_path(&base, 2).exists(), "piece holding 21 s kept");
+        // Extract 22.5 s .. 31.25 s and check every frame.
+        let out = dir.join("x.pcm");
+        let (from, to) = (RATE * 45 / 2, RATE * 125 / 4);
+        extract_frames(&base, from, to, &out).unwrap();
+        let data = std::fs::read(&out).unwrap();
+        assert_eq!(data.len() as u64, (to - from) * FRAME_BYTES);
+        for (i, fr) in data.chunks_exact(4).enumerate() {
+            let want = ((from + i as u64) / RATE) as i16;
+            assert_eq!(i16::from_le_bytes([fr[0], fr[1]]), want);
+        }
+        // Before what was kept: silence, not an error.
+        extract_frames(&base, 0, RATE, &out).unwrap();
+        assert!(std::fs::read(&out).unwrap().iter().all(|&b| b == 0));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     fn packet(frames: usize, value: f32) -> Vec<u8> {
         let mut v = Vec::new();

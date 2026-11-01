@@ -476,7 +476,7 @@ fn part_segments(seg_dir: &Path, prefix: &str) -> Vec<PathBuf> {
 fn join_plan(seg_dir: &Path, manifest: Option<&Manifest>) -> Vec<PartFiles> {
     let parts: Vec<&VideoPart> = manifest.map(|m| m.parts.iter().filter(|p| !p.dropped).collect()).unwrap_or_default();
     if parts.is_empty() {
-        return vec![PartFiles { files: segments(seg_dir), keep_secs: None }];
+        return vec![PartFiles { files: segments(seg_dir), first_index: 0, keep_secs: None }];
     }
     let mut out = Vec::new();
     for (i, p) in parts.iter().enumerate() {
@@ -490,9 +490,120 @@ fn join_plan(seg_dir: &Path, manifest: Option<&Manifest>) -> Vec<PartFiles> {
             (Some(a), Some(b)) if b > a => Some((b - a) as f64 / 1e7),
             _ => None,
         };
-        out.push(PartFiles { files, keep_secs });
+        out.push(PartFiles { files, first_index: 0, keep_secs });
     }
     out
+}
+
+const SEGMENT_HNS: u64 = ffmpeg::SEGMENT_SECONDS as u64 * 10_000_000;
+
+/// A part's segment files with their numbers (`p001_000012.mkv` is segment 12 of part 1).
+fn indexed_segments(seg_dir: &Path, prefix: &str) -> Vec<(u64, PathBuf)> {
+    part_segments(seg_dir, prefix)
+        .into_iter()
+        .filter_map(|p| {
+            let name = p.file_stem()?.to_string_lossy().into_owned();
+            let n = name.strip_prefix(prefix)?.parse::<u64>().ok()?;
+            Some((n, p))
+        })
+        .collect()
+}
+
+/// What to join for the moments `from..to` (times on the shared clock) of a session that is still
+/// running (instant replay). The video starts at the first segment boundary at or before `from`
+/// (a keyframe), so it may begin up to 2 s early; it is cut exactly at `to`, and where one part took
+/// over from another. Returns the plan and the moment the joined video starts.
+pub fn window_plan(seg_dir: &Path, parts: &[VideoPart], from: u64, to: u64) -> Option<(Vec<PartFiles>, u64)> {
+    let placed: Vec<(&VideoPart, u64)> =
+        parts.iter().filter(|p| !p.dropped).filter_map(|p| p.start_hns.map(|s| (p, s))).collect();
+    let mut out = Vec::new();
+    let mut video_start = None;
+    for (i, (p, s)) in placed.iter().enumerate() {
+        let ends = placed.get(i + 1).map(|n| n.1).unwrap_or(u64::MAX);
+        if ends <= from || *s >= to {
+            continue;
+        }
+        let first_wanted = from.max(*s).saturating_sub(*s) / SEGMENT_HNS;
+        let mut files = Vec::new();
+        let mut first_index = None;
+        for (k, path) in indexed_segments(seg_dir, &p.prefix) {
+            if k < first_wanted {
+                continue;
+            }
+            match first_index {
+                None => first_index = Some(k),
+                Some(f) if k != f + files.len() as u64 => break, // a gap: stop at it
+                _ => {}
+            }
+            files.push(path);
+        }
+        let Some(first) = first_index else { continue };
+        if video_start.is_none() {
+            video_start = Some(s + first * SEGMENT_HNS);
+        }
+        let cut = ends.min(to);
+        out.push(PartFiles { files, first_index: first, keep_secs: Some((cut - s) as f64 / 1e7) });
+    }
+    video_start.map(|v| (out, v))
+}
+
+/// Saves the moments `from..to` of a running instant-replay session to `out_path`, without
+/// stopping it: the matching video segments, and each audio track cut from its 10-second pieces.
+pub fn save_window(
+    ffmpeg_path: &Path,
+    seg_dir: &Path,
+    manifest: &Manifest,
+    from: u64,
+    to: u64,
+    out_path: &Path,
+) -> Result<Saved, String> {
+    let (plan, video_start) =
+        window_plan(seg_dir, &manifest.parts, from, to).ok_or("Nothing has been recorded for that moment yet.")?;
+    let work = seg_dir.join(format!("save-{}", unix_ms()));
+    std::fs::create_dir_all(&work).map_err(|e| format!("Could not create temp folder: {e}"))?;
+    let result = (|| {
+        if let Some(dir) = out_path.parent() {
+            std::fs::create_dir_all(dir).map_err(|e| format!("Could not create output folder {}: {e}", dir.display()))?;
+        }
+        let list = work.join("segments.ffconcat");
+        std::fs::write(&list, ffmpeg::concat_list_parts(&plan)).map_err(|e| format!("Could not write segment list: {e}"))?;
+        // Audio from the video's first frame (moved by the audio offset setting), to the end.
+        let offset = manifest.audio_offset_ms as i64 * 10_000;
+        let start = (video_start as i64 + offset - manifest.origin_hns as i64).max(0);
+        let from_frame = timeline::hns_to_frames(start).max(0) as u64;
+        let to_frame = timeline::hns_to_frames(to as i64 - manifest.origin_hns as i64).max(0) as u64;
+        let mut tracks: Vec<audio::TrackInfo> = Vec::new();
+        for t in &manifest.tracks {
+            let base = seg_dir.join(&t.file);
+            // An app that hasn't made sound by the end of the moment has nothing to add.
+            if !timeline::chunk_path(&base, from_frame / timeline::CHUNK_FRAMES).exists()
+                && !timeline::chunk_path(&base, to_frame.saturating_sub(1) / timeline::CHUNK_FRAMES).exists()
+            {
+                continue;
+            }
+            let out = work.join(&t.file);
+            timeline::extract_frames(&base, from_frame, to_frame.max(from_frame), &out)
+                .map_err(|e| format!("Could not read the audio for {}: {e}", t.title))?;
+            tracks.push(audio::TrackInfo { file: out.to_string_lossy().into_owned(), ..t.clone() });
+        }
+        let audio: Vec<AudioOut> = audio::plan_output(&tracks)
+            .into_iter()
+            .map(|t| AudioOut { title: t.title, files: t.sources.iter().map(|&i| PathBuf::from(&tracks[i].file)).collect() })
+            .collect();
+        let out = ffmpeg::hidden_command(ffmpeg_path)
+            .args(ffmpeg::finalise_args(&list, &audio, 0.0, out_path))
+            .stdin(Stdio::null())
+            .output()
+            .map_err(|e| format!("Could not run FFmpeg to save the file: {e}"))?;
+        let size = std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0);
+        if !out.status.success() || size == 0 {
+            return Err(format!("Saving failed. FFmpeg said:\n{}", String::from_utf8_lossy(&out.stderr).trim()));
+        }
+        log(&format!("saved replay {} ({} bytes)", out_path.display(), size));
+        Ok(Saved { path: out_path.to_path_buf(), duration_ms: (to.saturating_sub(video_start)) / 10_000, size_bytes: size })
+    })();
+    let _ = std::fs::remove_dir_all(&work);
+    result
 }
 
 /// Joins every finished segment in `seg_dir` into `out_path`. Removes the temp folder only on success.
@@ -702,6 +813,74 @@ mod e2e_switch {
         m.save(&dir);
         let out = std::env::temp_dir().join(format!("encore-e2e-sw-{}.mp4", std::process::id()));
         finalise(Path::new("ffmpeg"), &dir, &out, 7500).unwrap();
+        println!("OUT {}", out.display());
+    }
+}
+
+#[cfg(test)]
+mod e2e_replay {
+    use super::*;
+    use crate::audio::{Manifest, TrackInfo, TrackKind, VideoPart};
+    use crate::timeline::{ChunkedWriter, RATE};
+    use std::sync::atomic::AtomicU64;
+
+    /// A replay session: part 0 (blue) from S, part 1 (green, a monitor switch) from S+7 s, audio in
+    /// rolling pieces with a beep at S+9 s. Saving S+5.3..S+11
+    /// must start at the keyframe at S+4, switch to green at 3.0 s, and keep the green flash and
+    /// the beep together at 5.0 s. (Deleting old pieces is tested in timeline.rs.) Needs FFmpeg on PATH.
+    #[test]
+    #[ignore]
+    fn replay_window_is_cut_and_in_sync() {
+        let dir = std::env::temp_dir().join(format!("encore-e2e-rp-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let run = |args: &[&str]| {
+            let st = std::process::Command::new("ffmpeg").args(["-hide_banner", "-loglevel", "error", "-y"]).args(args).status().unwrap();
+            assert!(st.success());
+        };
+        let seg = |color: &str, d: &str, flashes: &str, pattern: &str| {
+            run(&["-f", "lavfi", "-i", &format!("color={color}:s=320x180:r=60:d={d}"),
+                "-vf", &format!("drawbox=c=white:t=fill:enable='{flashes}'"),
+                "-c:v", "libx264", "-bf", "0", "-g", "120", "-force_key_frames", "expr:gte(t,n_forced*2)",
+                "-f", "segment", "-segment_time", "2", "-segment_format", "matroska", "-reset_timestamps", "1",
+                dir.join(pattern).to_str().unwrap()]);
+        };
+        seg("blue", "10", "between(t,1,1.1)", "seg_%06d.mkv");
+        seg("green", "6", "between(t,2,2.1)", "p001_%06d.mkv");
+        // Session origin is 0.5 s before part 0 starts.
+        let origin: u64 = 100_000_000;
+        let s0 = origin + 5_000_000;
+        // 17 s of mic audio in rolling pieces: silence with a beep at S+9 s (origin + 9.5 s).
+        let keep = Arc::new(AtomicU64::new(0));
+        let mut w = ChunkedWriter::new(dir.join("a01_mic.pcm"), keep.clone());
+        let total = RATE * 17;
+        let beep = (RATE as f64 * 9.5) as u64;
+        let mut buf = Vec::new();
+        for i in 0..total {
+            let v: i16 = if i >= beep && i < beep + RATE / 10 { if (i / 24) % 2 == 0 { 20000 } else { -20000 } } else { 0 };
+            buf.extend_from_slice(&v.to_le_bytes());
+            buf.extend_from_slice(&v.to_le_bytes());
+            if buf.len() >= 48_000 {
+                std::io::Write::write_all(&mut w, &buf).unwrap();
+                buf.clear();
+            }
+        }
+        std::io::Write::write_all(&mut w, &buf).unwrap();
+        std::io::Write::flush(&mut w).unwrap();
+        let m = Manifest {
+            origin_hns: origin,
+            video_start_hns: Some(s0),
+            audio_offset_ms: 0,
+            tracks: vec![TrackInfo { file: "a01_mic.pcm".into(), title: "Microphone".into(), kind: TrackKind::Mic }],
+            parts: vec![
+                VideoPart { prefix: "seg_".into(), start_hns: Some(s0), dropped: false },
+                VideoPart { prefix: "p001_".into(), start_hns: Some(s0 + 70_000_000), dropped: false },
+            ],
+        };
+        let out = std::env::temp_dir().join(format!("encore-e2e-rp-{}.mp4", std::process::id()));
+        let saved = save_window(Path::new("ffmpeg"), &dir, &m, s0 + 53_000_000, s0 + 110_000_000, &out).unwrap();
+        assert_eq!(saved.duration_ms, 7000);
+        assert!(dir.join("seg_000004.mkv").exists(), "the session's files are left alone");
         println!("OUT {}", out.display());
     }
 }

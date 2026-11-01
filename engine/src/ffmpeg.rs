@@ -208,7 +208,10 @@ pub fn record_args(
 /// One part's segments for the join, and how long to keep of it (None: all of it).
 #[derive(Debug, Clone)]
 pub struct PartFiles {
+    /// The part's segments in order, without gaps, starting at segment number `first_index`.
     pub files: Vec<PathBuf>,
+    pub first_index: u64,
+    /// How much of the part to keep, from the part's own start (its segment 0).
     pub keep_secs: Option<f64>,
 }
 
@@ -221,7 +224,7 @@ pub fn concat_list_parts(parts: &[PartFiles]) -> String {
     let mut s = String::from("ffconcat version 1.0\n");
     for part in parts {
         for (k, f) in part.files.iter().enumerate() {
-            let begins = k as f64 * seg;
+            let begins = (part.first_index + k as u64) as f64 * seg;
             if let Some(keep) = part.keep_secs {
                 if begins >= keep - 0.0005 {
                     break;
@@ -512,7 +515,7 @@ mod tests {
 
     #[test]
     fn concat_list_escapes_paths() {
-        let l = concat_list_parts(&[PartFiles { files: vec![PathBuf::from(r"C:\Temp\it's\seg_000001.mkv")], keep_secs: None }]);
+        let l = concat_list_parts(&[PartFiles { files: vec![PathBuf::from(r"C:\Temp\it's\seg_000001.mkv")], first_index: 0, keep_secs: None }]);
         assert!(l.starts_with("ffconcat version 1.0\n"));
         assert!(l.contains("file 'C:/Temp/it'\\''s/seg_000001.mkv'"));
     }
@@ -558,9 +561,9 @@ mod tests {
     fn concat_parts_cut_where_the_next_part_takes_over() {
         let f = |n: &str| PathBuf::from(n);
         let parts = vec![
-            PartFiles { files: vec![f("seg_000000.mkv"), f("seg_000001.mkv"), f("seg_000002.mkv"), f("seg_000003.mkv")], keep_secs: Some(5.25) },
-            PartFiles { files: vec![f("p001_000000.mkv"), f("p001_000001.mkv")], keep_secs: Some(4.0) },
-            PartFiles { files: vec![f("p002_000000.mkv")], keep_secs: None },
+            PartFiles { files: vec![f("seg_000000.mkv"), f("seg_000001.mkv"), f("seg_000002.mkv"), f("seg_000003.mkv")], first_index: 0, keep_secs: Some(5.25) },
+            PartFiles { files: vec![f("p001_000000.mkv"), f("p001_000001.mkv")], first_index: 0, keep_secs: Some(4.0) },
+            PartFiles { files: vec![f("p002_000000.mkv")], first_index: 0, keep_secs: None },
         ];
         let l = concat_list_parts(&parts);
         assert_eq!(
