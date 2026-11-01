@@ -40,7 +40,7 @@
     const box = $('toasts');
     while (box.children.length >= 3) box.firstElementChild.remove();
     const el = document.createElement('div');
-    el.className = `toast ${kind}`;
+    el.className = `toast t-${kind}`; // prefixed: plain .info is the (i) icon
     el.textContent = message;
     if (action) {
       const b = document.createElement('button');

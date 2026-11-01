@@ -1,3 +1,15 @@
+## Encore 0.9.13 (beta), test build 34: notifications stay on top
+
+### Fixed
+- **Notifications hidden behind the game.** While a notification is showing, Encore keeps its
+  window on top, so a borderless game can't cover it. If something still covers it, Encore's log
+  says which program.
+- **The "Saving the last 1 minute…" message drew as a small circle** with squashed text. Plain
+  messages now look right.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.13).
+
 ## Encore 0.9.12 (beta), test build 33: fewer false alarms, no double saves
 
 ### Changed

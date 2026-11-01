@@ -23,6 +23,12 @@ pub const LABEL: &str = "notify";
 /// it goes idle; if one more was sent meanwhile, the window stays up for it.
 static SENT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
+/// True while notifications are on screen: the window is put back on top every POKE until they
+/// go (a borderless game marked "always on top" can otherwise end up above it).
+static SHOWING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static KEEPER: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+const POKE: std::time::Duration = std::time::Duration::from_millis(200);
+
 /// WebView2 options for both of Encore's windows (they must match to share one WebView2). The
 /// usual ones, plus: keep drawing when Windows thinks the window is hidden or covered. Without
 /// them the notification page was sometimes paused for seconds after being shown over a game,
@@ -107,6 +113,7 @@ pub fn show_notification(app: AppHandle, device: Option<String>, window: Option<
     {
         let hwnd = win.hwnd().map_err(|e| e.to_string())?;
         win::show_at(hwnd.0 as _, x, y, w, h);
+        keep_on_top(&app, hwnd.0 as usize);
     }
     let kind = item.get("kind").and_then(|k| k.as_str()).unwrap_or("?").to_string();
     let on = if chosen.is_some() { "chosen screen" } else if window.is_some() { "game's screen" } else { "screen in use" };
@@ -127,6 +134,7 @@ pub fn notifications_idle(app: AppHandle, seen: u64) {
     if seen < SENT.load(std::sync::atomic::Ordering::SeqCst) {
         return; // another one is on its way
     }
+    SHOWING.store(false, std::sync::atomic::Ordering::SeqCst);
     crate::hotkeys::note(&app, "notifications: window hidden".into());
     if let Some(win) = app.get_webview_window(LABEL) {
         #[cfg(windows)]
@@ -136,6 +144,38 @@ pub fn notifications_idle(app: AppHandle, seen: u64) {
         #[cfg(not(windows))]
         let _ = win.hide();
     }
+}
+
+/// Puts the window back on top every POKE while notifications show. A moment after it appears,
+/// logs any window still above it (by program), so a game that covers it can be named.
+#[cfg(windows)]
+fn keep_on_top(app: &AppHandle, hwnd: usize) {
+    use std::sync::atomic::Ordering;
+    SHOWING.store(true, Ordering::SeqCst);
+    if KEEPER.swap(true, Ordering::SeqCst) {
+        return; // already running
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let mut checked = false;
+        let begun = std::time::Instant::now();
+        while SHOWING.load(Ordering::SeqCst) {
+            std::thread::sleep(POKE);
+            win::raise(hwnd as _);
+            if !checked && begun.elapsed() >= std::time::Duration::from_millis(400) {
+                checked = true;
+                let above = win::windows_above(hwnd as _);
+                if !above.is_empty() {
+                    crate::hotkeys::note(&app, format!("notifications: covered by {}", above.join(", ")));
+                }
+            }
+        }
+        KEEPER.store(false, Ordering::SeqCst);
+        // Shown again just as this stopped: carry on.
+        if SHOWING.load(Ordering::SeqCst) {
+            keep_on_top(&app, hwnd);
+        }
+    });
 }
 
 /// The window's place and size in physical pixels for a spot on a screen.
@@ -166,7 +206,7 @@ fn place(s: &Screen, pos: &str, scale: f64) -> (i32, i32, i32, i32) {
 #[cfg(windows)]
 mod win {
     use super::Screen;
-    use windows_sys::Win32::Foundation::HWND;
+    use windows_sys::Win32::Foundation::{CloseHandle, HWND, RECT};
     use windows_sys::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTOPRIMARY};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         GetForegroundWindow, GetWindowLongPtrW, SetWindowDisplayAffinity, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWL_EXSTYLE,
@@ -227,6 +267,70 @@ mod win {
     pub fn hide(hwnd: HWND) {
         unsafe {
             ShowWindow(hwnd, SW_HIDE);
+        }
+    }
+
+    /// Back to the top of the always-on-top windows, without moving, resizing or activating.
+    pub fn raise(hwnd: HWND) {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{SWP_NOMOVE, SWP_NOSIZE};
+        unsafe {
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+    }
+
+    /// Visible windows above this one that overlap it: "program.exe (always on top)".
+    pub fn windows_above(hwnd: HWND) -> Vec<String> {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            GetWindow, GetWindowRect, GetWindowThreadProcessId, IsWindowVisible, GW_HWNDPREV, WS_EX_TOPMOST,
+        };
+        let mut out = Vec::new();
+        unsafe {
+            let mut mine: RECT = std::mem::zeroed();
+            if GetWindowRect(hwnd, &mut mine) == 0 {
+                return out;
+            }
+            let mut h = GetWindow(hwnd, GW_HWNDPREV);
+            let mut steps = 0;
+            while !h.is_null() && steps < 500 {
+                steps += 1;
+                let mut r: RECT = std::mem::zeroed();
+                if IsWindowVisible(h) != 0
+                    && GetWindowRect(h, &mut r) != 0
+                    && r.left < mine.right
+                    && r.right > mine.left
+                    && r.top < mine.bottom
+                    && r.bottom > mine.top
+                {
+                    let mut pid = 0u32;
+                    GetWindowThreadProcessId(h, &mut pid);
+                    let top = (GetWindowLongPtrW(h, GWL_EXSTYLE) as u32 & WS_EX_TOPMOST) != 0;
+                    let name = format!("{}{}", exe_name(pid), if top { " (always on top)" } else { "" });
+                    if !out.contains(&name) {
+                        out.push(name);
+                    }
+                }
+                h = GetWindow(h, GW_HWNDPREV);
+            }
+        }
+        out
+    }
+
+    fn exe_name(pid: u32) -> String {
+        use windows_sys::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION};
+        unsafe {
+            let hp = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+            if hp.is_null() {
+                return format!("pid {pid}");
+            }
+            let mut buf = [0u16; 512];
+            let mut len = buf.len() as u32;
+            let ok = QueryFullProcessImageNameW(hp, 0, buf.as_mut_ptr(), &mut len);
+            CloseHandle(hp);
+            if ok == 0 {
+                return format!("pid {pid}");
+            }
+            let path = String::from_utf16_lossy(&buf[..len as usize]);
+            path.rsplit('\\').next().unwrap_or(&path).to_string()
         }
     }
 }

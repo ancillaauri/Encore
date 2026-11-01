@@ -573,3 +573,10 @@ Agreed design for game detection (to build next):
   - Waiting at save time for the missing seconds was considered and left out for now.
   - The same hotkey pressed twice within 1.5 s counts as one press (a double tap saved two
     identical Echoes); the second press is logged.
+- 0.9.13: with top priority from a cold start, no slips at all and every Echo full length. Yet
+  the notifications were seen once in seven saves although each was placed on Warframe's screen
+  and drawn within 10 ms; Warframe is borderless, so something sits above the window. While
+  notifications show, the window is now put back on top every 200 ms, and 0.4 s after it appears
+  any visible window still above it is logged by program ("covered by …"). Also: the "Saving the
+  last 1 minute…" message drew as a tiny circle: a toast's kind "info" clashed with the (i) icon's
+  `.info` class. Toast kinds are now `t-info`, `t-ok`, `t-warning`, `t-error`.

@@ -672,7 +672,7 @@ body.recording .pick:not(.rec), body.saving .pick { opacity: .55; }
   transition: opacity .2s, transform .2s;
 }
 .toast.show { opacity: 1; transform: none; }
-.toast.error { color: var(--red); }
+.toast.t-error { color: var(--red); }
 .toast .btn { margin-top: 8px; }
 
 /* ---------- narrow windows ---------- */
