@@ -201,6 +201,10 @@ The per-app audio feature is called **Split App Tracks**. Splitting Discord voic
 track per person is dropped at the companion editor's request (none of the available methods
 suited it). Discord user ID stays in the backlog until its purpose is confirmed.
 
+## 2026-11-01: Confirmed on the editor developer's PC (0.5.4)
+Three monitors shown in the right order and sizes, picker on one line with five tiles, and the
+real Videos folder found on another drive (F:\Videos\Encore).
+
 ## Open items
 - Confirm zero-copy GPU capture works on real NVIDIA/AMD/Intel cards (fallback path exists if not).
 - Test exclusive-fullscreen games for black capture; define the fallback.
