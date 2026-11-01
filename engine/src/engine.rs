@@ -440,6 +440,11 @@ impl Engine {
     /// and the engine carry on; reports `replay_saved` (or `recording_saved`) when done.
     fn save_in_background(&self, from: u64, to: u64, out_path: PathBuf, label: String, replay: bool) {
         let Some(a) = self.active.as_ref() else { return };
+        // Claim the file name now, so a second save in the same second gets "(2)".
+        if let Some(dir) = out_path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::File::create(&out_path);
         self.pins.lock().unwrap().push(from);
         let (ffmpeg, dir, snapshot, pins) = (self.ffmpeg.clone(), a.seg_dir.clone(), a.snapshot(), self.pins.clone());
         if replay {
@@ -452,6 +457,9 @@ impl Engine {
                 if let Some(i) = p.iter().position(|&x| x == from) {
                     p.remove(i);
                 }
+            }
+            if result.is_err() {
+                let _ = std::fs::remove_file(&out_path); // the placeholder
             }
             if replay {
                 report_replay_saved(result, &label);

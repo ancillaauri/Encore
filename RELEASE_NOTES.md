@@ -1,39 +1,41 @@
-## Encore 0.6.0 (beta), test build 7: tray icon, hotkeys and sounds
+## Encore 0.7.0 (beta), test build 8: instant replay
 
 ### What's new
-- **Hotkey to start and stop recording: Ctrl+Alt+R.** Works anywhere, including in games.
-  Change it in Settings → Hotkeys: click the box, press the keys you want. It records whatever is
-  selected in Encore (the screen you're using, a monitor or an app).
-- **Tray icon** by the clock. Left-click opens Encore; right-click has Start/stop recording and
-  Quit. It shows a red dot while recording.
-- **Closing the window keeps Encore running in the tray**, so the hotkey keeps working. The first
-  time, Windows tells you where it went. To really quit: the tray icon → Quit, or ≡ → File → Exit.
-  Prefer the old way? Settings → General → "Quit Encore".
-- **Sounds:** a short rising tone when recording starts and a falling one when it stops, so you
-  know the hotkey worked without leaving your game. Turn off in Settings → General.
-- **Only one Encore:** opening Encore while it's in the tray brings the window back instead of
-  starting a second copy.
-- The per-app audio feature is now called **Split App Tracks**.
+- **Instant replay.** Turn it on in the left panel and Encore keeps the last few minutes of
+  whatever is selected (the screen you're using, a monitor or an app). When something great
+  happens, press **Ctrl+Alt+S** (or **Save replay** in the panel or the tray menu) and the last
+  2 minutes are saved, with every audio track, while Encore keeps going.
+  - Length: 30 seconds to 20 minutes. The panel shows how much disk space it uses (High quality,
+    1440p at 120 fps: about 2 GB for 2 minutes). Older footage is deleted as it goes.
+  - Saved replays appear under "Saved this session" with a *replay* tag, in the same folders as
+    recordings.
+  - Recording while replay is on uses the same capture, so there's never a second one slowing
+    things down.
+  - Changing what's recorded or the video settings restarts the buffer (it starts again from now).
+  - If it was on when you closed Encore, it's on again next time.
+  - The save hotkey can be changed in Settings → Hotkeys.
 
-Also in this version (from 0.5.x, if you haven't updated): setup on first start, your real Videos
-folder, the Encore folder, graphics priority while recording, and following the screen you click.
+From 0.6.0 (if you haven't updated): the **tray icon**, **closing to the tray**, the **Ctrl+Alt+R**
+hotkey to start and stop recording, start/stop **sounds**, and only one copy of Encore running.
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.6.0). Otherwise download
-`Encore_0.6.0_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
+Update from inside Encore (≡ → Help → Update to 0.7.0). Otherwise download
+`Encore_0.7.0_x64-setup.exe` below and run it. Windows may say "Windows protected your PC": click
 **More info**, then **Run anyway**.
 
 ### Test checklist
-1. **Hotkey in a game.** Start a game, press Ctrl+Alt+R: you should hear the start tone. Play a bit,
-   press it again: the stop tone, and the file is saved. Does the game notice the keys at all?
-2. **Tray.** Close Encore's window: a notification, and the icon stays by the clock. Right-click it:
-   Start recording, then Stop. Left-click: the window comes back.
-3. **Change the hotkey** in Settings → Hotkeys. Try one another app already uses (e.g. one from
-   Discord): Encore should say it couldn't set it up.
-4. **Quit** from the tray, and from ≡ → File → Exit: Encore should close completely.
-5. **Open Encore twice** (from the Start menu while it's in the tray): only one window.
-6. **Still waiting:** the game stutter test (normal vs run as administrator) and following the
-   screen you click on.
+1. **Replay in a game.** Turn instant replay on, play for 3 minutes, press Ctrl+Alt+S. You should
+   hear a short double beep, then "Saved replay" appears. The file should be about the last
+   2 minutes, smooth, with all audio tracks in sync. Send it if you can.
+2. **Save twice quickly** (two Ctrl+Alt+S a few seconds apart): both files saved.
+3. **Record while replay is on:** Ctrl+Alt+R, play 30 seconds, Ctrl+Alt+R. The recording should be
+   just that stretch.
+4. **Switch monitors** with replay on (click a window on the other screen), then save: the
+   replay should switch at the same moment.
+5. **Turn replay off**, and quit with it on: no errors, and the temp folder
+   `%LOCALAPPDATA%\Encore\temp` should be empty afterwards.
+6. **From 0.6.0:** the tray, closing to the tray, the record hotkey in a game, sounds.
+7. **Still waiting:** the game stutter test (normal vs run as administrator).
 
 ### What to send back
 Worked / didn't work for each step, any message Encore showed, and if something failed,
