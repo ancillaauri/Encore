@@ -159,15 +159,37 @@ fn spawn_part(
         .stderr(Stdio::from(log_file))
         .spawn()
         .map_err(|e| format!("Could not start FFmpeg ({}): {e}", ffmpeg_path.display()))?;
-    let priority = platform::boost_capture_priority(child.id());
-    log(&format!("capture part {index}: {priority}"));
-    warn_if_low_priority(&priority);
+    boost_priority(child.id(), index);
     let clock = Arc::new(Mutex::new(VideoClock::default()));
     if let Some(stdout) = child.stdout.take() {
         watch_progress(stdout, clock.clone(), manifest.clone(), seg_dir.to_path_buf(), index);
     }
     let stdin = child.stdin.take();
     Ok(Proc { child, stdin, clock, index, log_path, target: spec.target })
+}
+
+/// Raises the capture's CPU priority now, and its graphics priority as soon as Windows accepts it
+/// (once FFmpeg has opened the graphics card, usually well under a second). Tries for 10 seconds.
+fn boost_priority(pid: u32, index: usize) {
+    platform::raise_cpu_priority(pid);
+    std::thread::spawn(move || {
+        let begun = Instant::now();
+        let mut last = String::new();
+        let mut tries = 0u32;
+        while begun.elapsed() < Duration::from_secs(10) {
+            tries += 1;
+            match platform::try_gpu_priority(pid) {
+                Ok(done) => {
+                    log(&format!("capture part {index}: {done} after {} ms", begun.elapsed().as_millis()));
+                    return;
+                }
+                Err(e) => last = e,
+            }
+            std::thread::sleep(Duration::from_millis(200));
+        }
+        log(&format!("capture part {index}: {last} ({tries} tries)"));
+        warn_if_low_priority(&last);
+    });
 }
 
 /// Tells the person once per run when Windows wouldn't raise the capture's priority, since games

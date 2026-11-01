@@ -262,3 +262,13 @@ Both have hardware-accelerated GPU scheduling on.
   saving and exit. Hidden when already elevated.
 - Setting "Run as administrator" in the program's Properties doesn't apply when the updater or
   the tray copy starts Encore, so the in-app restart is the reliable route for testing.
+
+## 2026-11-01: Graphics priority is set once FFmpeg has opened the card (0.7.2)
+- Run as administrator with the right switched on, Windows still refused both levels with
+  0xC000000D (invalid parameter). Encore asked the moment FFmpeg started, before FFmpeg had opened
+  the graphics card; Windows has nothing to attach a graphics priority to until then. Other
+  recorders set it after creating their graphics device, which fits.
+- Encore now raises CPU priority at once and retries the graphics priority every 0.2 s for up to
+  10 s, logging how long it took. The warning only shows if every try fails.
+- With Windows' hardware-accelerated GPU scheduling on, Encore asks for high rather than realtime,
+  as realtime can make the whole system stutter in that mode.

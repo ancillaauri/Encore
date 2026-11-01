@@ -123,8 +123,9 @@ mod other {
     pub fn focused_monitor() -> Option<u64> {
         None
     }
-    pub fn boost_capture_priority(_pid: u32) -> String {
-        "not on Windows".into()
+    pub fn raise_cpu_priority(_pid: u32) {}
+    pub fn try_gpu_priority(_pid: u32) -> Result<String, String> {
+        Err("not on Windows".into())
     }
     pub fn is_elevated() -> bool {
         false
@@ -596,40 +597,86 @@ mod win {
         })
     }
 
-    /// Raises the capture process's CPU and graphics priority so a game using the whole graphics
-    /// card doesn't starve the capture. The result is written to the log, error codes included.
-    pub fn boost_capture_priority(pid: u32) -> String {
-        type SetGpuPriority = unsafe extern "system" fn(*mut c_void, i32) -> i32;
+    /// True when Windows' hardware-accelerated GPU scheduling is on. With it on, realtime graphics
+    /// priority can make the whole system stutter, so high is used instead (as other recorders do).
+    fn hags_enabled() -> bool {
+        use windows_sys::Win32::System::Registry::{RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_DWORD};
+        unsafe {
+            let key = to_wide("SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers");
+            let name = to_wide("HwSchMode");
+            let mut value: u32 = 0;
+            let mut size = size_of::<u32>() as u32;
+            let r = RegGetValueW(
+                HKEY_LOCAL_MACHINE,
+                key.as_ptr(),
+                name.as_ptr(),
+                RRF_RT_REG_DWORD,
+                null_mut(),
+                &mut value as *mut u32 as *mut c_void,
+                &mut size,
+            );
+            r == 0 && value == 2
+        }
+    }
+
+    /// Above-normal CPU priority for the capture process. Works without admin rights.
+    pub fn raise_cpu_priority(pid: u32) {
         const ABOVE_NORMAL_PRIORITY_CLASS: u32 = 0x8000;
         const PROCESS_SET_INFORMATION: u32 = 0x0200;
+        unsafe {
+            let hp = OpenProcess(PROCESS_SET_INFORMATION, 0, pid);
+            if !hp.is_null() {
+                SetPriorityClass(hp, ABOVE_NORMAL_PRIORITY_CLASS);
+                CloseHandle(hp);
+            }
+        }
+    }
+
+    /// One attempt at raising the capture process's graphics priority, so a game using the whole
+    /// graphics card doesn't starve the capture. Windows only accepts it once the process has
+    /// opened the graphics card, so the caller retries for a few seconds after FFmpeg starts.
+    /// Ok and Err both carry a line for the log, error codes included.
+    pub fn try_gpu_priority(pid: u32) -> Result<String, String> {
+        type SetGpuPriority = unsafe extern "system" fn(*mut c_void, i32) -> i32;
+        const PROCESS_ALL_ACCESS: u32 = 0x001F_FFFF;
         const GPU_HIGH: i32 = 4;
         const GPU_REALTIME: i32 = 5;
         let privilege = enable_priority_privilege();
         let admin = if is_elevated() { "admin" } else { "not admin" };
+        let hags = hags_enabled();
+        let sched = if hags { "GPU scheduling on" } else { "GPU scheduling off" };
         unsafe {
-            let hp = OpenProcess(PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+            let hp = OpenProcess(PROCESS_ALL_ACCESS, 0, pid);
             if hp.is_null() {
-                return format!("GPU priority refused (could not open process; {admin}, {privilege})");
+                return Err(format!("GPU priority refused (could not open process; {admin}, {privilege})"));
             }
-            SetPriorityClass(hp, ABOVE_NORMAL_PRIORITY_CLASS);
             let gdi = LoadLibraryW(to_wide("gdi32.dll").as_ptr());
-            let mut result = format!("GPU priority unavailable ({admin}, {privilege})");
-            if !gdi.is_null() {
-                if let Some(f) = GetProcAddress(gdi, b"D3DKMTSetProcessSchedulingPriorityClass\0".as_ptr()) {
+            let f = if gdi.is_null() {
+                None
+            } else {
+                GetProcAddress(gdi, b"D3DKMTSetProcessSchedulingPriorityClass\0".as_ptr())
+            };
+            let result = match f {
+                None => Err(format!("GPU priority unavailable ({admin}, {privilege})")),
+                Some(f) => {
                     let set: SetGpuPriority = std::mem::transmute(f);
-                    let rt = set(hp as *mut c_void, GPU_REALTIME);
-                    result = if rt >= 0 {
-                        format!("GPU priority realtime ({admin}, {privilege})")
+                    let rt = if hags { -1 } else { set(hp as *mut c_void, GPU_REALTIME) };
+                    if rt >= 0 {
+                        Ok(format!("GPU priority realtime ({admin}, {privilege}, {sched})"))
                     } else {
                         let hi = set(hp as *mut c_void, GPU_HIGH);
                         if hi >= 0 {
-                            format!("GPU priority high ({admin}, {privilege}; realtime 0x{rt:08x})")
+                            Ok(format!("GPU priority high ({admin}, {privilege}, {sched})"))
+                        } else if hags {
+                            Err(format!("GPU priority refused ({admin}, {privilege}, {sched}; high 0x{hi:08x})"))
                         } else {
-                            format!("GPU priority refused ({admin}, {privilege}; realtime 0x{rt:08x}, high 0x{hi:08x})")
+                            Err(format!(
+                                "GPU priority refused ({admin}, {privilege}, {sched}; realtime 0x{rt:08x}, high 0x{hi:08x})"
+                            ))
                         }
-                    };
+                    }
                 }
-            }
+            };
             CloseHandle(hp);
             result
         }
