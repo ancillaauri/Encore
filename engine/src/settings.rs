@@ -225,7 +225,7 @@ impl Settings {
             return Err("Update mode must be manual, auto_download or never".into());
         }
         if !REPLAY_SECONDS.contains(&updated.replay_seconds) {
-            return Err(format!("Replay length must be one of {:?} seconds", REPLAY_SECONDS));
+            return Err(format!("Echoes length must be one of {:?} seconds", REPLAY_SECONDS));
         }
         if !["newest", "focused"].contains(&updated.game_pick.as_str()) {
             return Err("Game choice must be newest or focused".into());

@@ -429,3 +429,16 @@ Agreed design for game detection (to build next):
   rather than changing the file's size part-way.
 - League of Legends, VALORANT and a few others are recognised by program name, because their
   install folder may not be readable while they run.
+
+## 2026-11-01: Instant replay is now called Echoes (0.9.1)
+- The feature is **Echoes**; saving one is **Save an Echo**; a saved clip is **an Echo** (tagged
+  "Echo" under Saved this session). Hotkeys: "Save an Echo", "Save an Echo: last 30 seconds" etc.
+  Status: "Echoes: keeping the last 2 minutes" / "waiting for a game". Tray: "Save an Echo".
+  Internally (code, settings keys, temp folders) it is still "replay"; nothing changes on disk.
+- Calmer panel (top left): the title with a glowing icon button (blue when on), one line saying
+  what it's doing, "Keeps the last [length]", and "Save an Echo" with its hotkey inside the button.
+  Disk use moved to the length's tooltip.
+- "Also when no game is open" moved to Settings → Games as "Only keep Echoes while a game is
+  running" (the opposite way round, so it says what it limits); same setting underneath.
+- First-run setup gets a fourth step introducing Echoes ("Never miss a moment"), with a switch
+  (on) and the length.

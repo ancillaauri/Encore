@@ -124,13 +124,12 @@
     <section class="stage" aria-label="Recording">
       <div class="hero">
         <div class="hero-side hero-left" id="replay-sec">
-          <h2 class="hlab">Instant replay</h2>
-          <label class="qs" title="Keeps the last few minutes so you can save great moments after they happen">
-            <span class="qs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/></svg></span>
-            <span class="qs-text"><span class="qs-name">Keep the last few minutes</span><span class="qs-sub" id="qs-replay-sub">Off</span></span>
-            <input type="checkbox" class="toggle sm" id="replay-on">
-          </label>
-          <label class="hrow"><span>Length</span>
+          <div class="ehead">
+            <h2 class="hlab">Echoes</h2>
+            <label class="aic echo-btn" id="echo-btn"><input type="checkbox" class="aswitch" id="replay-on" aria-label="Echoes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/></svg></label>
+          </div>
+          <p class="esub" id="qs-replay-sub">Off</p>
+          <label class="hrow"><span>Keeps the last</span>
             <select class="dd" id="q-replay" data-setting="replay_seconds" data-number>
               <option value="30">30 seconds</option>
               <option value="60">1 minute</option>
@@ -141,10 +140,8 @@
               <option value="1200">20 minutes</option>
             </select>
           </label>
-          <label class="hrow" id="replay-desk-row" hidden data-tip="Off: instant replay only keeps games, and waits while no game is open. Saves disk space and graphics card time on the desktop."><span>Also when no game is open</span>
-            <input type="checkbox" class="toggle sm" data-setting="replay_on_desktop"></label>
-          <button type="button" class="btn sm wide" id="save-replay" disabled>Save replay</button>
-          <p class="lock" id="replay-note"></p>
+          <button type="button" class="btn sm wide savecho" id="save-replay" disabled><span>Save an Echo</span><span class="kbd" id="save-key"></span></button>
+          <p class="lock" id="replay-note" hidden></p>
         </div>
 
         <div class="hero-mid">
@@ -310,7 +307,7 @@
           </div>
           <div class="setcard spaced">
             <label class="setrow"><span class="settext"><span class="setname">Start Encore when Windows starts</span>
-              <span class="setsub wrap">Opens in the tray, so hotkeys and instant replay are ready straight away.</span></span>
+              <span class="setsub wrap">Opens in the tray, so hotkeys and Echoes are ready straight away.</span></span>
               <input type="checkbox" class="toggle" id="autostart"></label>
           </div>
           <div class="setcard spaced">
@@ -330,23 +327,23 @@
               <button type="button" class="btn sm ghost" id="hotkey-record-clear">Clear</button>
             </div>
             <div class="setrow">
-              <span class="settext"><span class="setname">Save replay</span>
-                <span class="setsub">Saves the last few minutes while instant replay is on</span></span>
+              <span class="settext"><span class="setname">Save an Echo</span>
+                <span class="setsub">Saves everything Echoes is keeping (the length you chose)</span></span>
               <button type="button" class="hotkey" id="hotkey-replay" data-hotkey="hotkey_save_replay"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_replay">Clear</button>
             </div>
             <div class="setrow">
-              <span class="settext"><span class="setname">Save last 30 seconds</span></span>
+              <span class="settext"><span class="setname">Save an Echo: last 30 seconds</span></span>
               <button type="button" class="hotkey" data-hotkey="hotkey_save_30s"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_30s">Clear</button>
             </div>
             <div class="setrow">
-              <span class="settext"><span class="setname">Save last minute</span></span>
+              <span class="settext"><span class="setname">Save an Echo: last minute</span></span>
               <button type="button" class="hotkey" data-hotkey="hotkey_save_60s"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_60s">Clear</button>
             </div>
             <div class="setrow">
-              <span class="settext"><span class="setname">Save custom length</span>
+              <span class="settext"><span class="setname">Save an Echo: custom length</span>
                 <span class="setsub" id="custom-len-note"></span></span>
               <span class="custom-len">
                 <input type="number" id="custom-len" min="1" max="1200" step="1" aria-label="Custom length">
@@ -400,13 +397,13 @@
             <button type="button" class="setrow setopt" role="radio" data-game-end="stop">
               <span class="radio" aria-hidden="true"></span>
               <span class="settext"><span class="setname">Stop and save</span>
-                <span class="setsub wrap">The recording ends with the game. Instant replay keeps going.</span></span>
+                <span class="setsub wrap">The recording ends with the game. Echoes keeps going.</span></span>
             </button>
           </div>
           <div class="setcard spaced">
-            <label class="setrow"><span class="settext"><span class="setname">Instant replay when no game is open</span>
-              <span class="setsub wrap">Off: instant replay only keeps games, and waits while none is open.</span></span>
-              <input type="checkbox" class="toggle" data-setting="replay_on_desktop"></label>
+            <label class="setrow"><span class="settext"><span class="setname">Only keep Echoes while a game is running</span>
+              <span class="setsub wrap">Encore stops keeping Echoes on the desktop and starts again when a game opens. Saves disk space and keeps your graphics card free when you're not playing.</span></span>
+              <input type="checkbox" class="toggle" id="echo-games-only"></label>
           </div>
           <div class="setcard spaced">
             <div class="setrow"><span class="settext"><span class="setname">Always a game</span>
@@ -461,8 +458,8 @@
               <button type="button" class="btn sm ghost" data-preview="stop" aria-label="Play recording stopped sound">Play</button>
             </div>
             <div class="setrow soundrow">
-              <span class="settext"><span class="setname">Replay saved</span></span>
-              <select class="dd" data-setting="sound_save" aria-label="Replay saved: sound">
+              <span class="settext"><span class="setname">Echo saved</span></span>
+              <select class="dd" data-setting="sound_save" aria-label="Echo saved: sound">
                   <option value="rise">Rising chime</option>
                   <option value="fall">Falling chime</option>
                   <option value="double">Double beep</option>
@@ -473,8 +470,8 @@
                   <option value="shutter">Camera shutter</option>
                   <option value="none">No sound</option>
               </select>
-              <input type="range" class="vol" min="0" max="100" step="5" data-setting="volume_save" data-number aria-label="Replay saved: volume">
-              <button type="button" class="btn sm ghost" data-preview="save" aria-label="Play replay saved sound">Play</button>
+              <input type="range" class="vol" min="0" max="100" step="5" data-setting="volume_save" data-number aria-label="Echo saved: volume">
+              <button type="button" class="btn sm ghost" data-preview="save" aria-label="Play the Echo saved sound">Play</button>
             </div>
           </div>
         </section>
@@ -611,6 +608,32 @@
             <input type="checkbox" class="toggle" data-setting="audio_app_tracks"></label>
         </div>
         <p class="snote">You can change all of this later in Settings.</p>
+      </div>
+
+      <div class="sstep" data-step="4" hidden>
+        <div class="echo-hero" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/></svg>
+        </div>
+        <p class="slead center">Never miss a moment</p>
+        <p class="sbody">With <strong>Echoes</strong> on, Encore quietly keeps the last few minutes of whatever you're playing. Pull off something great, press <span class="kbd" id="setup-echo-key">Ctrl + Alt + S</span>, and it's saved, even though you weren't recording.</p>
+        <p class="sbody">Older footage is let go as you play, so Echoes never fills up your drive.</p>
+        <div class="setcard spaced">
+          <label class="setrow"><span class="settext"><span class="setname">Turn on Echoes</span>
+            <span class="setsub">You can switch it on or off any time, top left</span></span>
+            <input type="checkbox" class="toggle" id="setup-echo" checked></label>
+          <label class="setrow"><span class="setname">Keep the last</span>
+            <select class="dd" id="setup-echo-len" data-setting="replay_seconds" data-number>
+              <option value="30">30 seconds</option>
+              <option value="60">1 minute</option>
+              <option value="120">2 minutes</option>
+              <option value="300">5 minutes</option>
+              <option value="600">10 minutes</option>
+              <option value="900">15 minutes</option>
+              <option value="1200">20 minutes</option>
+            </select>
+          </label>
+        </div>
+        <p class="snote">Just want the highlight? Ctrl + Alt + 1 saves the last 30 seconds, and Ctrl + Alt + 2 the last minute.</p>
       </div>
 
       <div class="modal-btns">

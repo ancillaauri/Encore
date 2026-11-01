@@ -487,7 +487,7 @@ impl Engine {
     fn start_replay(&mut self, args: &Value) -> Result<Value, String> {
         match &self.active {
             Some(a) if a.is_replay() => return Ok(self.status()),
-            Some(_) => return Err("Stop the recording first, then turn on instant replay.".into()),
+            Some(_) => return Err("Stop the recording first, then turn on Echoes.".into()),
             None => {}
         }
         let source = args.get("source").and_then(|v| v.as_str()).unwrap_or("desktop");
@@ -534,7 +534,7 @@ impl Engine {
     /// than it) without stopping the buffer.
     fn save_replay(&mut self, args: &Value) -> Result<Value, String> {
         let Some(a) = self.active.as_ref().filter(|a| a.is_replay()) else {
-            return Err("Instant replay is off. Turn it on first.".into());
+            return Err("Echoes is off. Turn it on first (top left).".into());
         };
         let max = self.settings.replay_seconds;
         let seconds = args.get("seconds").and_then(|v| v.as_u64()).map(|s| (s as u32).clamp(1, max)).unwrap_or(max);
@@ -676,7 +676,7 @@ fn report_replay_saved(result: Result<Saved, String>, label: &str) {
         ),
         Err(e) => {
             log(&format!("replay save failed: {e}"));
-            send_event("error", json!({ "message": format!("Couldn't save the replay: {e}") }));
+            send_event("error", json!({ "message": format!("Couldn't save the Echo: {e}") }));
         }
     }
 }
@@ -823,7 +823,7 @@ impl Engine {
             self.replay_waiting = false;
             if let Err(e) = self.start_session(&json!({ "source": "desktop" }), true) {
                 self.replay_waiting = true;
-                send_event("warning", json!({ "message": format!("Couldn't start instant replay for the game: {e}") }));
+                send_event("warning", json!({ "message": format!("Couldn't start Echoes for the game: {e}") }));
             }
             return;
         }
@@ -910,7 +910,7 @@ impl Engine {
             // recorded from it, then turn replay off.
             let detail = self.active.as_ref().map(|a| tail(&a.log_path(), 4)).unwrap_or_default();
             log(&format!("replay capture ended unexpectedly: {detail}"));
-            send_event("warning", json!({ "message": "Instant replay stopped because what it was capturing went away (for example the window closed). Turn it on again to carry on." }));
+            send_event("warning", json!({ "message": "Echoes stopped because what it was capturing went away (for example the window closed). Turn it on again to carry on." }));
             self.stop_replay();
         } else if stopped {
             let active = self.active.take().unwrap();

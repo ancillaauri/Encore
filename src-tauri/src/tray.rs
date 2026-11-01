@@ -54,7 +54,7 @@ pub struct TrayGame {
 fn build_menu(app: &AppHandle, recording: bool, games: Option<(&[TrayGame], Option<u32>, Option<u32>)>) -> tauri::Result<Menu<Wry>> {
     let open = MenuItem::with_id(app, "open", "Open Encore", true, None::<&str>)?;
     let record = MenuItem::with_id(app, "record", if recording { "Stop and save recording" } else { "Start recording" }, true, None::<&str>)?;
-    let replay = MenuItem::with_id(app, "replay", "Save replay", true, None::<&str>)?;
+    let replay = MenuItem::with_id(app, "replay", "Save an Echo", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Encore", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let menu = Menu::with_items(app, &[&open, &record, &replay])?;

@@ -296,7 +296,7 @@
     $('work-dir').value = custom ? `${custom.replace(/\\$/, '')}\\Encore temp` : 'Default (on the C: drive)';
     $('default-work').disabled = !custom;
     const replay = sizeText(mbPerMinute(s.quality) * (s.replay_seconds + 6) / 60);
-    $('work-note').textContent = `Where recordings are written while they\u2019re being made, and where instant replay keeps its last few minutes (about ${replay} at your settings). Choose a drive with plenty of free space; an SSD is best. Encore makes an \u201cEncore temp\u201d folder inside.`;
+    $('work-note').textContent = `Where recordings are written while they\u2019re being made, and where Echoes keeps its last few minutes (about ${replay} at your settings). Choose a drive with plenty of free space; an SSD is best. Encore makes an \u201cEncore temp\u201d folder inside.`;
   }
   async function setWorkDir(dir) {
     if (state.phase === 'recording') { toast('Stop the recording first, then change the working folder.', 'warning', 6000); return; }
@@ -478,7 +478,7 @@
     } else {
       $('what').textContent = describeTarget();
       $('detail').textContent = state.settings
-        ? (state.replay.on ? `Instant replay is on \u00b7 saved to ${encoreRoot()}` : `Saved to ${encoreRoot()}`)
+        ? (state.replay.on ? `Echoes is on \u00b7 saved to ${encoreRoot()}` : `Saved to ${encoreRoot()}`)
         : '';
       $('timer').textContent = '0:00';
       $('ring-sweep').style.strokeDashoffset = RING;
@@ -537,9 +537,9 @@
       else add('good', 'Game detection', 'Scanning for games');
     }
     // Instant replay
-    if (state.replay && state.replay.on && state.replay.waiting) add('', 'Instant replay', 'Waiting for a game');
-    else if (state.replay && state.replay.on) add('good', 'Instant replay', `Holding the last ${replayLength()}`);
-    else add('', 'Instant replay', 'Off');
+    if (state.replay && state.replay.on && state.replay.waiting) add('', 'Echoes', 'Waiting for a game');
+    else if (state.replay && state.replay.on) add('good', 'Echoes', `Keeping the last ${replayLength()}`);
+    else add('', 'Echoes', 'Off');
     // Audio tracks while recording
     const tracks = state.phase === 'recording' && state.recording ? state.recording.audio_tracks || [] : [];
     if (tracks.length) add('', `${tracks.length} audio track${tracks.length === 1 ? '' : 's'}`, tracks.join(', '));
@@ -705,7 +705,7 @@
     const text = h('div', 'rtext');
     const name = h('div', 'rname', shortName(d.path));
     if (d.recovered) name.append(h('span', 'tag', 'recovered'));
-    if (d.replay) name.append(h('span', 'tag replay-live', 'replay'));
+    if (d.replay) name.append(h('span', 'tag replay-live', 'Echo'));
     text.append(name, h('div', 'rmeta', d.duration_ms ? `${clock(d.duration_ms)} · ${size(d.size_bytes)}` : size(d.size_bytes)));
     li.append(thumb, text);
     li.onclick = () => bridge.revealFile(d.path).catch((e) => toast(String(e), 'error'));
@@ -749,7 +749,7 @@
       case 'replay_saved': {
         addRecent({ ...data, replay: true });
         const len = data.duration_ms ? ` (${lengthText(Math.round(data.duration_ms / 1000))})` : '';
-        toast(`Saved replay${len}: ${fileName(data.path)}`, 'ok', 5000);
+        toast(`Saved an Echo${len}: ${fileName(data.path)}`, 'ok', 5000);
         break;
       }
       case 'games':
@@ -1035,15 +1035,17 @@
     $('replay-on').checked = on;
     $('replay-on').disabled = state.replayBusy || (state.phase !== 'idle' && !on);
     $('save-replay').disabled = !on || state.replayBusy;
-    const key = s.hotkey_save_replay ? s.hotkey_save_replay.replace(/\+/g, ' + ') : null;
+    const key = s.hotkey_save_replay ? s.hotkey_save_replay.replace(/\+/g, ' + ') : '';
     const disk = sizeText(mbPerMinute(s.quality) * (s.replay_seconds + 6) / 60);
-    $('replay-note').textContent = on
-      ? `On. ${key ? `${key} saves` : 'Save replay keeps'} the last ${replayLength()}. Uses about ${disk} of disk while on.`
-      : 'Off. Turn on to save great moments after they happen.';
-    $('replay-note').classList.toggle('replay-live', on);
-    const qs = $('replay-on').closest('.qs');
-    if (qs) qs.classList.toggle('lit', on);
-    $('qs-replay-sub').textContent = on ? `Last ${replayLength()}` : 'Off';
+    $('save-key').textContent = key;
+    $('echo-btn').dataset.tip = on
+      ? `Echoes: On. Keeping the last ${replayLength()}. Click to turn off.`
+      : 'Echoes: Off. Click to keep the last few minutes, so you can save great moments after they happen.';
+    $('q-replay').closest('.hrow').dataset.tip = `Uses about ${disk} of disk space while Echoes is on (at your video settings).`;
+    $('replay-sec').classList.toggle('lit', on);
+    $('qs-replay-sub').textContent = state.replay.waiting ? 'Waiting for a game'
+      : on ? `On \u00b7 keeping the last ${replayLength()}`
+      : 'Off \u00b7 save great moments after they happen';
     renderStatus();
   }
   async function setReplay(on, remember = true) {
@@ -1081,7 +1083,7 @@
     }, 400);
   }
   async function saveReplay(seconds) {
-    if (!state.replay.on) { toast('Turn on instant replay first (left panel).', 'warning', 5000); return; }
+    if (!state.replay.on) { toast('Turn on Echoes first (top left).', 'warning', 5000); return; }
     try {
       await bridge.saveReplay(seconds);
       playCue('save');
@@ -1214,7 +1216,7 @@
     }
     const max = s.replay_seconds;
     $('custom-len-note').textContent = sec > max
-      ? `Longer than your replay length, so it saves ${lengthText(max)}`
+      ? `Longer than Echoes keeps, so it saves ${lengthText(max)}`
       : `Saves the last ${lengthText(sec)}`;
     $('custom-len-note').classList.toggle('warn', sec > max);
   }
@@ -1332,10 +1334,11 @@
     const s = state.settings;
     if (!s) return;
     document.querySelectorAll('#setup .sstep').forEach((el) => (el.hidden = Number(el.dataset.step) !== setupStep));
-    $('setup-step').textContent = `Step ${setupStep} of 3`;
-    $('setup-title').textContent = setupStep === 1 ? 'Welcome to Encore' : setupStep === 2 ? 'Video' : 'Sound';
+    $('setup-step').textContent = `Step ${setupStep} of 4`;
+    $('setup-title').textContent = ['Welcome to Encore', 'Video', 'Sound', 'Echoes'][setupStep - 1];
     $('setup-back').disabled = setupStep === 1;
-    $('setup-next').textContent = setupStep === 3 ? 'Start using Encore' : 'Next';
+    $('setup-next').textContent = setupStep === 4 ? 'Start using Encore' : 'Next';
+    if (s.hotkey_save_replay) $('setup-echo-key').textContent = s.hotkey_save_replay.replace(/\+/g, ' + ');
     $('setup-folder').value = s.output_dir;
     const root = encoreRoot();
     $('setup-folder-note').textContent = `Encore makes a folder called Encore here, with a folder inside for Desktop and each game or app: ${root}\\Desktop, ${root}\\Warframe…`;
@@ -1475,7 +1478,6 @@
     }
     document.body.classList.toggle('gd-wait', gameWaiting());
     document.body.classList.toggle('gd-game', !!(on && !paused && act && state.source === 'desktop'));
-    $('replay-desk-row').hidden = !on;
     syncTrayGames();
   }
   async function lockGame(pid) {
@@ -1513,6 +1515,7 @@
     if (!s) return;
     document.querySelectorAll('[data-game-pick]').forEach((o) => o.setAttribute('aria-checked', String(o.dataset.gamePick === s.game_pick)));
     document.querySelectorAll('[data-game-end]').forEach((o) => o.setAttribute('aria-checked', String(o.dataset.gameEnd === s.game_end)));
+    $('echo-games-only').checked = !s.replay_on_desktop;
     for (const [key, id] of [['games_always', 'games-always'], ['games_never', 'games-never']]) {
       const box = $(id);
       box.textContent = '';
@@ -1545,6 +1548,7 @@
     const r = btn.getBoundingClientRect();
     openMenu(r.left, r.bottom + 6, items.length ? items : [{ text: 'No apps open', disabled: true, run: () => {} }]);
   }
+  $('echo-games-only').addEventListener('change', (e) => saveSetting('replay_on_desktop', !e.target.checked));
   $('add-always-game').addEventListener('click', (e) => { e.stopPropagation(); pickAppFor('games_always', e.currentTarget); });
   $('add-never-game').addEventListener('click', (e) => { e.stopPropagation(); pickAppFor('games_never', e.currentTarget); });
   document.querySelectorAll('[data-game-pick]').forEach((o) => o.addEventListener('click', () => saveSetting('game_pick', o.dataset.gamePick)));
@@ -1616,11 +1620,14 @@
   $('browse-output').addEventListener('click', browseFolder);
   $('setup-back').addEventListener('click', () => { if (setupStep > 1) { setupStep--; renderSetup(); } });
   $('setup-next').addEventListener('click', async () => {
-    if (setupStep < 3) { setupStep++; renderSetup(); return; }
+    if (setupStep < 4) { setupStep++; renderSetup(); return; }
     const want = $('setup-admin').checked;
     const change = want !== !!state.startAsAdmin;
+    const echoes = $('setup-echo').checked;
     closeDialog($('setup'));
     await finishSetup();
+    if (echoes && !state.replay.on && state.phase === 'idle') await setReplay(true);
+    else if (!echoes && state.replay.on) await setReplay(false);
     if (change) await setStartAsAdmin(want, { restart: 'now' });
   });
   $('setup-skip').addEventListener('click', () => closeDialog($('setup')));
