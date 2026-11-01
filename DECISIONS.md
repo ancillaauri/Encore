@@ -588,3 +588,14 @@ Agreed design for game detection (to build next):
   one using the graphics card accepts it, the others get 20 tries). High is above the game, below
   the top-priority capture. Same test showed high priority isn't enough for Warframe on this PC
   even capped at 120 fps: 63 s behind, 123 s to catch up, a 60 s Echo of 7.6 MB.
+- 0.9.15: the 0.9.14 test showed Encore's WebView2 at high graphics priority still didn't get the
+  notifications on screen with the capture at realtime. Notifications are now drawn by Encore on
+  the processor (resvg into a picture) and shown in a native layered window
+  (`UpdateLayeredWindow`), so they need no graphics card time from Encore at all; Windows only
+  places the finished picture. Same looks, timers, stacking, spots and settings; the web page
+  (ui/notify.html), its WebView2 options and the engine's WebView2 priority boost are gone. Before
+  this change: branch `backup/0.9.14` and release v0.9.14.
+- Same test: on high priority (no top priority) Warframe Echoes came out short (44 s of 60, 34 of
+  60, 80 of 120) with 2-second freezes (up to 37 % repeated frames); with top priority 0.2 %. So
+  top priority is needed for games that use the whole card on this PC. The microphone track was
+  silent because the headset's mute switch was on.

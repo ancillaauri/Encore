@@ -1,3 +1,13 @@
+## Encore 0.9.15 (beta), test build 36: notifications drawn by Encore
+
+### Changed
+- **Notifications are now drawn by Encore itself,** not by a web page. They look the same, but
+  they no longer need the graphics card, so they appear even when a game is using all of it and
+  Top graphics priority is on.
+
+### Install
+Update from inside Encore (≡ → Help → Update to 0.9.15).
+
 ## Encore 0.9.14 (beta), test build 35: notifications with top priority
 
 ### Fixed

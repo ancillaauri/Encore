@@ -8,6 +8,7 @@ mod admin;
 mod engine_link;
 mod hotkeys;
 mod notify;
+mod notify_draw;
 mod startup;
 mod tray;
 mod updater;
@@ -159,8 +160,6 @@ fn main() {
             tray::restart_as_admin,
             tray::set_tray_games,
             notify::show_notification,
-            notify::notifications_idle,
-            notify::notification_drawn,
             admin::admin_status,
             admin::set_start_as_admin,
             startup::autostart_status,

@@ -217,15 +217,20 @@ task is missing, Encore just opens normally. The task-started copy waits 0.4 s s
 check doesn't see the copy that's closing. Restart as Administrator uses the task too when it's set
 up, after waiting for the old copy to exit.
 
-## Notifications (shell, 0.9.8)
-`src-tauri/src/notify.rs` owns a second window, `notify` (page `ui/notify.html`), created hidden
-at start-up: transparent, always on top, click-through, `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW`,
-and `WDA_EXCLUDEFROMCAPTURE` so capture leaves it out. The interface decides whether to show one
-(settings, Do not disturb, its own window in front) and calls `show_notification(device, pos,
-item)`; the shell resolves the screen (by Windows name, else the one holding the foreground
-window), places the window at the spot without activating it, and sends the item to the page.
-The page stacks up to three, runs each timer, and calls `notifications_idle` when the last one
-has faded, which hides the window.
+## Notifications (shell, 0.9.15)
+Drawn by Encore itself, on the processor, so they need no graphics card time from Encore (a web
+page drawn by the card never got its turn with a game using all of the card and the capture at
+top priority). `src-tauri/src/notify_draw.rs` turns each notification into a picture once (a
+small SVG rendered by resvg: glow, glassy card, border, icon, text wrapped to fit) and composes
+the stack each frame (fade and slide in from its edge, fade out, cards moving to their new place,
+timer line). `src-tauri/src/notify.rs` runs a plain Win32 layered window on its own thread:
+`WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE`,
+`WDA_EXCLUDEFROMCAPTURE`, frames handed over with `UpdateLayeredWindow` (about 30 a second, only
+while something shows; hidden otherwise), put back on top every 200 ms while showing, and any
+window still above it logged. The interface decides whether to show one (settings, Do not
+disturb, its own window in front) and calls `show_notification(device, window, pos, item)`; the
+shell resolves the screen (chosen by Windows name, else the game's window's screen, else the one
+holding the foreground window).
 
 ## Updates (shell)
 

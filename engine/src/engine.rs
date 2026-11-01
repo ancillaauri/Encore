@@ -88,9 +88,6 @@ pub struct Engine {
     /// Game detection: the games that are open, and which one is locked.
     watch: Watch,
     last_game_scan: Option<Instant>,
-    /// Encore's own window processes given high graphics priority (pid → tries; u32::MAX = done).
-    ui_boosted: HashMap<u32, u32>,
-    last_ui_boost: Option<Instant>,
     /// Names already worked out for each game process (reading them takes a moment).
     game_names: HashMap<u32, String>,
     /// What the interface last heard about games (to send updates only when something changes).
@@ -180,8 +177,6 @@ impl Engine {
             pins: Arc::new(Mutex::new(Vec::new())),
             watch: Watch::default(),
             last_game_scan: None,
-            ui_boosted: HashMap::new(),
-            last_ui_boost: None,
             game_names: HashMap::new(),
             games_sent: String::new(),
             session_source: "desktop".into(),
@@ -980,46 +975,9 @@ impl Engine {
         }
     }
 
-    /// Gives Encore's own window processes (WebView2, which draws the interface and the
-    /// notifications over games) high graphics priority, every few seconds for new ones. Without
-    /// it, with the capture at top priority and a game using all of the graphics card, the
-    /// notifications were drawn but never reached the screen. High is above the game and below a
-    /// top-priority capture. Only the process that uses the graphics card accepts it; the others
-    /// are given a few tries and then left alone.
-    fn boost_ui(&mut self) {
-        if self.last_ui_boost.map(|t| t.elapsed() < Duration::from_secs(3)).unwrap_or(false) {
-            return;
-        }
-        self.last_ui_boost = Some(Instant::now());
-        let own = audio::own_processes();
-        if own.is_empty() {
-            return;
-        }
-        let procs = platform::processes();
-        self.ui_boosted.retain(|pid, _| own.contains(pid));
-        for pid in own {
-            let is_webview = procs.get(&pid).map(|p| p.exe.eq_ignore_ascii_case("msedgewebview2.exe")).unwrap_or(false);
-            if !is_webview {
-                continue;
-            }
-            let tries = self.ui_boosted.entry(pid).or_insert(0);
-            if *tries >= 20 {
-                continue; // done, or never uses the graphics card
-            }
-            match platform::try_gpu_priority_at(pid, false) {
-                Ok(line) => {
-                    log(&format!("Encore window process {pid}: {line}"));
-                    *tries = u32::MAX;
-                }
-                Err(_) => *tries += 1,
-            }
-        }
-    }
-
     /// Called regularly from the main loop: follows games and the focus, notices if FFmpeg
     /// stopped on its own.
     pub fn tick(&mut self) {
-        self.boost_ui();
         self.follow_games();
         self.follow_focus();
         if let Some(event) = self.active.as_mut().and_then(|a| a.poll()) {
