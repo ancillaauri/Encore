@@ -72,6 +72,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Notifications over the game, never recorded: hologram card or edge tab by spot, 2 to 10 s timer, up to 3 stacked, size 1× to 2× | 0.9.8; drawn by Encore on the processor from 0.9.15; not over exclusive fullscreen games | [x] |
 | Priority Capture: realtime graphics priority for the capture, switch in the side panel and Settings → Advanced, one-time "I understand" | 0.9.10 (as Top graphics priority), 0.9.17 | [x] |
 | Warning when the capture falls behind (30 s, or more than 10 s behind) | 0.9.10, 0.9.12 | [x] |
+| Main Menu (Settings at top level), Sidebar naming, Priority Capture hideable from the sidebar | 0.9.21 | [x] |
 
 ## Out of scope (decided, with reasons)
 
@@ -81,4 +82,3 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 - Cloud hosting / share links / social feed: server costs, accounts, moderation; a different product.
 - Built-in streaming (Twitch etc.): OBS covers it.
 - Editing effects (slow motion, captions, music): the companion editor's job.
-| Main Menu (Settings at top level), Sidebar naming, Priority Capture hideable from the sidebar | 0.9.21 | [x] |
