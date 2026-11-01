@@ -377,3 +377,6 @@ Agreed design for game detection (to build next):
   has a lighter highlight and "In use".
 - "One app" is renamed "Select Application".
 - On narrow windows the picker tiles shrink so it stays on one line.
+- 0.8.2: the record button sits higher (top of the stage, not centred), and Select Application
+  and Game moved to a second row under the screens. The picker shrinks to fit the window's height
+  as well as its width.

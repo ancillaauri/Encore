@@ -387,20 +387,24 @@
   // Keeps the picker on one line: shrinks the monitors until everything fits the stage.
   function fitPicks() {
     const row = $('picks');
-    // The row never wraps; it overflows instead, which is easy to measure.
-    const wraps = () => row.scrollWidth > row.clientWidth + 1;
-    // Larger windows get larger monitors, up to MON_MAX.
+    const row2 = document.querySelector('.picks2');
     const stage = document.querySelector('.stage');
-    monBase = stage && stage.clientHeight > 760 ? MON_MAX : 150;
-    row.classList.remove('compact', 'tight');
+    // Too wide (the row never wraps, it overflows) or too tall for the stage.
+    const tooBig = () => row.scrollWidth > row.clientWidth + 1 || (stage && stage.scrollHeight > stage.clientHeight + 1);
+    // Larger windows get larger monitors, up to MON_MAX.
+    monBase = stage && stage.clientHeight > 820 ? MON_MAX : 150;
+    for (const r of [row, row2]) r.classList.remove('compact', 'tight');
     renderPicks();
-    while (monBase > 70 && wraps()) {
+    while (monBase > 70 && tooBig()) {
       monBase -= 10;
       renderPicks();
     }
-    // Still too wide: smaller tiles, then smaller still.
-    if (wraps()) row.classList.add('compact');
-    if (wraps()) row.classList.add('tight');
+    // Still too big: smaller tiles, then smaller still.
+    for (const cls of ['compact', 'tight']) {
+      if (!tooBig()) break;
+      row.classList.add(cls);
+      row2.classList.add(cls);
+    }
   }
   try { new ResizeObserver(() => fitPicks()).observe(document.querySelector('.stage')); } catch (e) { /* older engine */ }
 

@@ -395,7 +395,7 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 .toggle.sm:checked::after { transform: translateX(14px); }
 
 /* ---------- stage: the record control is the one bold element ---------- */
-.stage { display: flex; flex-direction: column; align-items: center; justify-content: safe center; padding: 34px 24px 40px; overflow-y: auto; min-height: 0; }
+.stage { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 26px 24px 32px; overflow-y: auto; min-height: 0; }
 .record {
   position: relative;
   width: 190px;
@@ -450,6 +450,7 @@ body.recording #settings .setcard, body.saving #settings .setcard { pointer-even
 /* ---------- what to record: monitors as holograms, laid out like Windows has them ---------- */
 .pickhead { margin: 28px 0 12px; font-size: 12px; font-weight: 600; color: var(--mute); }
 .picks { display: flex; align-items: flex-end; gap: 14px; flex-wrap: nowrap; justify-content: center; max-width: 100%; }
+.picks2 { margin-top: 10px; gap: 22px; }
 .mons { display: flex; align-items: flex-end; gap: 10px; }
 .pick { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 12px 10px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text); min-width: 112px; flex: none; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
 .pick:hover:not(:disabled) { background: #121114; }
@@ -485,7 +486,7 @@ body.recording #settings .setcard, body.saving #settings .setcard { pointer-even
 .picks.compact .beam { width: 86px; }
 .picks.tight .pick { padding: 8px 4px 6px; }
 .picks.tight .app { width: 62px; height: 54px; }
-.picks.tight .pn { font-size: 12px; max-width: 96px; }
+.picks.tight .pn { font-size: 12px; max-width: 120px; }
 .picks.tight .ps { font-size: 11px; max-width: 96px; }
 .picks.tight .vsep { margin: 0 2px 26px; }
 /* Following: the screen in use (lighter than a chosen one). */
