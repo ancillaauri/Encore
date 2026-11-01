@@ -389,9 +389,13 @@
     else if (state.source === 'window') note = 'Only this window is recorded, even when you alt-tab. Pick Follow or a monitor to record a screen instead.';
     else if (gameActive()) note = `${state.phase === 'recording' ? 'Recording' : 'Records'} ${gameActive().name}. The highlighted screen is used again when it closes.`;
     else if (gameWaiting()) note = 'Game detection is on: the green screen is recorded until a game opens.';
+    else if (gamesOnly()) note = '';
     else if (pin) note = 'Always records this monitor. Pick Follow to record whichever screen you click on.';
     else note = 'Records the screen you click on and moves with you. Pick a monitor to always record that one.';
     $('pick-note').textContent = note;
+    $('pick-sub').innerHTML = gamesOnly()
+      ? 'Encore only records games right now. These are used if you press record while no game is open.'
+      : 'Used for recordings and Echoes. Leave it on <strong>Follow</strong> and Encore records whatever screen you\u2019re using.';
   }
 
   // Keeps the picker on one line: shrinks the monitors until everything fits the stage.
@@ -519,6 +523,8 @@
       add(waiting ? 'good' : 'acc', r.following ? 'Following you' : (m ? 'Locked to screen' : 'Application'), name);
     } else if (game && state.source === 'desktop') {
       // The game detection line below says which game.
+    } else if (gamesOnly()) {
+      // Nothing is captured until a game opens; the game detection line says so.
     } else if (state.source === 'window') {
       add(state.windowTitle ? 'acc' : '', 'Application', state.windowTitle || 'Choose one below');
     } else if (pinnedId()) {
@@ -534,7 +540,7 @@
       if (state.source === 'window' || g.paused) add('', 'Game detection', 'Paused while recording an application');
       else if (game && g.locked === game.pid) add('acc', 'Locked to', game.name);
       else if (game) add('acc', 'Tracking', game.name);
-      else add('good', 'Game detection', 'Scanning for games');
+      else add('good', 'Game detection', gamesOnly() ? 'Waiting for a game' : 'Scanning for games');
     }
     // Instant replay
     if (state.replayRestarting) add('warn', 'Echoes', 'Restarting with your new settings');
@@ -1028,6 +1034,14 @@
     const n = state.settings ? state.settings.replay_seconds : 120;
     return n === 60 ? 'minute' : REPLAY_NAMES[n] || `${n} seconds`;
   }
+  // What Echoes is keeping: the game, the window, or the screen.
+  function echoTarget() {
+    const g = gameActive();
+    if (g && state.source === 'desktop') return g.name;
+    if (state.source === 'window') return state.windowTitle || '';
+    const m = targetMonitor();
+    return m ? m.name : '';
+  }
   function renderReplay() {
     const s = state.settings;
     if (!s) return;
@@ -1046,7 +1060,7 @@
     $('replay-sec').classList.toggle('restarting', !!state.replayRestarting);
     $('qs-replay-sub').textContent = state.replayRestarting ? 'Restarting with your new settings\u2026'
       : state.replay.waiting ? 'Waiting for a game'
-      : on ? `On \u00b7 keeping the last ${replayLength()}`
+      : on ? `On \u00b7 keeping the last ${replayLength()}${echoTarget() ? ` of ${echoTarget()}` : ''}`
       : 'Off \u00b7 save great moments after they happen';
     renderStatus();
   }
@@ -1371,6 +1385,7 @@
     refreshAdmin();
     const s0 = state.settings;
     $('setup-games').checked = !s0 || !s0.setup_done || !!s0.game_detection;
+    $('setup-games-only').checked = !!(s0 && s0.setup_done && s0.game_detection && !s0.replay_on_desktop);
     $('setup-echo').checked = !s0 || !s0.setup_done || !!s0.replay_on;
     bridge.autostartStatus().then((on) => { $('setup-autostart').checked = !!on; }).catch(() => {});
     renderSetup();
@@ -1454,10 +1469,15 @@
     if (!state.settings || !state.settings.game_detection) return null;
     return (g.games || []).find((x) => x.pid === g.active) || null;
   }
+  // "Wait for a game": with game detection on, nothing is recorded on the desktop.
+  function gamesOnly() {
+    const s = state.settings;
+    return !!(s && s.game_detection && !s.replay_on_desktop && state.source === 'desktop');
+  }
   // Game detection is on but no game is open: the chosen screen is recorded meanwhile (green).
   function gameWaiting() {
     const s = state.settings;
-    return !!(s && s.game_detection && state.source === 'desktop' && !(state.games || {}).paused && !gameActive());
+    return !!(s && s.game_detection && !gamesOnly() && state.source === 'desktop' && !(state.games || {}).paused && !gameActive());
   }
   function renderGames() {
     const s = state.settings;
@@ -1469,11 +1489,11 @@
     $('gb-sub').textContent = !on ? 'Off'
       : paused ? 'Paused while recording an application'
       : act ? (g.locked === act.pid ? `Locked to ${act.name}` : `Tracking ${act.name}`)
-      : 'Scanning for games';
+      : gamesOnly() ? 'Waiting for a game' : 'Scanning for games';
     const box = $('gb-games');
     box.textContent = '';
     if (on) {
-      if (!(g.games || []).length) box.append(h('span', 'gb-empty', 'No games open. Your chosen screen is recorded until one starts.'));
+      if (!(g.games || []).length) box.append(h('span', 'gb-empty', 'No games open'));
       for (const game of g.games || []) {
         const isActive = game.pid === g.active;
         const isLocked = game.pid === g.locked;
@@ -1497,6 +1517,10 @@
       }
     }
     document.body.classList.toggle('gd-wait', gameWaiting());
+    $('gb-when').hidden = !on;
+    const only = !s.replay_on_desktop;
+    document.querySelectorAll('[data-nogame]').forEach((b) => b.setAttribute('aria-checked', String((b.dataset.nogame === 'wait') === only)));
+    $('picks').classList.toggle('unused', gamesOnly() && !act && state.phase !== 'recording');
     document.body.classList.toggle('gd-game', !!(on && !paused && act && state.source === 'desktop'));
     syncTrayGames();
   }
@@ -1568,6 +1592,14 @@
     const r = btn.getBoundingClientRect();
     openMenu(r.left, r.bottom + 6, items.length ? items : [{ text: 'No apps open', disabled: true, run: () => {} }]);
   }
+  // "No game open": record the screen, or wait for a game (Echoes waits, recordings end with their game).
+  document.querySelectorAll('[data-nogame]').forEach((b) => b.addEventListener('click', async () => {
+    const wait = b.dataset.nogame === 'wait';
+    if (!state.settings) return;
+    await saveSetting('replay_on_desktop', !wait);
+    await saveSetting('game_end', wait ? 'stop' : 'continue');
+    if (state.replay.on) restartReplay();
+  }));
   $('echo-games-only').addEventListener('change', (e) => saveSetting('replay_on_desktop', !e.target.checked));
   $('add-always-game').addEventListener('click', (e) => { e.stopPropagation(); pickAppFor('games_always', e.currentTarget); });
   $('add-never-game').addEventListener('click', (e) => { e.stopPropagation(); pickAppFor('games_never', e.currentTarget); });
@@ -1645,10 +1677,15 @@
     const change = want !== !!state.startAsAdmin;
     const echoes = $('setup-echo').checked;
     const games = $('setup-games').checked;
+    const gamesOnlyPick = games && $('setup-games-only').checked;
     const autostart = $('setup-autostart').checked;
     closeDialog($('setup'));
     await finishSetup();
     if (state.settings && games !== !!state.settings.game_detection) await saveSetting('game_detection', games);
+    if (state.settings && gamesOnlyPick === !!state.settings.replay_on_desktop) {
+      await saveSetting('replay_on_desktop', !gamesOnlyPick);
+      await saveSetting('game_end', gamesOnlyPick ? 'stop' : 'continue');
+    }
     try { if (autostart !== !!(await bridge.autostartStatus())) await bridge.setAutostart(autostart); } catch (e) { toast(String(e), 'error'); }
     if (echoes && !state.replay.on && state.phase === 'idle') await setReplay(true);
     else if (!echoes && state.replay.on) await setReplay(false);

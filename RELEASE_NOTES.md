@@ -1,21 +1,21 @@
-## Encore 0.9.4 (beta), test build 25: safety fixes
+## Encore 0.9.5 (beta), test build 26: clearer "What to record", and games only
 
 ### What's changed
-- **Possible cause of a PC freeze removed.** Encore was giving its recording the very highest
-  graphics priority ("realtime"), which can crowd out the rest of the system. It now uses "high",
-  which should still keep games smooth in recordings.
-- **Screenshot tools aren't games.** Lightshot (and ShareX, Greenshot, Snagit and others) cover the
-  screen for a moment and were being picked up by game detection. They're now ignored, and anything
-  that only looks like a game because it fills the screen has to stay for a few seconds first.
-- **"Couldn't switch what's being recorded"** is now a plain message naming what couldn't be
-  recorded, shown once, and Encore waits before trying again.
-- A recording made while Echoes is on can no longer replace an Echo saved in the same second.
+- **"What to record" explains itself:** it's used for recordings *and* Echoes, and **Follow** is
+  marked **Recommended**, so you can leave it alone.
+- **The Echoes panel says what it's keeping**: "keeping the last 2 minutes of Warframe" (or your
+  screen).
+- **Only want games?** With game detection on, the bar under the screens now has
+  **Until a game opens: Record my screen / Wait for a game**. "Wait for a game" means nothing is
+  kept on the desktop: Echoes starts when a game opens, and a recording ends when its game closes.
+  The screens dim, since they're only used if you press record with no game open.
+- Setup's game detection page offers the same choice ("Only record games").
 
 ### Install
-Update from inside Encore (≡ → Help → Update to 0.9.4).
+Update from inside Encore (≡ → Help → Update to 0.9.5).
 
 ### Test checklist
-1. Warframe with game detection on, uncapped: is it still smooth in the recording? (This checks
-   that "high" priority is enough.)
-2. Play for 10+ minutes with Echoes on, save a few Echoes: no freeze.
-3. Take a Lightshot screenshot: Encore shouldn't switch to it.
+1. Game detection on → **Wait for a game**, Echoes on. On the desktop: status says "Waiting for a
+   game" and Echoes waits. Open Warframe: Echoes starts ("keeping the last 2 minutes of Warframe").
+   Close it: Echoes waits again.
+2. Switch back to **Record my screen**: Echoes keeps your screen again (green).

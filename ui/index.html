@@ -168,11 +168,12 @@
       <div class="divider" aria-hidden="true"></div>
 
       <h2 class="pickhead">What to record</h2>
+      <p class="picksub" id="pick-sub">Used for recordings and Echoes. Leave it on <strong>Follow</strong> and Encore records whatever screen you're using.</p>
       <div class="picks" id="picks" role="radiogroup" aria-label="What to record">
         <button type="button" class="pick" id="pick-follow" role="radio" aria-checked="false" title="Record the screen you click on, and move with you">
           <span class="app"><span class="bar"></span><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l11.5 8.2-5.2.9 3 6-2.4 1.2-3-6.1L6 17.6z"/></svg></span></span>
           <span class="neck"></span><span class="beam"></span>
-          <span class="pn">Follow</span><span class="ps">The screen you click</span>
+          <span class="pn">Follow</span><span class="ps rec-tag">Recommended</span>
         </button>
         <div class="mons" id="mons"></div>
         <button type="button" class="pick" id="pick-app" role="radio" aria-checked="false" aria-haspopup="menu">
@@ -187,6 +188,13 @@
           <span class="qs-text"><span class="qs-name">Game detection</span><span class="qs-sub" id="gb-sub">Off</span></span>
         </button>
         <div class="gb-games" id="gb-games"></div>
+        <div class="gb-when" id="gb-when" hidden>
+          <span class="gb-when-l">Until a game opens</span>
+          <div class="seg" role="radiogroup" aria-label="When no game is open">
+            <button type="button" role="radio" data-nogame="screen" data-tip="Records your chosen screen until a game starts (Echoes too).">Record my screen</button>
+            <button type="button" role="radio" data-nogame="wait" data-tip="Records nothing until a game starts: Echoes waits, and a recording stops when its game closes.">Wait for a game</button>
+          </div>
+        </div>
       </div>
       <p class="pnote" id="pick-note"></p>
     </section>
@@ -634,6 +642,9 @@
           <label class="setrow"><span class="settext"><span class="setname">Turn on game detection</span>
             <span class="setsub">The controller under the screens turns it on or off</span></span>
             <input type="checkbox" class="toggle" id="setup-games" checked></label>
+          <label class="setrow"><span class="settext"><span class="setname">Only record games</span>
+            <span class="setsub">Nothing is kept while you're on the desktop. Echoes starts when a game opens</span></span>
+            <input type="checkbox" class="toggle" id="setup-games-only"></label>
         </div>
         <p class="snote">Playing two games at once? Press Ctrl + Alt + G in the one you want and Encore stays on it.</p>
       </div>

@@ -856,3 +856,18 @@ body.gd-game:not(.recording) #picks .pick.on, body.gd-game:not(.recording) #pick
 .tour-mon { width: 84px; height: 48px; display: grid; place-items: center; border: 1.5px solid rgba(138, 150, 255, .7); border-radius: 6px; color: #d6dbff; font-size: 20px; font-weight: 700; background: linear-gradient(180deg, rgba(88, 101, 242, .25), rgba(88, 101, 242, .04)); }
 .keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; margin: 4px 0 6px; font-size: 13.5px; color: var(--dim); }
 .keys .kbd { justify-self: start; font-size: 12px; font-weight: 600; color: #c9ceff; padding: 2px 7px; border-radius: 4px; background: rgba(138, 150, 255, .14); white-space: nowrap; }
+
+/* What to record: a line saying it's shared, and Follow marked as the one to leave on */
+.picksub { margin: -6px 0 14px; font-size: 12.5px; color: var(--mute); text-align: center; max-width: 70ch; }
+.picksub strong { color: var(--dim); font-weight: 600; }
+.ps.rec-tag { color: #9aa3ff; }
+body.gd-wait .ps.rec-tag { color: #8fdca5; }
+/* Games only: the screens aren't used until a game opens */
+#picks.unused { opacity: .4; }
+#picks.unused:hover { opacity: .7; }
+.gb-when { display: flex; align-items: center; gap: 10px; flex: none; padding-left: 14px; border-left: 1px solid var(--line); }
+.gb-when-l { font-size: 12px; color: var(--mute); white-space: nowrap; }
+.seg { display: inline-flex; padding: 2px; border-radius: 8px; background: #0a090c; border: 1px solid var(--line2); }
+.seg button { border: 0; background: transparent; color: var(--mute); font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.seg button:hover { color: var(--text); }
+.seg button[aria-checked="true"] { background: rgba(88, 101, 242, .2); color: #e0e3ff; }

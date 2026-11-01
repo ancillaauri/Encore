@@ -468,3 +468,18 @@ Agreed design for game detection (to build next):
   recording Warframe, so Encore carried on…") and shown once; FFmpeg's full reason goes to the log.
 - A recording made while Echoes is on picks its file name when saved (it could, rarely, take the
   name of an Echo saved in the same second and overwrite it).
+
+## 2026-11-01: Making "What to record" obvious, and a games-only choice (0.9.5)
+- Worry: someone who just wants Echoes may think they have to set up a monitor. So: a line under
+  "What to record" ("Used for recordings and Echoes. Leave it on Follow…"), Follow labelled
+  "Recommended", and the Echoes panel says what it's keeping ("…the last 2 minutes of Warframe").
+- For people who only want games recorded: the game detection bar has "Until a game opens:
+  Record my screen / Wait for a game". Wait for a game sets `replay_on_desktop` off (Echoes waits)
+  and `game_end` to stop (a recording ends with its game); the screens dim and the line above them
+  says they're only used if you press record with no game open. Also offered in setup ("Only
+  record games"). The Settings → Games options stay as the fine-grained version.
+- Background on the earlier freeze (for later): the PC had the same kind of crash before Encore
+  existed: 27/10 LiveKernelEvent 117 and 141, then BlueScreen 116 (VIDEO_TDR_FAILURE, insufficient
+  resources) on the RTX 3060 Ti. Suggested a clean driver install, removing any GPU overclock,
+  checking temperatures and power cables. If a freeze happens on 0.9.4+ with no hardware error
+  logged, look at Encore again.
