@@ -341,8 +341,10 @@
     for (const m of mons) {
       const w = Math.round(monBase * Math.max(0.6, m.width / maxW));
       const hgt = Math.round(w * (m.height / Math.max(1, m.width)));
-      const on = state.source === 'desktop' && shown && shown.id === m.id;
-      const b = h('button', `pick${on ? ' on' : ''}${recording && recId === m.id ? ' rec' : ''}`);
+      const on = state.source === 'desktop' && pin === m.id;
+      // Following: the screen in use gets a lighter highlight (the Follow tile is the choice).
+      const cur = state.source === 'desktop' && !pin && shown && shown.id === m.id;
+      const b = h('button', `pick${on ? ' on' : ''}${cur ? ' cur' : ''}${recording && recId === m.id ? ' rec' : ''}`);
       b.type = 'button';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(on));
@@ -350,19 +352,23 @@
       const mon = h('span', 'mon', displayNo(m));
       mon.style.width = `${w}px`;
       mon.style.height = `${Math.max(40, Math.min(170, hgt))}px`;
-      if (pin === m.id) mon.append(h('span', 'pin', 'ALWAYS'));
       b.append(mon, h('span', 'neck'), h('span', 'beam'), h('span', 'pn', m.name));
       if (recording && recId === m.id) {
         const live = h('span', 'live');
         live.append(h('i'), document.createTextNode('Recording'));
         b.append(live);
       } else {
-        b.append(h('span', 'ps', `${m.width}×${m.height}${m.primary ? ' · Primary' : ''}`));
+        b.append(h('span', 'ps', cur ? 'In use' : `${m.width}×${m.height}${m.primary ? ' · Primary' : ''}`));
       }
-      b.title = pin === m.id ? 'Click again to follow the screen you use' : `Always record ${m.name}`;
+      b.title = `Always record ${m.name} (${m.width}×${m.height}${m.primary ? ', primary' : ''})`;
       b.onclick = () => pickMonitor(m);
       box.append(b);
     }
+    const fol = $('pick-follow');
+    const folOn = state.source === 'desktop' && !pin;
+    fol.classList.toggle('on', folOn);
+    fol.setAttribute('aria-checked', String(folOn));
+    fol.disabled = recording;
     const app = $('pick-app');
     app.classList.toggle('on', state.source === 'window');
     app.setAttribute('aria-checked', String(state.source === 'window'));
@@ -372,9 +378,9 @@
     let note = '';
     if (recording && state.recording && state.recording.following) note = 'Follows the screen you click on. Click a window on another monitor to move the recording there.';
     else if (recording) note = '';
-    else if (state.source === 'window') note = 'Only this window is recorded, even when you alt-tab. Click a monitor to record the screen instead.';
-    else if (pin) note = 'Always records this monitor. Click it again to follow the screen you use.';
-    else note = 'Records the screen you\u2019re using and follows you when you click on another. Click a monitor to always record that one.';
+    else if (state.source === 'window') note = 'Only this window is recorded, even when you alt-tab. Pick Follow or a monitor to record a screen instead.';
+    else if (pin) note = 'Always records this monitor. Pick Follow to record whichever screen you click on.';
+    else note = 'Records the screen you click on and moves with you. Pick a monitor to always record that one.';
     $('pick-note').textContent = note;
   }
 
@@ -386,25 +392,29 @@
     // Larger windows get larger monitors, up to MON_MAX.
     const stage = document.querySelector('.stage');
     monBase = stage && stage.clientHeight > 760 ? MON_MAX : 150;
+    row.classList.remove('compact', 'tight');
     renderPicks();
     while (monBase > 70 && wraps()) {
       monBase -= 10;
       renderPicks();
     }
+    // Still too wide: smaller tiles, then smaller still.
+    if (wraps()) row.classList.add('compact');
+    if (wraps()) row.classList.add('tight');
   }
   try { new ResizeObserver(() => fitPicks()).observe(document.querySelector('.stage')); } catch (e) { /* older engine */ }
 
-  async function pickMonitor(m) {
+  // Picking a monitor always records that one; Follow records the screen you click on.
+  async function pickScreen(value) {
     if (state.phase !== 'idle') return;
-    if (state.source === 'window') {
-      state.source = 'desktop';
-      if (pinnedId() !== m.id) await saveSetting('monitor', `id:${m.id}`);
-      else restartReplay();
-    } else {
-      await saveSetting('monitor', pinnedId() === m.id ? 'follow' : `id:${m.id}`);
-    }
+    const wasWindow = state.source === 'window';
+    state.source = 'desktop';
+    if (state.settings && state.settings.monitor !== value) await saveSetting('monitor', value);
+    else if (wasWindow) restartReplay();
     renderStage();
   }
+  const pickMonitor = (m) => pickScreen(`id:${m.id}`);
+  $('pick-follow').addEventListener('click', () => pickScreen('follow'));
 
   async function pickApp() {
     if (state.phase !== 'idle') return;

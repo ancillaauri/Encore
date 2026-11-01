@@ -478,6 +478,21 @@ body.recording #settings .setcard, body.saving #settings .setcard { pointer-even
 .on .beam { background: radial-gradient(ellipse at center, rgba(88, 101, 242, .65), transparent 70%); }
 .pn { font-size: 13px; font-weight: 600; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ps { font-size: 11.5px; color: var(--mute); margin-top: -6px; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Narrow windows: smaller tiles so the picker stays on one line. */
+.picks.compact .pick { min-width: 0; padding: 10px 8px 8px; }
+.picks.compact .app { width: 76px; height: 66px; }
+.picks.compact .pn, .picks.compact .ps { max-width: 118px; }
+.picks.compact .beam { width: 86px; }
+.picks.tight .pick { padding: 8px 4px 6px; }
+.picks.tight .app { width: 62px; height: 54px; }
+.picks.tight .pn { font-size: 12px; max-width: 96px; }
+.picks.tight .ps { font-size: 11px; max-width: 96px; }
+.picks.tight .vsep { margin: 0 2px 26px; }
+/* Following: the screen in use (lighter than a chosen one). */
+.cur .mon { border-color: rgba(138, 150, 255, .5); color: #aab2ff; box-shadow: 0 0 12px rgba(88, 101, 242, .2); }
+.cur .neck { background: rgba(138, 150, 255, .4); }
+.cur .beam { background: radial-gradient(ellipse at center, rgba(88, 101, 242, .3), transparent 70%); }
+.cur .ps { color: #9aa3ff; }
 .pin { position: absolute; top: 5px; right: 6px; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-shadow: none; color: #9aa3ff; }
 .vsep { width: 1px; height: 96px; background: var(--line); margin: 0 4px 26px; }
 .pnote { margin: 14px 0 0; font-size: 12px; color: var(--dim); text-align: center; max-width: 60ch; }

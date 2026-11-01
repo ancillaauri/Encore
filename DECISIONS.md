@@ -346,3 +346,34 @@ Both have hardware-accelerated GPU scheduling on.
   elevated copy passes this on through a short-lived marker file.
 - Settings has a contents list on the left: click a section to jump to it; the section in view is
   highlighted. Hidden on narrow windows.
+
+## 2026-11-01: Game detection plan, and the picker changes that come first (0.8.1)
+Agreed design for game detection (to build next):
+- Game detection is its own on/off switch, separate from the monitor choice. With no game
+  running, Encore records the chosen monitor (or follows clicks), shown in green to say detection
+  is still on. A game opening takes over; when all games close it goes back to the fallback.
+- League: only the match window counts; the client never does, so between matches it's the
+  fallback monitor.
+- Several games: newest wins by default (setting: "Newest game" or "The game I'm playing").
+  "Record this game" hotkey (Ctrl+Alt+G), clicking a game in the Game tile, or the tray menu locks
+  onto one; the lock holds while other games open and is released when that game closes.
+  "Next game" hotkey (Ctrl+Alt+N) moves between open games.
+- Select Application is separate; picking it pauses game detection; picking a screen resumes it.
+- Games are captured as their window only (Alt+Tab and the desktop never appear). If a game in
+  exclusive full screen comes out black, Encore says to use borderless.
+- A manual recording when the game closes either carries on with the fallback or stops and saves
+  (setting).
+- Instant replay stays one global switch; "Keep replay on the desktop" off means it only buffers
+  while a game runs.
+- Detection: Always/Never lists, known launchers/clients/browsers excluded, game-library folders,
+  then full screen with heavy graphics use as the last guess. Names from Steam's records where
+  possible; "(TM) Client" style endings cleaned.
+- After that: Encore's own notices (never captured, hologram position picker, Do not disturb in
+  the main panel), designed together first.
+
+0.8.1 (first step):
+- "Follow" is its own tile in the picker (the screen you click on). Picking a monitor always
+  records it (no more click-again-to-follow or "ALWAYS" badge); when following, the screen in use
+  has a lighter highlight and "In use".
+- "One app" is renamed "Select Application".
+- On narrow windows the picker tiles shrink so it stays on one line.

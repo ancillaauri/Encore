@@ -131,12 +131,17 @@
 
       <h2 class="pickhead">What to record</h2>
       <div class="picks" id="picks" role="radiogroup" aria-label="What to record">
+        <button type="button" class="pick" id="pick-follow" role="radio" aria-checked="false" title="Record the screen you click on, and move with you">
+          <span class="app"><span class="bar"></span><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l11.5 8.2-5.2.9 3 6-2.4 1.2-3-6.1L6 17.6z"/></svg></span></span>
+          <span class="neck"></span><span class="beam"></span>
+          <span class="pn">Follow</span><span class="ps">The screen you click</span>
+        </button>
         <div class="mons" id="mons"></div>
         <span class="vsep" aria-hidden="true"></span>
         <button type="button" class="pick" id="pick-app" role="radio" aria-checked="false" aria-haspopup="menu">
           <span class="app"><span class="bar"></span><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 9h16"/></svg></span></span>
           <span class="neck"></span><span class="beam"></span>
-          <span class="pn">One app</span><span class="ps" id="pick-app-sub">Choose</span>
+          <span class="pn">Select Application</span><span class="ps" id="pick-app-sub">Choose</span>
         </button>
         <button type="button" class="pick" id="pick-game" role="radio" aria-checked="false" disabled title="Automatic game detection comes in the next update">
           <span class="app"><span class="bar"></span><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/><path d="M8 11.5v2M7 12.5h2M15.5 12h.01M17.5 13h.01"/></svg></span></span>
