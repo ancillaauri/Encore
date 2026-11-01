@@ -4,7 +4,7 @@ A lightweight game and screen recorder for Windows 11, made as a pair with the c
 
 - Records the screen you're using and follows you when you click a window on another monitor, or
   always one monitor, or a single app
-- **Split App Tracks:** a separate audio track for each app that makes sound (game, music,
+- **Split Application Audio:** a separate audio track for each app that makes sound (game, music,
   browser, voice chat), plus Full mix (everything, including your mic), Microphone and Desktop audio
 - GPU encoding on NVIDIA, AMD and Intel (H.264, HEVC or AV1)
 - Saves into an Encore folder wherever you choose, with a folder per game or app

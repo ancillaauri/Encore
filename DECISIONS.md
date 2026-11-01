@@ -397,3 +397,10 @@ Agreed design for game detection (to build next):
   Application shrink before the monitors do.
 - Minimum window size 1100x700: the smallest at which everything fits without scrolling with three
   monitors, a recording running and two games found (checked in a browser at each size).
+- Side panel audio (with the game detection build): Video and Audio are split by a line. Each audio
+  option has an icon whose lines glow: Full System Audio (was "Desktop audio"; PC and monitor)
+  and Split Application Audio (was "Split App Tracks"; mixer sliders) glow blue when on and soft
+  red when off; Microphone glows green when on and red, with a line through it, when off. Split
+  Application Audio has an (i) explaining it on hover. Switches use the monitors' lighter blue.
+  Only the labels changed: the tracks in the files keep their names ("Desktop audio" etc.), so the
+  editor's handling is unchanged.

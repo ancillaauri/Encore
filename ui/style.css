@@ -388,7 +388,7 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
   background: #fff;
   transition: transform .15s;
 }
-.toggle:checked { background: var(--acc); }
+.toggle:checked { background: #7c88ff; }
 .toggle:checked::after { transform: translateX(16px); }
 .toggle.sm { width: 34px; height: 20px; border-radius: 10px; }
 .toggle.sm::after { width: 14px; height: 14px; }
@@ -442,7 +442,7 @@ body.saving .dot { background: var(--dim); }
 .tracks { margin: 6px 0 0; color: var(--dim); font-size: 12.5px; text-align: center; max-width: 60ch; }
 
 /* while recording, settings that would change the file are locked */
-body.recording #quick .srow, body.saving #quick .srow,
+body.recording #quick .srow, body.saving #quick .srow, body.recording #quick-audio .srow, body.saving #quick-audio .srow,
 body.recording #settings .setcard, body.saving #settings .setcard { pointer-events: none; opacity: .5; }
 
 /* ---------- what to record: monitors as holograms, laid out like Windows has them ---------- */
@@ -769,3 +769,22 @@ body.side-collapsed .side-foot { display: none; }
 .gchip.active .gd { background: var(--acc); box-shadow: 0 0 6px rgba(88, 101, 242, .8); }
 .gchip.locked { border-color: rgba(138, 150, 255, .9); }
 .gchip .lock { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- side panel audio rows: icons whose lines glow (on / off) ---------- */
+.arow { justify-content: flex-start; gap: 10px; }
+.arow .atext { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.arow .toggle { flex: none; }
+.aic { width: 22px; height: 22px; flex: none; display: grid; place-items: center; }
+.aic svg { width: 20px; height: 20px; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s ease, filter .25s ease; }
+.arow .slash { display: none; }
+/* Full System Audio and Split Application Audio: blue when on, soft red when off */
+.arow.blue .aic svg { stroke: #ff8a8e; filter: drop-shadow(0 0 2px rgba(255, 92, 97, .55)); opacity: .8; }
+.arow.blue:has(input:checked) .aic svg { stroke: #b4bbff; filter: drop-shadow(0 0 2px rgba(124, 136, 255, .95)) drop-shadow(0 0 6px rgba(110, 120, 255, .5)); opacity: 1; }
+/* Microphone: green when on, red (with a line through) when off */
+.arow.mic .aic svg { stroke: #ff7a7e; filter: drop-shadow(0 0 2px rgba(255, 92, 97, .9)) drop-shadow(0 0 6px rgba(255, 92, 97, .45)); }
+.arow.mic .slash { display: inline; }
+.arow.mic:has(input:checked) .aic svg { stroke: #6fdc8c; filter: drop-shadow(0 0 2px rgba(59, 199, 93, .95)) drop-shadow(0 0 6px rgba(59, 199, 93, .5)); }
+.arow.mic:has(input:checked) .slash { display: none; }
+.arow:has(input:disabled) .aic svg { opacity: .45; }
+.info { display: inline-grid; place-items: center; width: 15px; height: 15px; flex: none; border-radius: 50%; border: 1.3px solid #6b6a70; color: #9c9ba0; font-size: 10px; font-weight: 700; font-style: normal; line-height: 1; cursor: help; }
+.info:hover, .info:focus-visible { border-color: #b4bbff; color: #e0e3ff; outline: none; }

@@ -253,6 +253,12 @@
     tip.timer = setTimeout(() => { if (tip.el === el && el.isConnected) showTip(el); }, 250);
   });
   document.addEventListener('pointerdown', hideTip, true);
+  // The (i) next to an option explains it; clicking it shouldn't flip the switch it sits beside.
+  document.querySelectorAll('.info').forEach((i) => {
+    i.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); showTip(i); });
+    i.addEventListener('focus', () => showTip(i));
+    i.addEventListener('blur', hideTip);
+  });
   window.addEventListener('blur', hideTip);
 
   // ---------- formatting ----------
@@ -477,7 +483,7 @@
     // Settings that change the file are locked while recording or saving.
     const locked = state.phase !== 'idle';
     $('lock-note').hidden = !locked;
-    document.querySelectorAll('#quick select, #quick input').forEach((el) => (el.disabled = locked));
+    document.querySelectorAll('#quick select, #quick input, #quick-audio input').forEach((el) => (el.disabled = locked));
     fitPicks();
     syncTray();
     renderReplay();
