@@ -504,3 +504,23 @@ Agreed design for game detection (to build next):
   Echoes headline "Shadow every play" (a nod to ShadowPlay). Every key shown in setup is the one
   actually set ("no key set" otherwise). Last page: the moon line went; "Change any of them in
   Settings → Hotkeys" with an Open hotkey settings button.
+
+## 2026-11-01: Notifications over the game (0.9.8)
+- A small window of their own, drawn by the shell: transparent, always on top, click-through,
+  never takes focus, no taskbar button, and marked so Windows' screen capture leaves it out
+  (`SetWindowDisplayAffinity`, `WDA_EXCLUDEFROMCAPTURE`, Windows 10 2004+). They never appear in
+  recordings or Echoes, nor in screen sharing or screenshots. Hidden when there's nothing to show.
+- Two looks, picked by the spot: the **hologram card** in the corners and at top and bottom
+  centre, its timer line on the side facing into the screen (along the bottom at the top, along
+  the top at the bottom); the **edge tab** at the middle of the left or right edge, sliding in from
+  that edge, its timer bar on the inner side draining downwards. Eight spots in all.
+- Up to three stacked; a fourth pushes the oldest out. The newest sits nearest the screen edge.
+- Settings → Notifications: on/off, screen (the one in use, or a chosen one), the spot on a
+  monitor diagram, time on screen (2 to 10 seconds, default 5), Show a test, and which events
+  show (Echo saved, recording started, recording saved, game detection, problems). Setup has a
+  Notifications page (now 7 pages) with the diagram and the time.
+- Not shown while Encore's own window is in front (its messages show there) or with Do not
+  disturb on. A test always shows.
+- Games in exclusive fullscreen draw over every window, so they can't show there. No warning:
+  Settings and setup say so instead.
+- Defaults: on, top right, 5 seconds, the screen in use, every event.

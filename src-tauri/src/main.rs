@@ -7,6 +7,7 @@
 mod admin;
 mod engine_link;
 mod hotkeys;
+mod notify;
 mod startup;
 mod tray;
 mod updater;
@@ -136,6 +137,7 @@ fn main() {
             tray::setup(app.handle())?;
             tray::start(app.handle().clone());
             hotkeys::start(app.handle().clone());
+            notify::create(app.handle())?;
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -156,6 +158,8 @@ fn main() {
             tray::quit_app,
             tray::restart_as_admin,
             tray::set_tray_games,
+            notify::show_notification,
+            notify::notifications_idle,
             admin::admin_status,
             admin::set_start_as_admin,
             startup::autostart_status,

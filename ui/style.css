@@ -880,3 +880,57 @@ body.gd-wait .ps.rec-tag { color: #8fdca5; }
 .gamebar:not(.on) .gb-switch { border-right: 0; padding-right: 4px; }
 .kbd.unset { color: var(--mute); background: rgba(255, 255, 255, .05); font-weight: 500; }
 #setup-hotkeys { margin: 4px 0 6px; }
+
+/* ---------- notifications: the spot picker (Settings and setup) ---------- */
+.sethead { font-size: 14px; margin: 18px 0 8px; color: var(--text); }
+.ntf-card { display: flex; align-items: center; gap: 28px; padding: 20px 18px 18px; }
+.ntf-side { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.ntf-name { font-size: 18px; color: #fff; }
+.ntf-label { flex: none; width: 120px; }
+.ntf-grow { flex: 1; }
+.ntf-secs-text { flex: none; min-width: 84px; text-align: right; font-weight: 600; color: #c9ceff; font-variant-numeric: tabular-nums; }
+.ntf-secs { accent-color: #7c88ff; }
+.ntf-setup { padding: 16px 16px 12px; display: grid; justify-items: center; }
+.ntf-center { text-align: center; margin-top: 10px; }
+.ntf-center strong { color: var(--text); }
+.setcard.off { opacity: .45; }
+
+.ntf-pick { flex: none; display: flex; flex-direction: column; align-items: center; --w: 420px; --h: 236px; }
+.ntf-pick.small { --w: 352px; --h: 198px; }
+.ntf-mon { position: relative; width: var(--w); height: var(--h); box-sizing: border-box; border-radius: 8px; border: 1.5px solid rgba(138, 150, 255, .55); background: #0d0c14; box-shadow: 0 0 22px rgba(88, 101, 242, .25), inset 0 0 18px rgba(138, 150, 255, .08); }
+.ntf-mon > i { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-style: normal; font-size: 12px; color: var(--dim); }
+.ntf-neck { width: 4px; height: 16px; background: rgba(138, 150, 255, .7); box-shadow: 0 0 8px rgba(88, 101, 242, .8); }
+.ntf-base { width: 96px; height: 4px; border-radius: 2px; background: rgba(138, 150, 255, .55); }
+
+.ntf-slot { position: absolute; padding: 0; overflow: hidden; box-sizing: border-box; font: inherit; color: inherit; cursor: pointer; border: 1px dashed #3a393e; background: transparent; border-radius: 6px; width: 104px; height: 26px; transition: border-color .15s ease, background .15s ease; }
+.ntf-slot:hover { border-color: rgba(138, 150, 255, .8); background: rgba(88, 101, 242, .12); }
+.ntf-slot:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ntf-slot[aria-pressed="true"] { border: 1px solid rgba(138, 150, 255, .85); background: rgba(16, 15, 26, .95); box-shadow: 0 0 14px rgba(88, 101, 242, .55); }
+.ntf-slot.tl { top: 12px; left: 12px; }
+.ntf-slot.tc { top: 12px; left: 50%; transform: translateX(-50%); }
+.ntf-slot.tr { top: 12px; right: 12px; }
+.ntf-slot.bl { bottom: 12px; left: 12px; }
+.ntf-slot.bc { bottom: 12px; left: 50%; transform: translateX(-50%); }
+.ntf-slot.br { bottom: 12px; right: 12px; }
+.ntf-slot.ml, .ntf-slot.mr { top: 50%; transform: translateY(-50%); width: 70px; height: 34px; }
+.ntf-slot.ml { left: 0; border-left: 0; border-radius: 0 6px 6px 0; }
+.ntf-slot.mr { right: 0; border-right: 0; border-radius: 6px 0 0 6px; }
+
+.ntf-mini { display: flex; align-items: center; gap: 6px; padding: 0 8px; height: 100%; }
+.ntf-mini b { width: 11px; height: 11px; flex: none; border-radius: 3px; border: 1px solid rgba(138, 150, 255, .7); box-shadow: 0 0 5px rgba(88, 101, 242, .7); }
+.ntf-mini span { flex: 1; display: grid; gap: 3px; }
+.ntf-mini span::before, .ntf-mini span::after { content: ""; height: 3px; border-radius: 2px; }
+.ntf-mini span::before { width: 70%; background: var(--text); }
+.ntf-mini span::after { width: 90%; background: var(--dim); }
+.ntf-slot.ml .ntf-mini b, .ntf-slot.mr .ntf-mini b { display: none; }
+.ntf-tm { position: absolute; background: #b4bbff; box-shadow: 0 0 5px rgba(88, 101, 242, .9); }
+.ntf-tm.x { left: 6px; right: 6px; height: 2px; transform-origin: left; animation: ntfX var(--secs, 5s) linear infinite; }
+.ntf-slot.tl .ntf-tm, .ntf-slot.tc .ntf-tm, .ntf-slot.tr .ntf-tm { bottom: 0; }
+.ntf-slot.bl .ntf-tm, .ntf-slot.bc .ntf-tm, .ntf-slot.br .ntf-tm { top: 0; }
+.ntf-tm.y { top: 0; bottom: 0; width: 3px; transform-origin: bottom; animation: ntfY var(--secs, 5s) linear infinite; }
+.ntf-slot.mr .ntf-tm { left: 0; }
+.ntf-slot.ml .ntf-tm { right: 0; }
+@keyframes ntfX { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes ntfY { from { transform: scaleY(1); } to { transform: scaleY(0); } }
+@media (prefers-reduced-motion: reduce) { .ntf-tm { animation: none; } }
+@media (max-width: 760px) { .ntf-card { flex-direction: column; align-items: stretch; } .ntf-pick { --w: 340px; --h: 191px; } }

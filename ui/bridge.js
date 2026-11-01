@@ -24,6 +24,9 @@
     nextGame: () => call('next_game'),
     setTrayGames: (on, games, active, locked, recording) => T.core.invoke('set_tray_games', { on, games, active: active ?? null, locked: locked ?? null, recording }),
     onTrayGame: (callback) => T.event.listen('tray-game', (e) => callback(e.payload)),
+    // A notification over the game: device = a screen's Windows name, or null for the screen in use;
+    // pos = tl, tc, tr, ml, mr, bl, bc or br; item = {kind, title, text, seconds}
+    showNotification: (device, pos, item) => T.core.invoke('show_notification', { device: device || null, pos, item }),
     openFolder: (path) => T.core.invoke('open_folder', { path }),
     revealFile: (path) => T.core.invoke('reveal_in_folder', { path }),
     openLink: (url) => T.core.invoke('open_link', { url }),

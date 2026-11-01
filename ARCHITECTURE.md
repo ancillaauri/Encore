@@ -35,6 +35,7 @@ The interface calls only these. Each shell provides its own implementation of th
 |---|---|
 | `startRecording()` / `stopRecording()` | Manual recording |
 | `startReplay()` / `stopReplay()` / `saveReplay()` | Echoes (the instant replay buffer) |
+| `showNotification(device, pos, item)` | A notification over the game (shell window, never recorded) |
 | `getStatus()` | Current state (idle / recording / replay on, elapsed time, disk use) |
 | `getSettings()` / `setSettings(obj)` | Read/write settings |
 | `listMonitors()` / `listWindows()` | Capture targets for the source picker |
@@ -215,6 +216,16 @@ copy isn't elevated, Encore runs the task and exits, so it comes back elevated w
 task is missing, Encore just opens normally. The task-started copy waits 0.4 s so the single-instance
 check doesn't see the copy that's closing. Restart as Administrator uses the task too when it's set
 up, after waiting for the old copy to exit.
+
+## Notifications (shell, 0.9.8)
+`src-tauri/src/notify.rs` owns a second window, `notify` (page `ui/notify.html`), created hidden
+at start-up: transparent, always on top, click-through, `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW`,
+and `WDA_EXCLUDEFROMCAPTURE` so capture leaves it out. The interface decides whether to show one
+(settings, Do not disturb, its own window in front) and calls `show_notification(device, pos,
+item)`; the shell resolves the screen (by Windows name, else the one holding the foreground
+window), places the window at the spot without activating it, and sends the item to the page.
+The page stacks up to three, runs each timer, and calls `notifications_idle` when the last one
+has faded, which hides the window.
 
 ## Updates (shell)
 

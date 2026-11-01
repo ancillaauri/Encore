@@ -116,7 +116,26 @@ pub struct Settings {
     pub volume_start: u32,
     pub volume_stop: u32,
     pub volume_save: u32,
+    /// Notifications: small pop-ups over the game, shown by the app shell in a window that screen
+    /// capture leaves out. Do not disturb hides them all.
+    pub notifications: bool,
+    /// Where they appear (one of NOTIFY_SPOTS): corners and top/bottom centre use the card; the
+    /// middle of the left or right edge uses the edge tab.
+    pub notify_pos: String,
+    /// How long each one stays on screen, in seconds.
+    pub notify_seconds: u32,
+    /// Which screen: "game" (the screen in use) or a monitor id ("id:…").
+    pub notify_screen: String,
+    /// Which events show one.
+    pub notify_echo: bool,
+    pub notify_record: bool,
+    pub notify_saved: bool,
+    pub notify_game: bool,
+    pub notify_problems: bool,
 }
+
+pub const NOTIFY_SPOTS: [&str; 8] = ["tl", "tc", "tr", "ml", "mr", "bl", "bc", "br"];
+pub const NOTIFY_SECONDS: std::ops::RangeInclusive<u32> = 2..=10;
 
 /// Sounds the interface can play (it synthesises them; no sound files).
 pub const SOUND_NAMES: [&str; 9] = ["rise", "fall", "double", "pop", "bell", "blip", "click", "shutter", "none"];
@@ -174,6 +193,15 @@ impl Default for Settings {
             volume_start: 50,
             volume_stop: 50,
             volume_save: 50,
+            notifications: true,
+            notify_pos: "tr".into(),
+            notify_seconds: 5,
+            notify_screen: "game".into(),
+            notify_echo: true,
+            notify_record: true,
+            notify_saved: true,
+            notify_game: true,
+            notify_problems: true,
         }
     }
 }
@@ -259,6 +287,16 @@ impl Settings {
         if [updated.volume_start, updated.volume_stop, updated.volume_save].iter().any(|v| *v > 100) {
             return Err("Volume must be between 0 and 100".into());
         }
+        if !NOTIFY_SPOTS.contains(&updated.notify_pos.as_str()) {
+            return Err("Unknown notification position".into());
+        }
+        if !NOTIFY_SECONDS.contains(&updated.notify_seconds) {
+            return Err("Notifications can stay for 2 to 10 seconds".into());
+        }
+        let ns = updated.notify_screen.as_str();
+        if !(ns == "game" || (ns.starts_with("id:") && ns.len() > 3)) {
+            return Err("Notification screen must be game or a monitor id".into());
+        }
         if updated.hotkey_record.len() > 64 {
             return Err("Hotkey is too long".into());
         }
@@ -313,6 +351,13 @@ impl Settings {
         }
         for v in [&mut self.volume_start, &mut self.volume_stop, &mut self.volume_save] {
             *v = (*v).min(100);
+        }
+        if !NOTIFY_SPOTS.contains(&self.notify_pos.as_str()) {
+            self.notify_pos = d.notify_pos.clone();
+        }
+        self.notify_seconds = self.notify_seconds.clamp(*NOTIFY_SECONDS.start(), *NOTIFY_SECONDS.end());
+        if !(self.notify_screen == "game" || (self.notify_screen.starts_with("id:") && self.notify_screen.len() > 3)) {
+            self.notify_screen = "game".into();
         }
         // Not set up yet and still on an old guessed default: use the real Videos folder (it may be
         // on another drive or in OneDrive, where the guess made a new, empty folder).
@@ -420,5 +465,21 @@ mod tests {
         assert_eq!(s.replay_custom_seconds, 90);
         assert_eq!((s.sound_start.as_str(), s.sound_stop.as_str(), s.sound_save.as_str()), ("rise", "fall", "double"));
         assert_eq!((s.volume_start, s.volume_stop, s.volume_save), (50, 50, 50));
+        assert!(s.notifications && s.notify_echo && s.notify_record && s.notify_saved && s.notify_game && s.notify_problems);
+        assert_eq!((s.notify_pos.as_str(), s.notify_seconds, s.notify_screen.as_str()), ("tr", 5, "game"));
+    }
+
+    #[test]
+    fn notification_settings_are_checked() {
+        let s = Settings::default();
+        assert!(s.apply_patch(&serde_json::json!({ "notify_pos": "mr", "notify_seconds": 10 })).is_ok());
+        assert!(s.apply_patch(&serde_json::json!({ "notify_pos": "middle" })).is_err());
+        assert!(s.apply_patch(&serde_json::json!({ "notify_seconds": 1 })).is_err());
+        assert!(s.apply_patch(&serde_json::json!({ "notify_screen": "id:abc" })).is_ok());
+        assert!(s.apply_patch(&serde_json::json!({ "notify_screen": "left" })).is_err());
+        // Settings from before notifications existed, or with odd values, load with sensible ones.
+        let o: Settings = serde_json::from_value(serde_json::json!({ "notify_pos": "x", "notify_seconds": 99 })).unwrap();
+        let o = o.normalised();
+        assert_eq!((o.notify_pos.as_str(), o.notify_seconds, o.notify_screen.as_str()), ("tr", 10, "game"));
     }
 }

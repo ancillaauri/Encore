@@ -475,6 +475,51 @@
         </section>
 
         <section class="setsec">
+          <h3>Notifications</h3>
+          <p class="setnote">Small pop-ups over your game when you save an Echo, start or stop recording, or Encore changes game. They never appear in your recordings or Echoes.</p>
+          <div class="setcard">
+            <label class="setrow"><span class="settext"><span class="setname">Show notifications</span>
+              <span class="setsub">Do not disturb hides them all</span></span>
+              <input type="checkbox" class="toggle" data-setting="notifications"></label>
+            <label class="setrow"><span class="setname">Screen</span>
+              <select class="dd" id="notify-screen" aria-label="Screen for notifications"></select>
+            </label>
+          </div>
+          <h4 class="sethead">Where they appear</h4>
+          <div class="setcard ntf-card" data-ntf-dim>
+            <div class="ntf-pick" id="notify-pick"></div>
+            <div class="ntf-side">
+              <span class="setsub">Selected</span>
+              <b class="ntf-name" id="notify-pos-name"></b>
+              <span class="setsub wrap">Click a spot to move them. Corners, top and bottom use the hologram card; the two side spots use the edge tab.</span>
+            </div>
+          </div>
+          <h4 class="sethead">How long they stay</h4>
+          <div class="setcard" data-ntf-dim>
+            <label class="setrow"><span class="setname ntf-label">Time on screen</span>
+              <input type="range" class="grow ntf-secs" min="2" max="10" step="1" data-setting="notify_seconds" data-number>
+              <span class="ntf-secs-text" data-ntf-secs></span>
+            </label>
+            <div class="setrow"><span class="setsub wrap ntf-grow">The line on each notification counts down this time.</span>
+              <button type="button" class="btn sm" id="notify-test">Show a test</button></div>
+          </div>
+          <h4 class="sethead">What to show</h4>
+          <div class="setcard" data-ntf-dim>
+            <label class="setrow"><span class="settext"><span class="setname">Echo saved</span><span class="setsub">Shows how much was saved</span></span>
+              <input type="checkbox" class="toggle" data-setting="notify_echo"></label>
+            <label class="setrow"><span class="settext"><span class="setname">Recording started</span><span class="setsub">And what is being recorded</span></span>
+              <input type="checkbox" class="toggle" data-setting="notify_record"></label>
+            <label class="setrow"><span class="settext"><span class="setname">Recording saved</span><span class="setsub">Its length and name</span></span>
+              <input type="checkbox" class="toggle" data-setting="notify_saved"></label>
+            <label class="setrow"><span class="settext"><span class="setname">Game detection</span><span class="setsub">A game is followed or locked</span></span>
+              <input type="checkbox" class="toggle" data-setting="notify_game"></label>
+            <label class="setrow"><span class="settext"><span class="setname">Problems</span><span class="setsub">Warnings and errors</span></span>
+              <input type="checkbox" class="toggle" data-setting="notify_problems"></label>
+          </div>
+          <p class="snote">Games in exclusive fullscreen won't show notifications. Borderless or windowed games will.</p>
+        </section>
+
+        <section class="setsec">
           <h3>Updates</h3>
           <p class="setnote">New versions come from the GitHub releases page.</p>
           <div class="setcard" role="radiogroup" aria-label="How updates work">
@@ -652,7 +697,27 @@
       </div>
 
 
-      <div class="sstep" data-step="6" data-title="You're all set" hidden>
+      <div class="sstep" data-step="6" data-title="Notifications" hidden>
+        <div class="echo-hero" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+        </div>
+        <p class="sbody">Encore shows a small pop-up over your game when you save an Echo, record, or it switches game. <strong>Pick where it goes and how long it stays.</strong> It never shows up in your recordings.</p>
+        <div class="setcard spaced ntf-setup">
+          <div class="ntf-pick small" id="setup-notify-pick"></div>
+          <p class="snote ntf-center">Click a spot to move it. <strong id="setup-notify-name"></strong></p>
+        </div>
+        <div class="setcard spaced">
+          <label class="setrow"><span class="setname ntf-label">Time on screen</span>
+            <input type="range" class="grow ntf-secs" min="2" max="10" step="1" data-setting="notify_seconds" data-number>
+            <span class="ntf-secs-text" data-ntf-secs></span>
+          </label>
+          <div class="setrow"><span class="setsub wrap ntf-grow">See one on the screen you're using</span>
+            <button type="button" class="btn sm" id="setup-notify-test">Show a test</button></div>
+        </div>
+        <p class="snote">Games in exclusive fullscreen won't show notifications; borderless or windowed games will. Choose which events show, or turn them off, in <strong>Settings → Notifications</strong>.</p>
+      </div>
+
+      <div class="sstep" data-step="7" data-title="You're all set" hidden>
         <p class="slead">A few handy keys</p>
         <div class="keys">
           <span class="kbd" data-key="hotkey_record"></span><span>Start or stop recording</span>

@@ -607,6 +607,7 @@
     renderToggles();
     renderGames();
     renderGameSettings();
+    renderNotify();
     if (!$('setup').hidden) renderSetup();
   }
 
@@ -744,12 +745,15 @@
         state.recording = data;
         state.phase = 'recording';
         renderStage();
+        notify('record', 'Recording started', labelName(data.label));
         break;
       case 'recording_saved':
         state.phase = 'idle';
         state.recording = null;
         addRecent(data);
         toast(data.recovered ? `Recovered an interrupted recording: ${fileName(data.path)}` : `Saved ${fileName(data.path)}`, 'ok', 5000);
+        notify('saved', data.recovered ? 'Recovered a recording' : 'Recording saved',
+          [data.duration_ms ? lengthText(Math.round(data.duration_ms / 1000)) : '', labelName(data.label)].filter(Boolean).join(', '));
         renderStage();
         break;
       case 'status':
@@ -769,6 +773,8 @@
         addRecent({ ...data, replay: true });
         const len = data.duration_ms ? ` (${lengthText(Math.round(data.duration_ms / 1000))})` : '';
         toast(`Saved an Echo${len}: ${fileName(data.path)}`, 'ok', 5000);
+        const of = /^(Game|Window): /.test(data.label || '') ? ` of ${labelName(data.label)}` : '';
+        notify('echo', 'Echo saved', data.duration_ms ? `Last ${lengthText(Math.round(data.duration_ms / 1000))}${of}` : `Saved${of}`);
         break;
       }
       case 'games':
@@ -779,6 +785,10 @@
       case 'game_switched':
         if (state.recording) state.recording.game = data.name || null;
         renderStage();
+        if (data.name) {
+          const k = state.settings && state.settings.hotkey_lock_game;
+          notify('game', `Now following ${data.name}`, k ? `Press ${k} to stay on this game` : '');
+        }
         break;
       case 'focus_monitor':
         state.focusMonitor = data.id || state.focusMonitor;
@@ -797,10 +807,12 @@
         break;
       case 'warning':
         toast(data.message, 'warning', 12000);
+        notify('problem', 'Heads up', data.message);
         break;
       case 'error':
         if (state.phase === 'saving') state.phase = 'idle';
         toast(data.message, 'error', 20000);
+        notify('problem', 'Something went wrong', data.message);
         renderStage();
         break;
       case 'engine_exited':
@@ -1555,6 +1567,7 @@
       const r = action === 'next_game' ? await bridge.nextGame() : await bridge.lockFocusedGame();
       playCue('save');
       toast(`Recording ${r.locked} until it closes`, 'ok', 4000);
+      notify('game', `Locked on ${r.locked}`, 'Encore stays on this game until it closes');
     } catch (e) { toast(String(e), 'warning', 7000); }
   }
   let traySent = '';
@@ -1572,6 +1585,71 @@
   bridge.onTrayGame((id) => lockGame(id === 'unlock' ? null : Number(id)));
 
   // Settings → Games: always / never lists, and the two choices.
+  // ---------- notifications over the game (drawn by the shell's notification window) ----------
+  const NOTIFY_SPOTS = [['tl', 'Top left'], ['tc', 'Top centre'], ['tr', 'Top right'], ['ml', 'Left edge'], ['mr', 'Right edge'], ['bl', 'Bottom left'], ['bc', 'Bottom centre'], ['br', 'Bottom right']];
+  const NOTIFY_KEYS = { echo: 'notify_echo', record: 'notify_record', saved: 'notify_saved', game: 'notify_game', problem: 'notify_problems' };
+  const spotStyle = (p) => (p === 'ml' || p === 'mr' ? 'edge tab' : 'hologram card');
+  const spotName = (p) => `${(NOTIFY_SPOTS.find(([id]) => id === p) || NOTIFY_SPOTS[2])[1]} (${spotStyle(p)})`;
+  const plain = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // "Game: Warframe" → "Warframe" (labels name what was recorded).
+  const labelName = (label) => String(label || '').replace(/^(Desktop|Window|Game): /, '');
+
+  // Shows one, unless it's switched off, Do not disturb is on, or Encore's own window is in front
+  // (its own messages show there). A test always shows.
+  function notify(kind, title, text, test = false) {
+    const s = state.settings;
+    if (!s) return;
+    if (!test && (!s.notifications || s.do_not_disturb || !s[NOTIFY_KEYS[kind]] || document.hasFocus())) return;
+    const id = s.notify_screen.startsWith('id:') ? s.notify_screen.slice(3) : null;
+    const m = id && monitorById(id);
+    bridge.showNotification(m ? m.device : null, s.notify_pos, { kind, title, text: text || '', seconds: s.notify_seconds })
+      .catch((e) => { if (test) toast(String(e), 'error'); });
+  }
+
+  function buildNotifyPick(box) {
+    box.innerHTML = '<div class="ntf-mon"><i>Your game</i></div><span class="ntf-neck"></span><span class="ntf-base"></span>';
+    const mon = box.firstChild;
+    for (const [id, name] of NOTIFY_SPOTS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `ntf-slot ${id}`;
+      b.dataset.spot = id;
+      b.setAttribute('aria-label', `${name}, ${spotStyle(id)}`);
+      b.addEventListener('click', () => saveSetting('notify_pos', id));
+      mon.appendChild(b);
+    }
+  }
+  buildNotifyPick($('notify-pick'));
+  buildNotifyPick($('setup-notify-pick'));
+
+  // secs: while the slider is being dragged, before it's saved.
+  function renderNotify(secs) {
+    const s = state.settings;
+    if (!s) return;
+    secs = secs || s.notify_seconds || 5;
+    document.querySelectorAll('.ntf-slot').forEach((b) => {
+      const on = b.dataset.spot === s.notify_pos;
+      b.setAttribute('aria-pressed', String(on));
+      // Drawn afresh each time so the timer line starts again from full.
+      b.innerHTML = on ? `<span class="ntf-mini"><b></b><span></span></span><span class="ntf-tm ${b.dataset.spot[0] === 'm' ? 'y' : 'x'}" style="--secs:${secs}s"></span>` : '';
+    });
+    $('notify-pos-name').textContent = spotName(s.notify_pos);
+    $('setup-notify-name').textContent = spotName(s.notify_pos);
+    document.querySelectorAll('[data-ntf-secs]').forEach((el) => (el.textContent = `${secs} seconds`));
+    document.querySelectorAll('[data-ntf-dim]').forEach((el) => el.classList.toggle('off', !s.notifications));
+    const opts = [['game', 'The screen you’re using'], ...state.monitors.map((m) => [`id:${m.id}`, `${m.name}${m.primary ? ' (main)' : ''}`])];
+    if (s.notify_screen !== 'game' && !opts.some(([v]) => v === s.notify_screen)) opts.push([s.notify_screen, 'Not connected: the screen you’re using']);
+    const sel = $('notify-screen');
+    const html = opts.map(([v, t]) => `<option value="${plain(v)}">${plain(t)}</option>`).join('');
+    if (sel.dataset.html !== html) { sel.innerHTML = html; sel.dataset.html = html; }
+    sel.value = s.notify_screen;
+  }
+  $('notify-screen').addEventListener('change', (e) => saveSetting('notify_screen', e.target.value));
+  document.querySelectorAll('.ntf-secs').forEach((el) => el.addEventListener('input', () => renderNotify(Number(el.value))));
+  for (const id of ['notify-test', 'setup-notify-test']) {
+    $(id).addEventListener('click', () => notify('echo', 'Echo saved', 'A test: this is how your notifications will look', true));
+  }
+
   function renderGameSettings() {
     const s = state.settings;
     if (!s) return;
