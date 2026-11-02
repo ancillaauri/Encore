@@ -28,7 +28,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Auto-start replay when a game is detected, stop when it closes | 7 | [ ] |
 | Storage: estimated disk use beside replay length [~] 0.7.0; max library size + auto-delete oldest, low-disk warning [ ] | 7 | [~] |
 | Installer + updates (check, download and install from the app; user chooses the update mode) | 8 | [~] |
-| Settings dialog, ≡ menu, side panel (quick settings, saved this session), About, changelog skeleton, first-run setup | 6 | [x] |
+| Settings dialog, Main Menu, sidebar (quick settings, saved this session), About, changelog skeleton, first-run setup | 6 | [x] |
 | Companion editor reads our per-app tracks (change on the editor side) | 9 | [ ] |
 
 ## Found in testing (0.3.0 desktop test, 2026-10-31)
@@ -70,7 +70,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Lower suggested frame rate in setup for weaker graphics cards | Uses the PC specs collected for the performance log | [ ] |
 | Per-app audio feature named **Split Application Audio** (UI and docs) | | [x] |
 | Notifications over the game, never recorded: hologram card or edge tab by spot, 2 to 10 s timer, up to 3 stacked, size 1× to 2× | 0.9.8; drawn by Encore on the processor from 0.9.15; not over exclusive fullscreen games | [x] |
-| Priority Capture: realtime graphics priority for the capture, switch in the side panel and Settings → Advanced, one-time "I understand" | 0.9.10 (as Top graphics priority), 0.9.17 | [x] |
+| Priority Capture: realtime graphics priority for the capture, switch in the sidebar and Settings → Advanced, one-time "I understand" | 0.9.10 (as Top graphics priority), 0.9.17 | [x] |
 | Warning when the capture falls behind (30 s, or more than 10 s behind) | 0.9.10, 0.9.12 | [x] |
 | Main Menu (Settings at top level), Sidebar naming, Priority Capture hideable from the sidebar | 0.9.21 | [x] |
 | Microphone found by name when its id changes; warning icon and menu when it isn't plugged in | 0.9.23 | [x] |

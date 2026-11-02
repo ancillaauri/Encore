@@ -63,7 +63,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
     let (tx, rx) = channel::<Request>();
     let _ = TX.set(Mutex::new(tx));
     let app = app.clone();
-    std::thread::Builder::new().name("notifications".into()).spawn(move || run(app, rx)).map(|_| ()).map_err(|e| tauri::Error::Io(e))
+    std::thread::Builder::new().name("notifications".into()).spawn(move || run(app, rx)).map(|_| ()).map_err(tauri::Error::Io)
 }
 
 /// Shows one notification. `device` is the chosen screen's Windows name ("\\.\DISPLAY2"), or

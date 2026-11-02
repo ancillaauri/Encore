@@ -13,11 +13,15 @@ A lightweight game and screen recorder for Windows 11, made as a pair with the c
 - GPU encoding on NVIDIA, AMD and Intel (H.264, HEVC or AV1), with graphics priority so games
   that use the whole card don't make recordings stutter (needs "Start Encore as administrator"),
   and **Priority Capture** for games that put a heavy load on the card or less powerful cards
-- Saves into an Encore folder wherever you choose, with a folder per game or app
+- Saves into an Encore folder wherever you choose, with a folder per game or app. Clips you
+  save show in the sidebar with a picture: click to open them in the companion clip editor, your
+  video player or their folder; rename them, or delete them with 5 seconds to undo
 - Tray icon, start with Windows, start/stop/save sounds you can choose, and a status panel
+- Finds your microphone again if Windows renames it, and warns you when it's unplugged
 - In-app updates, on your terms (tell me, download automatically, or never)
 - **Game detection:** games are recorded on their own as they open (just the game's window), and
-  the screen you chose takes over when they close; lock a game when several are open
+  the screen you chose takes over when they close; lock a game when several are open. Turn
+  Desktop Capture off to record games only
 - **Notifications** over your game (never recorded): a card in the corners or an edge tab at the
   sides, with a timer, stacking up to three, in the size you choose
 
@@ -29,7 +33,7 @@ Download the latest `Encore_x.y.z_x64-setup.exe` from
 [Releases](https://github.com/ancillaauri/Encore/releases/latest) and run it.
 The installer is not code-signed yet, so Windows may show "Windows protected your PC" the first
 time: click **More info**, then **Run anyway**. After that, Encore updates itself from inside the
-app (≡ → Help).
+app (Main Menu → Help).
 
 ## Docs
 

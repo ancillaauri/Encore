@@ -458,10 +458,7 @@ impl Engine {
         let (target, label, src_w, src_h, describe) = match source {
             "desktop" if game.is_some() => {
                 let g = game.unwrap();
-                let (w, h) = platform::window_size(g.handle).filter(|(w, h)| *w > 0 && *h > 0).map_or_else(
-                    || self.pick_monitor().map(|m| (m.2, m.3)).unwrap_or((1920, 1080)),
-                    |s| s,
-                );
+                let (w, h) = platform::window_size(g.handle).filter(|(w, h)| *w > 0 && *h > 0).unwrap_or_else(|| self.pick_monitor().map(|m| (m.2, m.3)).unwrap_or((1920, 1080)));
                 // The output size is set once, from the screen, so switching to and from the
                 // game doesn't change it (the game is scaled to fit if it's windowed).
                 let (mw, mh) = self.pick_monitor().map(|m| (m.2, m.3)).unwrap_or((w, h));
@@ -950,7 +947,7 @@ impl Engine {
     fn games_json(&self) -> Value {
         let active = self.current_game();
         let mut list = self.watch.games.clone();
-        list.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        list.sort_by_key(|a| a.name.to_lowercase());
         json!({
             "on": self.settings.game_detection,
             // Select Application is being recorded: detection waits until a screen is picked again.

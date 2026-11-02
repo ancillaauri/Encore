@@ -589,7 +589,7 @@
   }
   setInterval(tick, 250);
 
-  // ---------- settings (side panel and Settings window share the same controls) ----------
+  // ---------- settings (the sidebar and the Settings window share the same controls) ----------
   function renderSettings() {
     const s = state.settings;
     if (!s) return;
@@ -833,7 +833,7 @@
     li.onclick = () => { if (!li.classList.contains('deleting') && !li.querySelector('input')) openClip(d, (state.settings && state.settings.clip_click) || 'folder'); };
     li.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      if (li.classList.contains('deleting')) return;
+      if (li.classList.contains('deleting') || li.querySelector('input')) return; // being renamed
       openMenu(e.clientX, e.clientY, [
         { text: 'Open in Clip Editor', run: () => openClip(d, 'editor') },
         { text: 'Play in video player', run: () => openClip(d, 'player') },
@@ -853,7 +853,7 @@
       if (how === 'player') await bridge.openInPlayer(d.path);
       else if (how === 'editor') {
         const exe = await clipEditorPath();
-        if (!exe) { toast('Clip Editor wasn\u2019t found. Find it in Settings \u2192 Clips with Browse.', 'warning', 8000); return; }
+        if (!exe) { toast('Clip Editor wasn\u2019t found. Find it in Settings \u2192 Files with Locate or Browse.', 'warning', 8000); return; }
         await bridge.openInEditor(exe, d.path);
       } else await bridge.revealFile(d.path);
     } catch (e) { toast(String(e), 'error'); }
@@ -1895,7 +1895,7 @@
   bridge.onTrayGame((id) => lockGame(id === 'unlock' ? null : Number(id)));
 
   // Settings → Games: always / never lists, and the two choices.
-  // ---------- Priority Capture (side panel and Settings → Advanced; the same setting) ----------
+  // ---------- Priority Capture (sidebar and Settings → Advanced; the same setting) ----------
   // The first time it's turned on, the person ticks "I understand" first.
   async function setPriorityCapture(on) {
     const s = state.settings;

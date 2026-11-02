@@ -4,6 +4,7 @@
 //!     until they click it.
 //!   - "auto_download": download quietly when found and show "Update ready"; they choose when to install.
 //!   - "never": no automatic checks. "Check for updates" still works when they ask.
+//!
 //! Updates are signed; Encore refuses anything not signed with its own key.
 
 use crate::engine_link::EngineLink;
@@ -63,10 +64,10 @@ async fn find_update(app: &AppHandle) -> Result<Option<Update>, String> {
     match find_update_once(app).await {
         Ok(found) => Ok(found),
         Err(first) => {
-            eprintln!("update check failed, trying again: {first}");
+            crate::hotkeys::note(app, format!("update check failed, trying again: {first}"));
             tokio_sleep(Duration::from_secs(3)).await;
             find_update_once(app).await.map_err(|e| {
-                eprintln!("update check failed again: {e}");
+                crate::hotkeys::note(app, format!("update check failed again: {e}"));
                 "Couldn't reach GitHub to check for updates. Check your internet connection and try again.".to_string()
             })
         }
@@ -129,7 +130,7 @@ pub fn start(app: AppHandle) {
             let mode = update_mode(&app);
             if mode != "never" {
                 if let Err(e) = tauri::async_runtime::block_on(check(&app, mode == "auto_download")) {
-                    eprintln!("update check failed: {e}");
+                    crate::hotkeys::note(&app, format!("update check failed: {e}"));
                 }
             }
             std::thread::sleep(CHECK_EVERY);

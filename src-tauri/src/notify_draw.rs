@@ -122,10 +122,7 @@ fn options() -> &'static usvg::Options<'static> {
         db.load_system_fonts();
         // The interface's font; something close where it's missing (tests on other systems).
         db.set_sans_serif_family("Segoe UI");
-        let mut opt = usvg::Options::default();
-        opt.fontdb = Arc::new(db);
-        opt.font_family = "Segoe UI".into();
-        opt
+        usvg::Options { fontdb: Arc::new(db), font_family: "Segoe UI".into(), ..Default::default() }
     })
 }
 
@@ -509,8 +506,7 @@ impl Stack {
                         pb.move_to(lx * s, top * s);
                         pb.line_to(lx * s, ly1 * s);
                         if let Some(path) = pb.finish() {
-                            let mut paint = tiny_skia::Paint::default();
-                            paint.anti_alias = true;
+                            let mut paint = tiny_skia::Paint { anti_alias: true, ..Default::default() };
                             for (grow, a) in [(6.0, 0.10), (3.0, 0.20), (0.0, 1.0)] {
                                 paint.set_color_rgba8(r, g, b, (a * alpha * 255.0) as u8);
                                 let stroke = tiny_skia::Stroke { width: (TAB_TIMER_W + grow) * s, line_cap: tiny_skia::LineCap::Round, ..Default::default() };
@@ -523,8 +519,7 @@ impl Stack {
             };
             for bar in bars {
                 // A soft glow, then the line.
-                let mut paint = tiny_skia::Paint::default();
-                paint.anti_alias = true;
+                let mut paint = tiny_skia::Paint { anti_alias: true, ..Default::default() };
                 for (grow, a) in [(3.0, 0.10), (1.5, 0.18)] {
                     if let Some(gl) = Rect::from_ltrb(bar.left() - grow * s, bar.top() - grow * s, bar.right() + grow * s, bar.bottom() + grow * s) {
                         paint.set_color_rgba8(r, g, b, (a * alpha * 255.0) as u8);

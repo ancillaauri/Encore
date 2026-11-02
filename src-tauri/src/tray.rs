@@ -174,7 +174,7 @@ pub fn set_recording_state(app: AppHandle, recording: bool, label: Option<String
     }
 }
 
-/// Quits Encore for real (≡ → File → Exit), even when closing hides to the tray.
+/// Quits Encore for real (Main Menu → File → Exit), even when closing hides to the tray.
 #[tauri::command]
 pub fn quit_app(app: AppHandle) {
     app.exit(0);

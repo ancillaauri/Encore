@@ -5,7 +5,7 @@
 
 use serde::Serialize;
 
-/// Realtime graphics priority for the capture: Priority Capture (side panel, Settings → Advanced).
+/// Realtime graphics priority for the capture: Priority Capture (sidebar, Settings → Advanced).
 static GPU_TOP: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 pub fn set_gpu_top(on: bool) {

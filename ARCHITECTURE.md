@@ -199,7 +199,7 @@ together (everything doubled). The change needed mirrors how it already handles 
 
 `src-tauri/src/tray.rs`. A tray icon (red dot while recording) with Open / Start-Stop / Quit.
 Closing the window hides it to the tray when `close_to_tray` is on (default), so hotkeys keep
-working; the first time, a Windows notification says where Encore went. ≡ → File → Exit and the
+working; the first time, a Windows notification says where Encore went. Main Menu → File → Exit and the
 tray's Quit really quit (the engine saves any recording first). A second launch shows the existing
 window (single instance). Global hotkeys are watched by the shell (`hotkeys.rs`, reading the key state every 10 ms, since
 RegisterHotKey doesn't fire while some games such as League of Legends are in front) from the

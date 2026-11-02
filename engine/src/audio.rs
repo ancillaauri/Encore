@@ -149,6 +149,7 @@ pub struct OutTrack {
 /// - `Desktop audio`: system sound without the mic (only when there is a mic to leave out). The
 ///   interface calls this source "Full System Audio"; the track title stays (file contract).
 /// - one track per app
+///
 /// A track that would just repeat another (e.g. Full mix with nothing to mix in) is left out.
 pub fn plan_output(tracks: &[TrackInfo]) -> Vec<OutTrack> {
     let idx = |k: TrackKind| tracks.iter().position(|t| t.kind == k);

@@ -52,7 +52,7 @@ pub fn open_in_editor(exe: String, path: String) -> Result<(), String> {
     let e = Path::new(&exe);
     let is_exe = e.extension().map(|x| x.eq_ignore_ascii_case("exe")).unwrap_or(false);
     if !is_exe || !e.is_file() {
-        return Err("Clip Editor wasn't found. Find it in Settings → Clips.".into());
+        return Err("Clip Editor wasn't found. Find it in Settings → Files.".into());
     }
     std::process::Command::new(e).arg(&path).spawn().map(|_| ()).map_err(|err| format!("Couldn't open Clip Editor: {err}"))
 }
