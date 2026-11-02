@@ -1199,6 +1199,7 @@
   // Set once the report server is running (see report-worker/SETUP.md). Previews can set their own.
   const REPORTS_URL = window.ENCORE_REPORTS_URL || 'https://encore-reports.ancillaauri.workers.dev';
   const replies = {}; // report number -> { state, replies: [{ body, at }] }
+  let replyCheckFailed = false;
   let reportDetails = null;
   function unreadReplies() {
     const list = (state.settings && state.settings.reports) || [];
@@ -1255,19 +1256,21 @@
     const list = ((state.settings && state.settings.reports) || []).slice(-20);
     if (!REPORTS_URL || !list.length) return;
     const before = unreadReplies();
+    let failed = false;
     await Promise.all(list.map(async (r) => {
       try {
         const res = await fetch(`${REPORTS_URL}/replies?n=${r.number}&key=${encodeURIComponent(r.key)}`);
         if (res.ok) replies[r.number] = await res.json();
-      } catch (e) { /* offline: try again later */ }
+        else failed = true;
+      } catch (e) { failed = true; } // offline: try again later
     }));
+    replyCheckFailed = failed;
     const now = unreadReplies();
     if (tellIfNew && now > before) {
       toast(`You have ${now === 1 ? 'a reply' : `${now} replies`} to a problem you reported.`, 'info', 0, { label: 'Read', run: openReports });
     }
   }
-  function openReports() {
-    hideMenu();
+  function renderReports() {
     const list = [...((state.settings && state.settings.reports) || [])].reverse();
     const body = $('reports-body');
     body.replaceChildren();
@@ -1277,8 +1280,8 @@
       const box = h('div', 'rep');
       const head = h('div', 'rep-head');
       head.append(h('span', '', r.title || `Report ${r.number}`));
-      const st = h('span', `rep-state ${got && got.state === 'closed' ? 'closed' : ''}`, got ? (got.state === 'closed' ? 'Closed' : 'Open') : 'Checking\u2026');
-      head.append(st);
+      const label = got ? (got.state === 'closed' ? 'Closed' : 'Open') : replyCheckFailed ? 'Couldn\u2019t check' : 'Checking\u2026';
+      head.append(h('span', `rep-state ${got && got.state === 'closed' ? 'closed' : ''}`, label));
       box.append(head, h('div', 'rep-sub', `Report ${r.number}, sent ${new Date(r.sent * 1000).toLocaleDateString()}`));
       const reps = (got && got.replies) || [];
       if (got && !reps.length) box.append(h('div', 'rep-sub', 'No reply yet.'));
@@ -1289,15 +1292,33 @@
       });
       body.append(box);
     }
+  }
+  // Everything shown counts as read.
+  function markRepliesRead() {
+    const now = ((state.settings && state.settings.reports) || []).map((r) => ({ ...r, seen: Math.max(r.seen || 0, ((replies[r.number] || {}).replies || []).length) }));
+    if (JSON.stringify(now) !== JSON.stringify(state.settings.reports)) saveSetting('reports', now);
+  }
+  // Opening My Reports asks for replies there and then (it shows what's known meanwhile).
+  async function openReports() {
+    hideMenu();
+    replyCheckFailed = false;
+    renderReports();
     openDialog('reports');
-    // Everything shown counts as read.
-    const updated = ((state.settings && state.settings.reports) || []).map((r) => ({ ...r, seen: Math.max(r.seen || 0, ((replies[r.number] || {}).replies || []).length) }));
-    if (JSON.stringify(updated) !== JSON.stringify(state.settings.reports)) saveSetting('reports', updated);
+    await checkReplies(false);
+    if ($('reports').hidden) return;
+    renderReports();
+    markRepliesRead();
   }
   $('reports-new').addEventListener('click', () => { closeDialog($('reports')); openReport(); });
   // Look for replies a little after start, then every half hour.
   setTimeout(() => checkReplies(true), 20000);
   setInterval(() => checkReplies(true), 30 * 60 * 1000);
+  let lastFocusCheck = 0;
+  window.addEventListener('focus', () => {
+    if (Date.now() - lastFocusCheck < 5 * 60 * 1000) return;
+    lastFocusCheck = Date.now();
+    checkReplies(true);
+  });
 
   // ---------- app menu ----------
   menuButton($('menu-btn'), () => {
