@@ -988,3 +988,6 @@ body.pcap-hidden .pcrow, body.pcap-hidden #rail-pcap { display: none; }
 
 /* Under "Keeps the last": how big a saved Echo is */
 .esize { margin: 2px 10px 0; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* The version next to Encore in the title bar: small and faded */
+.brand .tbver { font-size: 11px; font-weight: 500; color: var(--dim); opacity: .75; margin-left: -2px; font-variant-numeric: tabular-nums; }

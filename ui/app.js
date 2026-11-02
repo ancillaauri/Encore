@@ -1337,6 +1337,9 @@
     $('q-replay').closest('.hrow').dataset.tip = `Uses about ${disk} of disk space while Echoes is on (at your video settings).`;
     // How big a saved Echo is: at most the preset's bitrate, usually a little less (quiet scenes need less).
     $('echo-size').textContent = `Each Echo is up to about ${sizeText(mbPerMinute(s.quality) * s.replay_seconds / 60)}`;
+    $('set-echo-size').textContent = `${$('echo-size').textContent} at your video settings`;
+    $('set-replay-on').checked = on || !!state.replayRestarting;
+    $('set-replay-on').disabled = $('replay-on').disabled;
     $('echo-size').dataset.tip = `At ${QUALITY_NAMES[s.quality]}, ${s.fps} fps and your resolution. Saving the last 30 seconds or minute makes a smaller file.`;
     $('replay-sec').classList.toggle('lit', on);
     $('replay-sec').classList.toggle('restarting', !!state.replayRestarting);
@@ -1396,6 +1399,7 @@
     } catch (e) { toast(String(e), 'error', 10000); }
   }
   $('replay-on').addEventListener('change', (e) => setReplay(e.target.checked));
+  $('set-replay-on').addEventListener('change', (e) => setReplay(e.target.checked));
   $('save-replay').addEventListener('click', () => saveReplay());
 
   // ---------- tray, hotkeys, sounds ----------
@@ -1988,6 +1992,11 @@
   function renderGameSettings() {
     const s = state.settings;
     if (!s) return;
+    // Desktop Capture can only be off with game detection on (otherwise nothing would be recorded).
+    $('set-dc-on').disabled = !s.game_detection || state.phase !== 'idle';
+    $('set-dc-note').textContent = s.game_detection
+      ? 'Also records your screen, for recordings and Echoes, when no game is open. Off: Encore only records games.'
+      : 'Always on while game detection is off, so there\u2019s something to record.';
     document.querySelectorAll('[data-game-pick]').forEach((o) => o.setAttribute('aria-checked', String(o.dataset.gamePick === s.game_pick)));
     document.querySelectorAll('[data-game-end]').forEach((o) => o.setAttribute('aria-checked', String(o.dataset.gameEnd === s.game_end)));
     for (const [key, id] of [['games_always', 'games-always'], ['games_never', 'games-never']]) {
@@ -2162,6 +2171,7 @@
     renderCodecs();
     renderStage();
     try { state.version = await bridge.appVersion(); } catch (e) { state.version = ''; }
+    $('tb-ver').textContent = state.version ? `v${state.version}` : '';
     try { state.update = await bridge.getUpdate(); } catch (e) { /* no update info yet */ }
     renderUpdate();
   }

@@ -14,6 +14,7 @@
     <div class="brand" data-tauri-drag-region>
       <img class="mark" data-tauri-drag-region src="img/icon.png" alt="" width="22" height="22">
       <span class="name" data-tauri-drag-region>Encore</span>
+      <span class="tbver" id="tb-ver" data-tauri-drag-region></span>
       <span class="beta" data-tauri-drag-region title="Encore is in beta until version 1.0">Beta</span>
     </div>
     <div class="tb-fill" data-tauri-drag-region></div>
@@ -285,7 +286,41 @@
         </section>
 
         <section class="setsec">
-          <h3>Saving</h3>
+          <h3>Echoes</h3>
+          <p class="setnote">Echoes keeps the last few minutes of what you're playing, so you can save a great moment after it happens.</p>
+          <div class="setcard">
+            <label class="setrow"><span class="settext"><span class="setname">Echoes</span>
+              <span class="setsub">The same switch as on the main screen</span></span>
+              <input type="checkbox" class="toggle" id="set-replay-on"></label>
+            <label class="setrow"><span class="settext"><span class="setname">Keeps the last</span>
+              <span class="setsub" id="set-echo-size"></span></span>
+              <select class="dd" id="set-replay" data-setting="replay_seconds" data-number>
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="120">2 minutes</option>
+                <option value="300">5 minutes</option>
+                <option value="600">10 minutes</option>
+                <option value="900">15 minutes</option>
+                <option value="1200">20 minutes</option>
+              </select>
+            </label>
+            <div class="setrow">
+              <span class="settext"><span class="setname">Custom save length</span>
+                <span class="setsub" id="custom-len-note"></span></span>
+              <span class="custom-len">
+                <input type="number" id="custom-len" min="1" max="1200" step="1" aria-label="Custom length">
+                <select class="dd" id="custom-unit" aria-label="Unit">
+                  <option value="1">seconds</option>
+                  <option value="60">minutes</option>
+                </select>
+              </span>
+            </div>
+          </div>
+          <p class="snote">The keys to save an Echo are under Hotkeys.</p>
+        </section>
+
+        <section class="setsec">
+          <h3>Files</h3>
           <div class="setcard">
             <div class="setrow">
               <span class="settext"><label class="setname" for="output">Save recordings to</label>
@@ -306,10 +341,7 @@
               </div>
             </div>
           </div>
-        </section>
-
-        <section class="setsec">
-          <h3>Clips</h3>
+          <h4 class="sethead">Saved this session</h4>
           <div class="setcard">
             <label class="setrow"><span class="settext"><span class="setname">When I click a clip</span>
               <span class="setsub wrap">In Saved this session. Right-click a clip for the other choices.</span></span>
@@ -351,11 +383,6 @@
               <span class="setsub wrap">Opens in the tray, so hotkeys and Echoes are ready straight away.</span></span>
               <input type="checkbox" class="toggle" id="autostart"></label>
           </div>
-          <div class="setcard spaced">
-            <label class="setrow"><span class="settext"><span class="setname">Start Encore as administrator</span>
-              <span class="setsub wrap" id="start-admin-note">Keeps game recordings smooth when a game uses all of your graphics card. Windows asks for permission once, not every time.</span></span>
-              <input type="checkbox" class="toggle" id="start-admin"></label>
-          </div>
         </section>
 
         <section class="setsec">
@@ -385,14 +412,7 @@
             </div>
             <div class="setrow">
               <span class="settext"><span class="setname">Save an Echo: custom length</span>
-                <span class="setsub" id="custom-len-note"></span></span>
-              <span class="custom-len">
-                <input type="number" id="custom-len" min="1" max="1200" step="1" aria-label="Custom length">
-                <select class="dd" id="custom-unit" aria-label="Unit">
-                  <option value="1">seconds</option>
-                  <option value="60">minutes</option>
-                </select>
-              </span>
+                <span class="setsub" id="custom-hotkey-note">Saves the custom length set under Echoes</span></span>
               <button type="button" class="hotkey" data-hotkey="hotkey_save_custom"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_custom">Clear</button>
             </div>
@@ -413,8 +433,15 @@
 
         <section class="setsec">
           <h3>Games</h3>
-          <p class="setnote">Game detection records games on their own as they open, and goes back to your chosen screen when they close.</p>
-          <p class="setnote">When more than one game is open, record:</p>
+          <div class="setcard">
+            <label class="setrow"><span class="settext"><span class="setname">Game detection</span>
+              <span class="setsub wrap">Records games on their own as they open, and goes back to your chosen screen when they close.</span></span>
+              <input type="checkbox" class="toggle" id="set-game-on" data-setting="game_detection"></label>
+            <label class="setrow"><span class="settext"><span class="setname">Desktop Capture</span>
+              <span class="setsub wrap" id="set-dc-note">Also records your screen, for recordings and Echoes, when no game is open. Off: Encore only records games.</span></span>
+              <input type="checkbox" class="toggle" id="set-dc-on" data-setting="desktop_capture"></label>
+          </div>
+          <p class="setnote spaced">When more than one game is open, record:</p>
           <div class="setcard" role="radiogroup" aria-label="Which game to record">
             <button type="button" class="setrow setopt" role="radio" data-game-pick="newest">
               <span class="radio" aria-hidden="true"></span>
@@ -601,6 +628,11 @@
         <section class="setsec">
           <h3>Advanced</h3>
           <div class="setcard">
+            <label class="setrow"><span class="settext"><span class="setname">Start Encore as administrator</span>
+              <span class="setsub wrap" id="start-admin-note">Keeps game recordings smooth when a game uses all of your graphics card. Windows asks for permission once, not every time.</span></span>
+              <input type="checkbox" class="toggle" id="start-admin"></label>
+          </div>
+          <div class="setcard spaced">
             <label class="setrow"><span class="settext"><span class="setname">Priority Capture</span>
               <span class="setsub wrap">For games that put a heavy load on your graphics card, or less powerful graphics cards. Off is right for most games. Turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error.</span></span>
               <input type="checkbox" class="toggle" id="gpu-realtime"></label>
