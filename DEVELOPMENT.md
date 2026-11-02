@@ -40,14 +40,15 @@ Every recording carries separate audio tracks: full mix, microphone, and one tra
 
 ## Design
 
-**Hard rule: Encore and the companion clip editor are a pair and must look identical.** Same title bar,
-menu, panels, dialogs, controls, colours, type, spacing, icons and motion. When the editor's look and
-Encore's differ, Encore changes to match. Before adding any new UI, check how the editor does the
-equivalent thing and follow it exactly; only invent where the editor has no equivalent, and then in
-its style. (Match by recreating its values, not by copying its code, unless its MIT notice is added
-to THIRD_PARTY_NOTICES.md.)
+**Rule (from 2026-11-02): Encore has its own look, for now.** Until 2026-11-02 Encore had to look
+identical to the companion clip editor. That rule is set aside while Encore is redesigned:
+away from the Discord look, towards a purple accent and the soft neon glow already used by the
+sidebar's icon switches (Microphone, Full System Audio). The layout stays (title bar, Main Menu,
+sidebar, dialogs). Whether the two apps line up again afterwards is to be agreed with the
+editor's side. Never copy the editor's code without adding its MIT notice to
+THIRD_PARTY_NOTICES.md.
 
-Colour tokens (the editor's Discord "Midnight" palette):
+Colour tokens until the redesign (from the editor's Discord "Midnight" palette):
 
 ```css
 :root{
@@ -57,7 +58,7 @@ Colour tokens (the editor's Discord "Midnight" palette):
 body{font:14px/1.4 system-ui,"Segoe UI",sans-serif}
 ```
 
-Known differences still to fix: see FEATURES.md ("Match the editor exactly").
+The redesign's to-do list: FEATURES.md ("Redesign").
 
 ## Stack
 

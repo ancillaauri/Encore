@@ -57,6 +57,16 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Audit every screen side by side with the editor (0.4.0): font, icon stroke, scrollbars, tooltips, File/View/Help menu with shortcuts, dropdown buttons instead of Windows dropdowns, chips, buttons, dialogs and their fades, toasts, panel width and collapsed rail | [x] |
 | Windows 11 snap layouts when hovering Maximise (the editor gets them from Windows; Encore draws its own buttons). Win+Z still works | [ ] |
 
+## Redesign (agreed 2026-11-02; to be designed first, then built)
+
+| Item | Notes | Status |
+|---|---|---|
+| Move away from Discord's look; the "match the editor" rule set aside for now | DEVELOPMENT.md → Design | [ ] |
+| Accent from Discord blue (#5865f2) to a purple | Hue to choose from mock-ups | [ ] |
+| Sliders and on/off switches in the soft neon glow style of the sidebar icon switches | Applies to every slider and toggle | [ ] |
+| Every button (now and future) brightens on hover | A design-system rule | [ ] |
+| Unread messages above Do not disturb in the sidebar (e.g. a reply to a report), with Read and Mark as read | Today only a passing message and "My Reports (1 new)" in Help show it | [ ] |
+
 ## Later (agreed, after core works)
 
 | Feature | Notes | Status |
