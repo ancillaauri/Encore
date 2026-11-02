@@ -1,3 +1,17 @@
+## Encore 0.9.31 (beta), test build 52: answer the developer, Echoes after a restart
+
+### What's new
+- **Reply to the developer** from Help → My Reports: each report shows as a conversation,
+  with a box to answer.
+
+### Fixed
+- **Echoes stayed off after a PC restart or reopening Encore** if it couldn't start straight
+  away. Encore now keeps trying for 3 minutes, and if it still can't, says why in Waiting for you.
+- A report removed by the developer no longer sits in My Reports saying "Couldn't check".
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.31).
+
 ## Encore 0.9.30 (beta), test build 51: Encore's own look
 
 ### What's new
