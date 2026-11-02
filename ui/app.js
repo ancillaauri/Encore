@@ -1311,6 +1311,15 @@
         buttons: [{ text: 'Read', main: true, run: openReports }, { text: 'Mark as read', run: () => { markRepliesRead(); renderInbox(); } }],
       });
     }
+    if (echoesRetry.failed && !state.replay.on) {
+      items.push({
+        icon: 'warn', warn: true, title: 'Echoes couldn\u2019t start', sub: echoesRetry.failed,
+        buttons: [
+          { text: 'Try again', main: true, run: () => echoesRetry.start() },
+          { text: 'Dismiss', run: () => { echoesRetry.failed = ''; renderInbox(); } },
+        ],
+      });
+    }
     for (const game of state.blackGames || []) {
       if (later.black.includes(game)) continue;
       items.push({
@@ -1627,9 +1636,12 @@
       : 'Off \u00b7 save great moments after they happen';
     renderStatus();
   }
-  async function setReplay(on, remember = true) {
-    if (state.replayBusy) return;
+  // Returns '' when it worked, else the reason. `quiet`: no message (Encore retries by itself).
+  async function setReplay(on, remember = true, quiet = false) {
+    if (state.replayBusy) return 'busy';
+    if (remember) echoesRetry.stop(); // switched by hand: Encore stops trying by itself
     state.replayBusy = true;
+    let failed = '';
     renderReplay();
     try {
       if (on) {
@@ -1643,13 +1655,44 @@
       }
       if (remember) await saveSetting('replay_on', on);
     } catch (e) {
-      if (String(e)) toast(String(e).replace(/^Error: ?/, ''), 'error', 10000);
+      failed = String(e).replace(/^Error: ?/, '') || 'Nothing to record yet.';
+      if (!quiet && String(e)) toast(failed, 'error', 10000);
       state.replay = { on: false };
     }
     state.replayBusy = false;
     renderReplay();
     renderStage();
+    return failed;
   }
+
+  // Echoes was on last time: turn it back on when Encore opens. Straight after a PC restart the
+  // graphics driver and antivirus can hold things up, so a first try that fails isn't the end:
+  // Encore tries again every 10 seconds for 3 minutes, then says why in "Waiting for you".
+  const echoesRetry = {
+    timer: null,
+    tries: 0,
+    failed: '', // set when Encore has given up: shown in Waiting for you
+    stop() { clearTimeout(this.timer); this.timer = null; },
+    async attempt() {
+      this.timer = null;
+      const s = state.settings;
+      if (!s || !s.replay_on || state.replay.on || state.phase !== 'idle') { this.stop(); return; }
+      this.tries += 1;
+      const why = await setReplay(true, false, true);
+      if (!why || state.replay.on) {
+        if (this.tries > 1) bridge.note(`Echoes started on try ${this.tries}`).catch(() => {});
+        this.failed = '';
+        renderInbox();
+        return;
+      }
+      bridge.note(`Echoes couldn't start when Encore opened (try ${this.tries}): ${why}`).catch(() => {});
+      if (this.tries < 18) { this.timer = setTimeout(() => this.attempt(), 10000); return; }
+      this.failed = why;
+      renderInbox();
+      notify('problem', 'Echoes couldn\u2019t start', why);
+    },
+    start() { this.stop(); this.tries = 0; this.failed = ''; this.attempt(); },
+  };
   // Settings that change what's captured restart the buffer (it starts again from now).
   const CAPTURE_KEYS = ['work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks', 'bitrate_custom', 'bitrate_mbps'];
   let replayRestart = null;
@@ -2491,8 +2534,8 @@
     await refreshMonitors();
     await refreshInputs();
     if (state.settings && !state.settings.setup_done && state.phase === 'idle') openSetup();
-    // Instant replay was on last time: turn it back on.
-    if (state.settings && state.settings.replay_on && !state.replay.on && state.phase === 'idle') setReplay(true, false);
+    // Echoes was on last time: turn it back on (trying again for a while if it can't yet).
+    if (state.settings && state.settings.replay_on && !state.replay.on && state.phase === 'idle') echoesRetry.start();
     // Capabilities arrive as an event, but may have been sent before we were listening.
     for (let i = 0; i < 40 && !(state.caps && state.caps.probed); i++) {
       try { state.caps = await bridge.getCapabilities(); } catch (e) { /* engine still starting */ }

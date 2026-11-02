@@ -447,6 +447,12 @@ impl Engine {
     /// Starts a capture: a normal recording, or the instant-replay buffer (`replay`).
     fn start_session(&mut self, args: &Value, replay: bool) -> Result<Value, String> {
         let caps = self.wait_for_probe(Duration::from_secs(20));
+        if !caps.probed {
+            // Not finished checking the graphics card yet (straight after a PC restart this can take
+            // a while): say so, rather than "no encoder", so it's clear trying again will work.
+            log("a capture was asked for before the graphics card check had finished (after 20 s)");
+            return Err("Encore is still checking your graphics card. Try again in a moment.".into());
+        }
         if !caps.ffmpeg_found {
             return Err(format!("FFmpeg was not found at {}. Reinstalling Encore should fix this.", caps.ffmpeg_path));
         }

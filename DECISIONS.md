@@ -840,3 +840,15 @@ Agreed design for game detection (to build next):
   own token, so the setup guide's promise of GitHub notifications was wrong. The Worker posts new
   reports and replies to an optional Discord webhook (secret DISCORD_WEBHOOK) instead.
 
+## 2026-11-02: Echoes keeps trying when Encore opens
+- A tester's Echoes stayed off after a PC restart or reopening Encore. Encore made one attempt to
+  turn Echoes back on when it opened; if that failed (most likely: the graphics card check not
+  finished within 20 s straight after a restart, while the driver loads and antivirus scans
+  FFmpeg), it stayed off for the session, and the message was shown in a window that starts
+  hidden in the tray.
+- Now: Encore tries again every 10 seconds for 3 minutes, writing each failed try (and the one
+  that worked) to its log. If it still can't, "Waiting for you" shows "Echoes couldn't start"
+  with the reason and Try again. Switching Echoes on or off by hand stops the retries.
+- The engine says "Encore is still checking your graphics card" (and logs it) when the check
+  hasn't finished, instead of "No graphics card video encoder was found".
+

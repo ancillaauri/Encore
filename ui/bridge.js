@@ -16,6 +16,8 @@
     setSettings: (patch) => call('set_settings', patch),
     getCapabilities: () => call('get_capabilities'),
     reportDetails: () => call('report_details'),
+    // A line in Encore's log (engine.log), for things only the interface knows about.
+    note: (message) => call('note', { message }),
     listAudioInputs: () => call('list_audio_inputs'),
     listMonitors: () => call('list_monitors'),
     listWindows: () => call('list_windows'),
