@@ -763,6 +763,7 @@
   async function refreshMonitors() {
     try { state.monitors = await bridge.listMonitors(); } catch (e) { state.monitors = []; }
     renderQualityLabels(); // the bitrates depend on the screen's size
+    renderReplay(); // and so does the size of an Echo
     renderStage();
   }
 
@@ -1334,6 +1335,9 @@
       ? `Echoes: On. Keeping the last ${replayLength()}. Click to turn off.`
       : 'Echoes: Off. Click to keep the last few minutes, so you can save great moments after they happen.';
     $('q-replay').closest('.hrow').dataset.tip = `Uses about ${disk} of disk space while Echoes is on (at your video settings).`;
+    // How big a saved Echo is: at most the preset's bitrate, usually a little less (quiet scenes need less).
+    $('echo-size').textContent = `Each Echo is up to about ${sizeText(mbPerMinute(s.quality) * s.replay_seconds / 60)}`;
+    $('echo-size').dataset.tip = `At ${QUALITY_NAMES[s.quality]}, ${s.fps} fps and your resolution. Saving the last 30 seconds or minute makes a smaller file.`;
     $('replay-sec').classList.toggle('lit', on);
     $('replay-sec').classList.toggle('restarting', !!state.replayRestarting);
     $('qs-replay-sub').textContent = state.replayRestarting ? 'Restarting with your new settings\u2026'
