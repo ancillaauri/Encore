@@ -1574,10 +1574,14 @@
     renderHotkeys();
   }
   let listening = null;
+  // When choosing a hotkey ended. The keyboard is also watched in the background, and it sees the
+  // keys a few moments after this page does, so a hotkey just pressed to choose it isn't acted on.
+  let listenEnded = 0;
   function stopListening() {
     if (!listening) return;
     listening.classList.remove('listening');
     listening = null;
+    listenEnded = performance.now();
     renderHotkeys();
   }
   document.querySelectorAll('[data-hotkey]').forEach((b) => b.addEventListener('click', () => {
@@ -1611,7 +1615,7 @@
     renderHotkeys();
   }));
   bridge.onHotkey((action) => {
-    if (listening) return; // choosing a new hotkey in Settings: the keys are for that
+    if (listening || performance.now() - listenEnded < 1000) return; // the keys were for choosing a hotkey
     if (action === 'save_replay') { saveReplay(); return; }
     if (action === 'save_replay_30') { saveReplay(30); return; }
     if (action === 'save_replay_60') { saveReplay(60); return; }
