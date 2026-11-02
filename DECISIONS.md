@@ -852,3 +852,14 @@ Agreed design for game detection (to build next):
 - The engine says "Encore is still checking your graphics card" (and logs it) when the check
   hasn't finished, instead of "No graphics card video encoder was found".
 
+## 2026-11-02: Clip Editor is now Backstage; screen recordings go in the game's folder
+- The companion editor was renamed Backstage (1.48.0): Backstage.exe, "Backstage" in Windows'
+  list of installed apps, installed in Programs\backstage. Locate looks for both names and
+  prefers Backstage; if the saved path has gone (its installer removes Clip Editor), opening a
+  clip looks again by itself. The interface says Backstage. Backstage still opens a clip it's
+  started with, so nothing else changed.
+- A save that would go in "Desktop" (the screen was being recorded) goes in the open game's
+  folder, named after it, when a game is open: the game in front, else the one used most
+  recently. With game detection off, only programs Encore knows are games count (not ones that
+  just fill the screen). No game open: Desktop, as before.
+

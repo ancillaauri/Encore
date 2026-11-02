@@ -1,27 +1,35 @@
-//! Opening saved clips: in Clip Editor (the companion editor) or in Windows' video player.
-//! Clip Editor already opens a video it's started with, and a second start hands the video to the
+//! Opening saved clips: in Backstage (the companion editor, called Clip Editor before 1.48) or in
+//! Windows' video player. Backstage opens a video it's started with, and a second start hands the video to the
 //! copy that's already open, so all Encore has to do is find it and start it with the clip.
 
 use std::path::{Path, PathBuf};
 
-const EXE: &str = "Clip Editor.exe";
+/// The editor's program and its name in Windows' list of installed apps: Backstage first, then
+/// its old name (its installer removes Clip Editor, but an older install may still be there).
+const EXES: [&str; 2] = ["Backstage.exe", "Clip Editor.exe"];
+const NAMES: [&str; 2] = ["Backstage", "Clip Editor"];
+const FOLDERS: [&str; 4] = ["backstage", "Backstage", "clip-editor", "Clip Editor"];
 
-/// Where Clip Editor is installed, if it can be found: Windows' list of installed apps first
-/// (that's where a changed install folder is recorded), then the usual folders.
+/// Where the editor is installed, if it can be found: Windows' list of installed apps first
+/// (that's where a changed install folder is recorded), then the usual folders. Backstage is
+/// preferred over an old Clip Editor.
 #[tauri::command]
 pub fn locate_clip_editor() -> Option<String> {
     let mut places: Vec<PathBuf> = installed_places();
     if let Ok(local) = std::env::var("LOCALAPPDATA") {
-        places.push(Path::new(&local).join("Programs").join("clip-editor"));
-        places.push(Path::new(&local).join("Programs").join("Clip Editor"));
+        places.extend(FOLDERS.iter().map(|f| Path::new(&local).join("Programs").join(f)));
     }
     for var in ["ProgramFiles", "ProgramFiles(x86)"] {
         if let Ok(pf) = std::env::var(var) {
-            places.push(Path::new(&pf).join("Clip Editor"));
-            places.push(Path::new(&pf).join("clip-editor"));
+            places.extend(FOLDERS.iter().map(|f| Path::new(&pf).join(f)));
         }
     }
-    places.into_iter().map(|dir| dir.join(EXE)).find(|exe| exe.is_file()).map(|exe| exe.display().to_string())
+    find_exe(&places).map(|exe| exe.display().to_string())
+}
+
+/// The first editor program in `places`, Backstage before Clip Editor.
+fn find_exe(places: &[PathBuf]) -> Option<PathBuf> {
+    EXES.iter().find_map(|name| places.iter().map(|dir| dir.join(name)).find(|exe| exe.is_file()))
 }
 
 /// Windows' file picker for Clip Editor's .exe. Returns the chosen file, or None if cancelled.
@@ -29,7 +37,7 @@ pub fn locate_clip_editor() -> Option<String> {
 pub async fn pick_clip_editor(app: tauri::AppHandle) -> Option<String> {
     use tauri::Manager;
     use tauri_plugin_dialog::DialogExt;
-    let mut dialog = app.dialog().file().set_title("Find Clip Editor").add_filter("Clip Editor", &["exe"]);
+    let mut dialog = app.dialog().file().set_title("Find Backstage").add_filter("Backstage", &["exe"]);
     if let Some(win) = app.get_webview_window("main") {
         dialog = dialog.set_parent(&win);
     }
@@ -45,16 +53,16 @@ fn check_clip(path: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Opens the clip in Clip Editor, ready to edit.
+/// Opens the clip in Backstage, ready to edit.
 #[tauri::command]
 pub fn open_in_editor(exe: String, path: String) -> Result<(), String> {
     check_clip(&path)?;
     let e = Path::new(&exe);
     let is_exe = e.extension().map(|x| x.eq_ignore_ascii_case("exe")).unwrap_or(false);
     if !is_exe || !e.is_file() {
-        return Err("Clip Editor wasn't found. Find it in Settings → Files.".into());
+        return Err("Backstage wasn't found. Find it in Settings → Files.".into());
     }
-    std::process::Command::new(e).arg(&path).spawn().map(|_| ()).map_err(|err| format!("Couldn't open Clip Editor: {err}"))
+    std::process::Command::new(e).arg(&path).spawn().map(|_| ()).map_err(|err| format!("Couldn't open Backstage: {err}"))
 }
 
 /// Opens the clip in whatever Windows uses for videos.
@@ -68,7 +76,7 @@ pub fn open_in_player(path: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Install folders of anything called "Clip Editor" in Windows' list of installed apps.
+/// Install folders of Backstage (or Clip Editor) in Windows' list of installed apps.
 #[cfg(windows)]
 fn installed_places() -> Vec<PathBuf> {
     use windows_sys::Win32::System::Registry::{
@@ -112,7 +120,7 @@ fn installed_places() -> Vec<PathBuf> {
                 if RegOpenKeyExW(list, name.as_ptr(), 0, KEY_READ, &mut app) != 0 {
                     continue;
                 }
-                if text(app, "DisplayName").map(|n| n.starts_with("Clip Editor")).unwrap_or(false) {
+                if text(app, "DisplayName").map(|n| NAMES.iter().any(|name| n.starts_with(name))).unwrap_or(false) {
                     if let Some(dir) = text(app, "InstallLocation").filter(|d| !d.is_empty()) {
                         out.push(PathBuf::from(dir.trim_matches('"')));
                     }
@@ -137,4 +145,23 @@ fn installed_places() -> Vec<PathBuf> {
 #[cfg(not(windows))]
 fn installed_places() -> Vec<PathBuf> {
     Vec::new()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backstage_is_found_before_an_old_clip_editor() {
+        let base = std::env::temp_dir().join(format!("encore-editor-{}", std::process::id()));
+        let old = base.join("Clip Editor");
+        let new = base.join("backstage");
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::create_dir_all(&new).unwrap();
+        std::fs::write(old.join("Clip Editor.exe"), b"x").unwrap();
+        assert_eq!(find_exe(&[old.clone(), new.clone()]), Some(old.join("Clip Editor.exe")));
+        std::fs::write(new.join("Backstage.exe"), b"x").unwrap();
+        assert_eq!(find_exe(&[old.clone(), new.clone()]), Some(new.join("Backstage.exe")));
+        let _ = std::fs::remove_dir_all(&base);
+    }
 }

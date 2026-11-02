@@ -623,6 +623,7 @@ impl Engine {
         let to = platform::now_hns();
         let from = to.saturating_sub(seconds as u64 * 10_000_000);
         let label = a.label_for(from, to);
+        let label = self.folder_label(label);
         let out_path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &label, platform::local_time());
         self.save_in_background(from, to, out_path, label, true);
         Ok(json!({ "saving": true, "seconds": seconds }))
@@ -709,6 +710,7 @@ impl Engine {
             // The name is picked now, not when the recording started: an Echo saved in the
             // meantime may have taken the name chosen then, and it must never be overwritten.
             let label = self.active.as_ref().map(|a| a.label_for(clip.from, now)).unwrap_or(clip.label);
+            let label = self.folder_label(label);
             let out_path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &label, clip.local);
             self.save_in_background(clip.from, now, out_path, label, false);
             return;
@@ -717,6 +719,7 @@ impl Engine {
             Some(active) if active.is_replay() => self.active = Some(active),
             Some(mut active) => {
                 let label = active.label_for(0, platform::now_hns());
+                let label = self.folder_label(label);
                 if label != active.label {
                     let path = recorder::output_path(&PathBuf::from(&self.settings.output_dir), &label, active.started_local);
                     active.set_output(label, path);
@@ -729,6 +732,45 @@ impl Engine {
             }
             None => {}
         }
+    }
+
+    /// A save of the screen ("Desktop") while a game is open goes in that game's folder, named
+    /// after it: the game in front if there is one, else the open game used most recently. Anything else, or
+    /// no game open, keeps its own name.
+    fn folder_label(&mut self, label: String) -> String {
+        if label != "Desktop" {
+            return label;
+        }
+        match self.game_being_played() {
+            Some(game) => {
+                log(&format!("screen recording saved while {game} is open: saving it in {game}'s folder"));
+                game
+            }
+            None => label,
+        }
+    }
+
+    /// The game being played, whether or not game detection is on: detected games, or (with
+    /// detection off) open windows Encore knows are games (not just ones that fill the screen).
+    fn game_being_played(&mut self) -> Option<String> {
+        if let Some(g) = self.current_game() {
+            return Some(g.name);
+        }
+        let front = platform::foreground_window();
+        let games: Vec<platform::TopWindow> = platform::top_windows()
+            .into_iter()
+            .filter(|w| matches!(games::classify(w, &self.settings.games_always, &self.settings.games_never), Some(games::Why::Always | games::Why::Known | games::Why::Library)))
+            .collect();
+        let w = games.iter().find(|w| w.handle == front).or_else(|| games.first())?; // else the one used most recently (top of the window order)
+        let name = match self.game_names.get(&w.pid) {
+            Some(n) => n.clone(),
+            None => {
+                let n = games::game_name(w, &platform::app_display_name(w.pid));
+                self.game_names.insert(w.pid, n.clone());
+                n
+            }
+        };
+        Some(name)
     }
 
     /// Instant replay: lets go of video and audio older than anything still needed.

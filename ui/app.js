@@ -847,7 +847,7 @@
       e.preventDefault();
       if (li.classList.contains('deleting') || li.querySelector('input')) return; // being renamed
       openMenu(e.clientX, e.clientY, [
-        { text: 'Open in Clip Editor', run: () => openClip(d, 'editor') },
+        { text: 'Open in Backstage', run: () => openClip(d, 'editor') },
         { text: 'Play in video player', run: () => openClip(d, 'player') },
         { text: 'Show in folder', run: () => openClip(d, 'folder') },
         '-',
@@ -859,14 +859,21 @@
     $('recent').prepend(li);
     $('recent-empty').hidden = true;
   }
-  // Opening a clip: its folder, Windows' video player, or Clip Editor (found first if need be).
+  // Opening a clip: its folder, Windows' video player, or Backstage (found first if need be).
   async function openClip(d, how) {
     try {
       if (how === 'player') await bridge.openInPlayer(d.path);
       else if (how === 'editor') {
         const exe = await clipEditorPath();
-        if (!exe) { toast('Clip Editor wasn\u2019t found. Find it in Settings \u2192 Files with Locate or Browse.', 'warning', 8000); return; }
-        await bridge.openInEditor(exe, d.path);
+        if (!exe) { toast('Backstage wasn\u2019t found. Find it in Settings \u2192 Files with Locate or Browse.', 'warning', 8000); return; }
+        try {
+          await bridge.openInEditor(exe, d.path);
+        } catch (e) {
+          // The saved one has gone (Clip Editor became Backstage, or it moved): look again once.
+          const again = /wasn.t found/.test(String(e)) ? await locateEditor(false) : null;
+          if (!again || again === exe) throw e;
+          await bridge.openInEditor(again, d.path);
+        }
       } else await bridge.revealFile(d.path);
     } catch (e) { toast(String(e), 'error'); }
   }
@@ -881,8 +888,8 @@
     try { found = await bridge.locateClipEditor(); } catch (e) { /* not found */ }
     if (found) {
       await saveSetting('clip_editor_path', found);
-      if (say) toast('Found Clip Editor.', 'info', 3000);
-    } else if (say) toast('Couldn\u2019t find Clip Editor. Use Browse to find Clip Editor.exe.', 'warning', 7000);
+      if (say) toast('Found Backstage.', 'info', 3000);
+    } else if (say) toast('Couldn\u2019t find Backstage. Use Browse to find Backstage.exe.', 'warning', 7000);
     renderClipEditor();
     return found;
   }
@@ -890,7 +897,7 @@
     const p = state.settings && state.settings.clip_editor_path;
     $('clip-editor-note').textContent = p
       ? 'Clips open here ready to edit. Locate finds it again if it moves.'
-      : 'Not found yet. Locate looks where it\u2019s usually installed; Browse lets you find Clip Editor.exe yourself.';
+      : 'Not found yet. Locate looks where it\u2019s usually installed; Browse lets you find Backstage.exe yourself.';
   }
   $('locate-editor').addEventListener('click', () => locateEditor(true));
   $('clip-click').addEventListener('change', (e) => { if (e.target.value === 'editor' && !(state.settings && state.settings.clip_editor_path)) setTimeout(() => locateEditor(true), 300); });
