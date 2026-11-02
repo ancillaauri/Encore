@@ -63,8 +63,8 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 |---|---|---|
 | Bookmarks: hotkey marks a moment, stored as MP4 chapters | Needs the companion editor to display them; agree format together (step 9+) | [ ] |
 | Full-session recording: auto-record whole match/session from game launch | Pairs with bookmarks | [ ] |
-| Microphone noise suppression (optional) | Raw mic track kept untouched | [ ] |
-| Custom bitrate option ("Set the bitrate myself" slider with preset marks, Mbps and MB/min) | Presets stay as the default; designed, next to build | [ ] |
+| Microphone noise suppression (optional) | Built in 0.9.28, applied at save | [x] |
+| Custom bitrate option | Built in 0.9.28 (slider without preset marks, as decided) | [x] |
 | Apps on a non-default sound device (e.g. Discord on a headset) get their own track | Today only apps on the default output are found | [ ] |
 | Discord: your user ID via Discord's local connection (hello message only; no login, nothing private) | Purpose to confirm with the companion editor side; needs a free Discord developer app | [ ] |
 | Lower suggested frame rate in setup for weaker graphics cards | Uses the PC specs collected for the performance log | [ ] |
@@ -77,6 +77,10 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Clicking a clip: folder, video player or Clip Editor (Locate / Browse) | 0.9.24 | [x] |
 | Settings reorganised (Echoes, Files, Games switches), Save an Echo hotkey changeable in place, Echo size, version in title bar | 0.9.26 | [x] |
 | Clip pictures in Saved this session | 0.9.27 | [x] |
+| Microphone noise reduction (Off / Light / Strong), Voice heading in the sidebar | 0.9.28 | [~] |
+| Set the bitrate myself (5–150 Mbps slider) | 0.9.28 | [~] |
+| Problem reports with replies in Encore (private repository, report server) | 0.9.28 | [~] |
+| Warning when a game in exclusive fullscreen records black | 0.9.28 | [~] |
 
 ## Out of scope (decided, with reasons)
 

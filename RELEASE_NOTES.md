@@ -1,3 +1,24 @@
+## Encore 0.9.28 (beta), test build 49: noise reduction, your own bitrate, problem reports
+
+### What's new
+- **Noise reduction for your microphone** (Off, Light or Strong), under a new **Voice** heading
+  in the sidebar and in Settings → Audio. Keyboard, fan and room noise are turned down when a
+  clip is saved; game sound, music and voice chat aren't touched. Off by default.
+- **Set the bitrate myself** (Settings → Video): a 5–150 Mbps slider replaces Quality, in
+  Settings and the sidebar. Encore uses exactly the bitrate you pick.
+- **Report a problem** (Main Menu → Help): tell us what went wrong, with Encore's log attached
+  if you like (see exactly what's sent first). Replies show up in **Help → My Reports**.
+- **A warning when a game records black** because it's in exclusive fullscreen: a sound, Encore
+  flashes in the taskbar, and a notification once you leave the game. Switch the game to
+  Borderless to fix it.
+
+### Fixed
+- Error messages pointed to the old Settings sections (General, Clips).
+- Right-clicking a clip while renaming it opened its menu.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.28).
+
 ## Encore 0.9.27 (beta), test build 48: clip pictures
 
 ### What's new
