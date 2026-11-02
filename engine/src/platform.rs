@@ -175,6 +175,9 @@ mod other {
     pub fn exclusive_fullscreen() -> bool {
         false
     }
+    pub fn windows_version() -> String {
+        "not Windows".into()
+    }
     pub fn window_size(_handle: u64) -> Option<(u32, u32)> {
         None
     }
@@ -865,6 +868,17 @@ mod win {
 
     pub fn window_exists(handle: u64) -> bool {
         unsafe { IsWindow(u2h(handle) as HWND) != 0 }
+    }
+
+    /// "Windows 11 (10.0.26100.4652)": from `ver`, which every Windows has. Build 22000 and later
+    /// is Windows 11.
+    pub fn windows_version() -> String {
+        let out = crate::ffmpeg::hidden_command(std::path::Path::new("cmd")).args(["/c", "ver"]).output();
+        let text = out.map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_default();
+        let version = text.rsplit("Version ").next().unwrap_or("").trim_end_matches(']').trim().to_string();
+        let build: u32 = version.split('.').nth(2).and_then(|b| b.parse().ok()).unwrap_or(0);
+        let name = if build >= 22_000 { "Windows 11" } else if build > 0 { "Windows 10" } else { "Windows" };
+        if version.is_empty() { name.into() } else { format!("{name} ({version})") }
     }
 
     /// Windows says a program has the screen in exclusive fullscreen (Direct3D), the mode that

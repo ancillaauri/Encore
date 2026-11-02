@@ -16,6 +16,7 @@ mod paths;
 mod platform;
 mod protocol;
 mod recorder;
+mod report;
 mod settings;
 mod timeline;
 

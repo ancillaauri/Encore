@@ -39,6 +39,18 @@ pub enum Quality {
     Low,
 }
 
+/// A problem report this PC sent: its number, the key that lets this PC (and nobody else) read
+/// the replies, its title, when it was sent (Unix seconds), and how many replies have been seen.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct SentReport {
+    pub number: u64,
+    pub key: String,
+    pub title: String,
+    pub sent: u64,
+    pub seen: u32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
@@ -68,6 +80,8 @@ pub struct Settings {
     pub bitrate_custom: bool,
     /// The bitrate chosen by hand, in Mbps (BITRATE_MBPS_MIN..=BITRATE_MBPS_MAX).
     pub bitrate_mbps: u32,
+    /// Problems reported from Encore (Help → Report a problem), so replies can be shown.
+    pub reports: Vec<SentReport>,
     /// Give each app that plays sound its own track.
     pub audio_app_tracks: bool,
     /// App updates: "manual" (check and tell me; I download and install), "auto_download"
@@ -197,6 +211,7 @@ impl Default for Settings {
             mic_denoise: "off".into(),
             bitrate_custom: false,
             bitrate_mbps: 30,
+            reports: Vec::new(),
             audio_app_tracks: true,
             update_mode: "manual".into(),
             setup_done: false,

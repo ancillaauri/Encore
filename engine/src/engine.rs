@@ -234,6 +234,10 @@ impl Engine {
             "get_settings" => Ok(serde_json::to_value(&self.settings).unwrap_or(Value::Null)),
             "set_settings" => self.set_settings(&c.args),
             "get_capabilities" => Ok(serde_json::to_value(self.caps()).unwrap_or(Value::Null)),
+            "report_details" => {
+                let encoders: Vec<String> = self.caps().encoders.iter().map(|e| e.name.to_string()).collect();
+                Ok(crate::report::details(&self.settings, &encoders))
+            }
             "list_monitors" => Ok(serde_json::to_value(platform::list_monitors()).unwrap_or(Value::Null)),
             "list_windows" => Ok(serde_json::to_value(platform::list_windows()).unwrap_or(Value::Null)),
             "list_audio_inputs" => Ok(serde_json::to_value(audio::list_inputs()).unwrap_or(Value::Null)),

@@ -1,0 +1,14 @@
+# Encore's problem-report server (a Cloudflare Worker). See SETUP.md.
+name = "encore-reports"
+main = "worker.js"
+compatibility_date = "2025-06-01"
+
+[vars]
+# The PRIVATE repository reports are filed in.
+REPO = "ancillaauri/Encore-reports"
+
+# At most 3 reports a minute from one place.
+[[ratelimits]]
+name = "LIMIT"
+namespace_id = "1001"
+simple = { limit = 3, period = 60 }

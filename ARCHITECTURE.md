@@ -271,3 +271,14 @@ buffer is dropped when games close; recordings end with their game; recording wi
 (`source: window`) pauses detection. Commands: `lock_game`, `lock_focused_game`,
 `next_game`; event `games` (list, active, locked, paused) and `game_switched`.
 Not yet: telling the person when a game in exclusive full screen captures black.
+
+## Problem reports
+
+Help → Report a problem gathers the engine's `report_details` (log tail with user names taken
+out, Windows version, encoders, settings summary) and posts it with the person's words to the
+report server (`report-worker/worker.js`, a Cloudflare Worker): `POST /report` files an issue in
+a private repository and returns `{ number, key }`; `GET /replies?n=&key=` returns the issue's
+state and comments (not ones starting with `//`). The key is an HMAC of the number, so only the
+sending PC can read replies. Sent reports are kept in settings (`reports`). Setup:
+report-worker/SETUP.md.
+

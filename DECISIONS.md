@@ -793,3 +793,19 @@ Agreed design for game detection (to build next):
   and a message waits in Encore until clicked. When the game leaves fullscreen, a notification
   says it recorded black and to choose Borderless. Once per game per session.
 
+## 2026-11-02: Problem reports, with replies in Encore
+- Main Menu → Help → Report a problem: what happened, what you were doing (optional), and
+  (ticked by default) Encore's log (last 300 lines) and PC details: Windows version, encoders,
+  a one-line settings summary. "See what's sent" shows all of it first. User names are taken
+  out of paths (`C:\Users\<user>\...`) in the engine, and again by the server.
+- Sent to a Cloudflare Worker (report-worker/), which files an issue in the PRIVATE repository
+  ancillaauri/Encore-reports with a fine-grained token (Issues only, that repository only)
+  kept in the Worker's secrets. Nothing secret is in the app.
+- The Worker returns the issue number and a key (HMAC of the number with a server secret), so
+  only the PC that sent a report can read its replies. Encore keeps them in settings
+  (`reports`) and asks for replies 20 s after start and every 30 minutes; new replies give a
+  message with Read, and Help shows "My Reports (n new)". Comments starting with "//" are
+  private notes, never shown.
+- At most 3 reports a minute per address, 200 KB per report. Reports can't be sent until the
+  Worker's address is put in Encore (REPORTS_URL).
+

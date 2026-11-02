@@ -679,6 +679,40 @@
     </div>
   </div>
 
+  <!-- Report a problem -->
+  <div id="report" class="modal-ov" hidden>
+    <div class="modal wide-modal" role="dialog" aria-modal="true" aria-labelledby="report-title">
+      <button type="button" class="modal-x" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
+      <h2 id="report-title">Report a problem</h2>
+      <div class="modal-body rform">
+        <label class="rlab" for="report-what">What happened?</label>
+        <textarea id="report-what" rows="4" maxlength="4000" placeholder="For example: I saved an Echo and it had no sound"></textarea>
+        <label class="rlab" for="report-doing">What were you doing? <span>(optional)</span></label>
+        <textarea id="report-doing" rows="2" maxlength="2000" placeholder="The game, and what you pressed"></textarea>
+        <label class="rcheck"><input type="checkbox" id="report-details" checked> Include Encore's log and my PC details</label>
+        <p class="rnote">Helps find the cause: the last few minutes of Encore's log, your Windows version, graphics card encoders and Encore settings. Your Windows user name is taken out. Only you and Encore's developer can see your report. <button type="button" class="linkbtn" id="report-show">See what's sent</button></p>
+        <pre class="rpre" id="report-preview" hidden></pre>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="button" class="btn primary" id="report-send">Send report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- My reports: replies from the developer -->
+  <div id="reports" class="modal-ov" hidden>
+    <div class="modal wide-modal" role="dialog" aria-modal="true" aria-labelledby="reports-title">
+      <button type="button" class="modal-x" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
+      <h2 id="reports-title">My reports</h2>
+      <div class="modal-body" id="reports-body"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" id="reports-new">Report a problem</button>
+        <button type="button" class="btn primary" data-close>Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Changelog -->
   <div id="changelog" class="modal-ov" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="changelog-title">

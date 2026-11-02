@@ -1194,6 +1194,111 @@
     if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (k === 'r' || k === 'p')) || (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))) e.preventDefault();
   });
 
+  // ---------- problem reports: sent to Encore's report server, replies shown in My reports ----------
+  // The server files each report in a private repository and hands replies back to this PC only.
+  // Set once the report server is running (see report-worker/SETUP.md). Previews can set their own.
+  const REPORTS_URL = window.ENCORE_REPORTS_URL || '';
+  const replies = {}; // report number -> { state, replies: [{ body, at }] }
+  let reportDetails = null;
+  function unreadReplies() {
+    const list = (state.settings && state.settings.reports) || [];
+    return list.reduce((n, r) => n + Math.max(0, ((replies[r.number] || {}).replies || []).length - (r.seen || 0)), 0);
+  }
+  function detailsText(d) {
+    return `Windows: ${d.windows}${d.administrator ? ' (Encore running as administrator)' : ''}\nEncoders: ${(d.encoders || []).join(', ') || 'none found'}\nSettings: ${d.settings}\n\nLog:\n${d.log}`;
+  }
+  async function openReport() {
+    $('report-what').value = '';
+    $('report-doing').value = '';
+    $('report-details').checked = true;
+    $('report-preview').hidden = true;
+    $('report-show').textContent = 'See what\u2019s sent';
+    reportDetails = null;
+    openDialog('report');
+    setTimeout(() => $('report-what').focus(), 60);
+    try { reportDetails = await bridge.reportDetails(); } catch (e) { reportDetails = null; }
+  }
+  $('report-show').addEventListener('click', async () => {
+    const pre = $('report-preview');
+    if (!pre.hidden) { pre.hidden = true; $('report-show').textContent = 'See what\u2019s sent'; return; }
+    if (!reportDetails) { try { reportDetails = await bridge.reportDetails(); } catch (e) { /* shown as unavailable */ } }
+    pre.textContent = reportDetails ? detailsText(reportDetails) : 'Encore\u2019s details couldn\u2019t be read just now.';
+    pre.hidden = false;
+    $('report-show').textContent = 'Hide';
+  });
+  $('report-send').addEventListener('click', async () => {
+    const what = $('report-what').value.trim();
+    if (what.length < 5) { toast('Say what happened first.', 'warning'); $('report-what').focus(); return; }
+    if (!REPORTS_URL) { toast('Problem reports aren\u2019t set up in this version yet.', 'warning', 6000); return; }
+    const btn = $('report-send');
+    btn.disabled = true;
+    btn.textContent = 'Sending\u2026';
+    try {
+      if ($('report-details').checked && !reportDetails) reportDetails = await bridge.reportDetails().catch(() => null);
+      const body = { version: state.version || '', what, doing: $('report-doing').value.trim(), details: $('report-details').checked ? reportDetails : null };
+      const res = await fetch(`${REPORTS_URL}/report`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.number) throw new Error(out.error || 'The report couldn\u2019t be sent. Try again later.');
+      const list = [...((state.settings && state.settings.reports) || []), { number: out.number, key: out.key, title: what.split('\n')[0].slice(0, 80), sent: Math.floor(Date.now() / 1000), seen: 0 }];
+      await saveSetting('reports', list);
+      closeDialog($('report'));
+      toast('Report sent. Thank you. Replies show up in Main Menu \u2192 Help \u2192 My Reports.', 'ok', 8000);
+    } catch (e) {
+      toast(e.message && !/fetch/i.test(e.message) ? e.message : 'The report couldn\u2019t be sent. Check your internet connection and try again.', 'error', 9000);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send report';
+    }
+  });
+  // Asks the report server for replies to each report sent from here (the newest 20).
+  async function checkReplies(tellIfNew) {
+    const list = ((state.settings && state.settings.reports) || []).slice(-20);
+    if (!REPORTS_URL || !list.length) return;
+    const before = unreadReplies();
+    await Promise.all(list.map(async (r) => {
+      try {
+        const res = await fetch(`${REPORTS_URL}/replies?n=${r.number}&key=${encodeURIComponent(r.key)}`);
+        if (res.ok) replies[r.number] = await res.json();
+      } catch (e) { /* offline: try again later */ }
+    }));
+    const now = unreadReplies();
+    if (tellIfNew && now > before) {
+      toast(`You have ${now === 1 ? 'a reply' : `${now} replies`} to a problem you reported.`, 'info', 0, { label: 'Read', run: openReports });
+    }
+  }
+  function openReports() {
+    hideMenu();
+    const list = [...((state.settings && state.settings.reports) || [])].reverse();
+    const body = $('reports-body');
+    body.replaceChildren();
+    if (!list.length) body.append(h('p', '', 'You haven\u2019t reported any problems from this PC.'));
+    for (const r of list) {
+      const got = replies[r.number];
+      const box = h('div', 'rep');
+      const head = h('div', 'rep-head');
+      head.append(h('span', '', r.title || `Report ${r.number}`));
+      const st = h('span', `rep-state ${got && got.state === 'closed' ? 'closed' : ''}`, got ? (got.state === 'closed' ? 'Closed' : 'Open') : 'Checking\u2026');
+      head.append(st);
+      box.append(head, h('div', 'rep-sub', `Report ${r.number}, sent ${new Date(r.sent * 1000).toLocaleDateString()}`));
+      const reps = (got && got.replies) || [];
+      if (got && !reps.length) box.append(h('div', 'rep-sub', 'No reply yet.'));
+      reps.forEach((x, i) => {
+        const div = h('div', `rep-reply ${i >= (r.seen || 0) ? 'new' : ''}`, x.body);
+        div.append(h('small', '', new Date(x.at).toLocaleString()));
+        box.append(div);
+      });
+      body.append(box);
+    }
+    openDialog('reports');
+    // Everything shown counts as read.
+    const updated = ((state.settings && state.settings.reports) || []).map((r) => ({ ...r, seen: Math.max(r.seen || 0, ((replies[r.number] || {}).replies || []).length) }));
+    if (JSON.stringify(updated) !== JSON.stringify(state.settings.reports)) saveSetting('reports', updated);
+  }
+  $('reports-new').addEventListener('click', () => { closeDialog($('reports')); openReport(); });
+  // Look for replies a little after start, then every half hour.
+  setTimeout(() => checkReplies(true), 20000);
+  setInterval(() => checkReplies(true), 30 * 60 * 1000);
+
   // ---------- app menu ----------
   menuButton($('menu-btn'), () => {
     const u = state.update || { status: 'none' };
@@ -1216,6 +1321,11 @@
           ? { text: 'Check for Updates...', run: checkForUpdates }
           : { text: `${u.status === 'ready' ? 'Restart to Update' : 'Update to'} ${u.version}...`, run: installUpdate },
         { text: 'Run Setup Again...', run: openSetup },
+        '-',
+        { text: 'Report a Problem...', run: openReport },
+        ...((state.settings && (state.settings.reports || []).length)
+          ? [{ text: unreadReplies() ? `My Reports (${unreadReplies()} new)` : 'My Reports', run: openReports }]
+          : []),
         '-',
         { text: 'Changelog', run: () => openDialog('changelog') },
         { text: 'About Encore', run: () => openDialog('about') },
@@ -1264,6 +1374,7 @@
     }
     // small dialogs also close with Enter
     if (e.key === 'Enter' && !$('setup').hidden) { if (!e.target.closest('button')) { e.preventDefault(); $('setup-next').click(); } return; }
+    if (e.key === 'Enter' && e.target.closest('textarea')) return; // a new line in a report
     if (e.key === 'Enter' && [...document.querySelectorAll('.modal-ov')].some((o) => !o.hidden)) { e.preventDefault(); closeTopDialog(); return; }
     if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key === ',') { e.preventDefault(); openDialog('settings'); }
     if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'b' || e.key === 'B')) {
