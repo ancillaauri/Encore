@@ -1,3 +1,16 @@
+## Encore 0.9.30 (beta), test build 51: Encore's own look
+
+### What's new
+- **A look of its own:** purple instead of the old blue, a new squared on/off switch, and
+  sliders with a bar handle that's easy to grab. Buttons and links brighten when you point at
+  them, dialogs have squarer corners, and the record button glows.
+- **Waiting for you** in the sidebar, above Do not disturb: updates ready to install, replies to
+  your problem reports, and games that recorded black wait there until you deal with them.
+  The update button that used to be at the top right lives here now.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.30).
+
 ## Encore 0.9.29 (beta), test build 50: replies straight away
 
 ### Fixed
