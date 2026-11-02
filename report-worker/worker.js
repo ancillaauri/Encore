@@ -3,7 +3,12 @@
 // one PC that sent it. The GitHub token lives only in this Worker's secrets, never in the app.
 //
 //   POST /report          { version, what, doing, details? }  ->  { number, key }
-//   GET  /replies?n=&key=                                      ->  { state, replies: [{ body, at }] }
+//   GET  /replies?n=&key=   ->  { state, messages: [{ body, at, from }], replies: [{ body, at }] }
+//   POST /reply           { n, key, body }                    ->  { ok: true }
+//
+// `messages` is the whole conversation (`from`: "developer" or "you"); `replies` only yours,
+// for Encore versions before replying was possible. A reply from Encore is posted as a comment
+// that starts with REPORTER_MARK, and reopens the report if it was closed.
 //
 // `key` is a signature of the report's number, made with a secret only this Worker knows, so
 // only the PC that sent a report can read its replies. Comments starting with "//" are notes for
@@ -11,6 +16,12 @@
 //
 // Secrets: GITHUB_TOKEN (fine-grained: Issues read and write on the reports repository only) and
 // KEY_SECRET (any long random text). Variable: REPO ("owner/name" of the private repository).
+// Optional secret DISCORD_WEBHOOK: a Discord channel webhook; new reports and replies from
+// Encore are posted there, so you hear about them straight away (GitHub doesn't notify you
+// about comments made with your own token).
+
+const REPORTER_MARK = '<!-- encore:reporter -->';
+const REPORTER_HEAD = '**Reply from the person who reported this:**';
 
 const MAX_BYTES = 200_000;
 
@@ -28,6 +39,7 @@ export default {
     try {
       if (url.pathname === '/report' && request.method === 'POST') return await fileReport(request, env, reply);
       if (url.pathname === '/replies' && request.method === 'GET') return await replies(url, env, reply);
+      if (url.pathname === '/reply' && request.method === 'POST') return await reporterReply(request, env, reply);
       return reply({ error: 'Not found.' }, 404);
     } catch (e) {
       return reply({ error: 'Something went wrong on the report server. Try again later.' }, 500);
@@ -80,6 +92,7 @@ async function fileReport(request, env, reply) {
   });
   if (!res.ok) return reply({ error: 'The report couldn\u2019t be filed. Try again later.' }, 502);
   const issue = await res.json();
+  await tell(env, `New problem report #${issue.number}: ${title}\nhttps://github.com/${env.REPO}/issues/${issue.number}`);
   return reply({ number: issue.number, key: await sign(env, issue.number) });
 }
 
@@ -94,12 +107,54 @@ async function replies(url, env, reply) {
   if (!issueRes.ok || !commentsRes.ok) return reply({ error: 'Replies couldn\u2019t be fetched. Try again later.' }, 502);
   const issue = await issueRes.json();
   const comments = await commentsRes.json();
+  const messages = comments
+    .map((c) => ({ text: String(c.body || ''), at: c.created_at }))
+    .filter((c) => !c.text.trimStart().startsWith('//'))
+    .map((c) => c.text.startsWith(REPORTER_MARK)
+      ? { body: c.text.slice(REPORTER_MARK.length).replace(REPORTER_HEAD, '').trim(), at: c.at, from: 'you' }
+      : { body: c.text, at: c.at, from: 'developer' });
   return reply({
     state: issue.state,
-    replies: comments
-      .filter((c) => !String(c.body || '').trimStart().startsWith('//'))
-      .map((c) => ({ body: String(c.body || ''), at: c.created_at })),
+    messages,
+    replies: messages.filter((m) => m.from === 'developer').map(({ body, at }) => ({ body, at })),
   });
+}
+
+// The person who sent a report answers from Encore.
+async function reporterReply(request, env, reply) {
+  if (env.LIMIT) {
+    const { success } = await env.LIMIT.limit({ key: request.headers.get('cf-connecting-ip') || 'unknown' });
+    if (!success) return reply({ error: 'Too many messages in a short time. Try again in a minute.' }, 429);
+  }
+  const text = await request.text();
+  if (text.length > 20_000) return reply({ error: 'That message is too long.' }, 413);
+  let r;
+  try { r = JSON.parse(text); } catch { return reply({ error: 'That message couldn\u2019t be read.' }, 400); }
+  const n = Number(r.n);
+  if (!Number.isInteger(n) || n < 1 || !same(String(r.key || ''), await sign(env, n))) return reply({ error: 'Not found.' }, 404);
+  const body = clip(r.body, 4000).trim();
+  if (body.length < 2) return reply({ error: 'Write a message first.' }, 400);
+  const res = await github(env, `/repos/${env.REPO}/issues/${n}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ body: `${REPORTER_MARK}\n${REPORTER_HEAD}\n\n${body}` }),
+  });
+  if (!res.ok) return reply({ error: 'The message couldn\u2019t be sent. Try again later.' }, 502);
+  // A closed report that gets a reply opens again, so it isn't missed.
+  await github(env, `/repos/${env.REPO}/issues/${n}`, { method: 'PATCH', body: JSON.stringify({ state: 'open' }) });
+  await tell(env, `Reply on report #${n}: ${body.length > 300 ? `${body.slice(0, 299)}\u2026` : body}\nhttps://github.com/${env.REPO}/issues/${n}`);
+  return reply({ ok: true });
+}
+
+// Posts to the Discord channel, if one is set up. Never stops a report going through.
+async function tell(env, content) {
+  if (!env.DISCORD_WEBHOOK) return;
+  try {
+    await fetch(env.DISCORD_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content.slice(0, 1900), allowed_mentions: { parse: [] } }),
+    });
+  } catch { /* the report is filed either way */ }
 }
 
 function github(env, path, init = {}) {

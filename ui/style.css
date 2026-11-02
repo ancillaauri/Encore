@@ -1124,3 +1124,9 @@ input[type="range"]:hover { filter: none; }
 .railbtn .rail-dot { position: absolute; top: 10px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 8px rgba(155, 107, 255, .9); }
 .railbtn { position: relative; }
 
+
+/* My Reports: your own messages, and the reply box */
+.rep-reply.mine { background: #1c1b20; border-left-color: #6b6a6f; margin-left: 28px; }
+.rep-answer { display: flex; gap: 8px; align-items: flex-end; margin-top: 10px; }
+.rep-answer textarea { flex: 1; resize: vertical; min-height: 36px; background: #0c0b0f; color: var(--text); border: 1px solid var(--line2); border-radius: 3px; padding: 7px 9px; font: inherit; font-size: 13px; outline: none; user-select: text; }
+.rep-answer textarea:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(155, 107, 255, .15); }

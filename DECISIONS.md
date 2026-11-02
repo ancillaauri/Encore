@@ -830,3 +830,13 @@ Agreed design for game detection (to build next):
   stands for it.
 - Written down in DESIGN.md for anyone building next to Encore.
 
+## 2026-11-02: Replying to the developer from Encore; Discord notices
+- My Reports shows each report as a conversation and has a reply box. The Worker posts the reply
+  as a comment starting with a hidden marker (`<!-- encore:reporter -->`) and a "Reply from the
+  person who reported this" line, and reopens the report if it was closed. `GET /replies` now
+  returns `messages` (each with `from`: developer or you) as well as the developer's `replies`
+  for older Encore versions; unread counts only the developer's.
+- Correction: GitHub doesn't notify the token's owner about issues and comments made with their
+  own token, so the setup guide's promise of GitHub notifications was wrong. The Worker posts new
+  reports and replies to an optional Discord webhook (secret DISCORD_WEBHOOK) instead.
+

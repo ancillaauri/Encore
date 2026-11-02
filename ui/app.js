@@ -1364,13 +1364,48 @@
       const label = got ? (got.state === 'closed' ? 'Closed' : 'Open') : replyCheckFailed ? 'Couldn\u2019t check' : 'Checking\u2026';
       head.append(h('span', `rep-state ${got && got.state === 'closed' ? 'closed' : ''}`, label));
       box.append(head, h('div', 'rep-sub', `Report ${r.number}, sent ${new Date(r.sent * 1000).toLocaleDateString()}`));
-      const reps = (got && got.replies) || [];
-      if (got && !reps.length) box.append(h('div', 'rep-sub', 'No reply yet.'));
-      reps.forEach((x, i) => {
-        const div = h('div', `rep-reply ${i >= (r.seen || 0) ? 'new' : ''}`, x.body);
-        div.append(h('small', '', new Date(x.at).toLocaleString()));
+      // The conversation: the developer's replies and yours (older servers send replies only).
+      const msgs = (got && (got.messages || (got.replies || []).map((x) => ({ ...x, from: 'developer' })))) || [];
+      if (got && !msgs.some((m) => m.from === 'developer')) box.append(h('div', 'rep-sub', 'No reply yet.'));
+      let devIndex = 0;
+      for (const m of msgs) {
+        const mine = m.from === 'you';
+        const fresh = !mine && devIndex++ >= (r.seen || 0);
+        const div = h('div', `rep-reply ${mine ? 'mine' : ''} ${fresh ? 'new' : ''}`, m.body);
+        div.append(h('small', '', `${mine ? 'You' : 'Developer'} \u00b7 ${new Date(m.at).toLocaleString()}`));
         box.append(div);
-      });
+      }
+      // Answer from here, once there's something to answer.
+      if (got && msgs.length) {
+        const form = h('div', 'rep-answer');
+        const ta = h('textarea', '');
+        ta.rows = 2;
+        ta.maxLength = 4000;
+        ta.placeholder = 'Write a reply';
+        ta.setAttribute('aria-label', `Reply about ${r.title || `report ${r.number}`}`);
+        const send = h('button', 'btn sm primary', 'Send reply');
+        send.type = 'button';
+        send.addEventListener('click', async () => {
+          const text = ta.value.trim();
+          if (text.length < 2) { ta.focus(); return; }
+          send.disabled = true;
+          send.textContent = 'Sending\u2026';
+          try {
+            const res = await fetch(`${REPORTS_URL}/reply`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ n: r.number, key: r.key, body: text }) });
+            const out = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(out.error || 'The reply couldn\u2019t be sent. Try again later.');
+            await checkReplies(false);
+            renderReports();
+            toast('Reply sent.', 'ok', 3000);
+          } catch (e) {
+            toast(e.message && !/fetch/i.test(e.message) ? e.message : 'The reply couldn\u2019t be sent. Check your internet connection and try again.', 'error', 8000);
+            send.disabled = false;
+            send.textContent = 'Send reply';
+          }
+        });
+        form.append(ta, send);
+        box.append(form);
+      }
       body.append(box);
     }
   }

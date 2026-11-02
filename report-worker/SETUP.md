@@ -8,10 +8,13 @@ reports). This takes about 15–20 minutes, once.
 ## 1. The private repository
 
 On GitHub: **New repository** → name it `Encore-reports` → choose **Private** → **Create**.
-You'll get an email or GitHub notification for every new report (you watch your own
-repositories by default). Reply with a comment as normal. Close the issue when it's fixed and
-the reporter sees it as Closed. A comment that starts with `//` is a note for you only: Encore
-never shows it.
+Reply to a report with a comment as normal; the reporter sees it in Encore and can answer from
+there (their answer appears as a comment starting "Reply from the person who reported this",
+and reopens the report if it was closed). Close the issue when it's fixed and the reporter sees
+it as Closed. A comment that starts with `//` is a note for you only: Encore never shows it.
+
+GitHub does **not** notify you about these: the Worker files reports and replies with your own
+token, so GitHub sees them as yours. Step 5 sends them to Discord instead.
 
 ## 2. A token that can only file issues there
 
@@ -39,6 +42,17 @@ Keep KEY_SECRET the same forever: changing it stops Encore reading replies to ol
 `wrangler deploy` prints the Worker's address, like
 `https://encore-reports.<your-name>.workers.dev`. Send that address over and it goes into
 Encore (`REPORTS_URL` in ui/app.js). Encore's is https://encore-reports.ancillaauri.workers.dev.
+
+## 5. Hear about new reports and replies (Discord)
+
+1. In Discord, make a private channel (or use one only you can see), e.g. `#encore-reports`.
+2. Channel settings (the cog) → **Integrations** → **Webhooks** → **New Webhook** → name it
+   `Encore reports` → **Copy Webhook URL**.
+3. Cloudflare → the `encore-reports` Worker → **Settings** → **Variables and Secrets** → **Add**:
+   name `DISCORD_WEBHOOK`, value the URL, **Secret** ticked → **Deploy**.
+
+Every new report and every reply from Encore then posts a message there with a link to it.
+Without it everything still works; you just have to look in `Encore-reports` yourself.
 
 ## 4. Check it
 
