@@ -1,3 +1,16 @@
+## Encore 0.9.27 (beta), test build 48: clip pictures
+
+### What's new
+- **Pictures for your clips** in Saved this session, taken from the middle of each clip, with
+  its length in the corner.
+
+### Fixed
+- Pressing your Save an Echo keys to set them as the hotkey no longer saves an Echo too.
+- The Echo tag on a clip with a long name no longer gets cut off.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.27).
+
 ## Encore 0.9.26 (beta), test build 47: tidier Settings, hotkey you can click
 
 ### What's new

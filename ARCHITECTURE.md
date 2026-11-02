@@ -57,8 +57,10 @@ Commands: `start_recording`, `stop_recording`, `start_replay`, `stop_replay`, `s
 `get_capabilities`, `shutdown`. If the engine's stdin closes (the shell exited), it finishes any
 recording in progress, saves it, and exits.
 
-Events: `status`, `recording_started`, `recording_saved`, `replay_saved`, `audio_app_added`,
-`audio_app_removed`, `warning`, `error`.
+Events: `hello`, `capabilities`, `status`, `recording_started`, `recording_saved`,
+`replay_status`, `replay_saving`, `replay_saved`, `clip_thumbnail`, `games`, `game_switched`,
+`focus_monitor`, `monitor_switched`, `audio_app_added`, `capture_behind`, `mic_found`,
+`priority_capture_off`, `warning`, `error`.
 
 Protocol version is sent in the first message (`{"event":"hello","data":{"protocol":1}}`).
 Any breaking change bumps the number and gets a DECISIONS.md entry.

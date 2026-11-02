@@ -743,3 +743,14 @@ Agreed design for game detection (to build next):
 - The version shows next to Encore in the title bar.
 - The hidden manual audio offset (always 0, no control) is removed. Sync is automatic, and any
   track can be moved in the editor. Old settings files that still have it load normally.
+
+## 2026-11-02: Clip pictures; choosing a hotkey doesn't act on it (0.9.27)
+- Each clip in Saved this session gets a picture from its middle (the first frame is often a
+  menu or a fade), with its length in the corner. FFmpeg makes a 256-pixel-wide JPEG after the
+  clip is saved, on a separate thread, so saving is never slowed down; it's sent to the
+  interface as a data URL (event `clip_thumbnail`) and kept only for the session, so no extra
+  files are made. If it can't be made, the placeholder stays.
+- A clip's name shortens before its Echo/recovered tag does.
+- Choosing a hotkey (Settings or the Save an Echo button) no longer also acts on it: the
+  background keyboard watcher sees the keys a moment after the page does, so hotkeys are
+  ignored for a second after choosing ends.

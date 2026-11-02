@@ -413,6 +413,35 @@ pub fn probe_args(encoder_name: &str) -> Vec<String> {
 
 // ---------- running FFmpeg ----------
 
+/// A small JPEG of one frame of a saved clip (for the clip list), `at` seconds in.
+pub fn thumbnail(ffmpeg: &Path, file: &Path, at: f64) -> Result<Vec<u8>, String> {
+    let out = hidden_command(ffmpeg)
+        .args(["-hide_banner", "-loglevel", "error", "-ss", &format!("{:.2}", at.max(0.0)), "-i"])
+        .arg(file)
+        .args(["-frames:v", "1", "-vf", "scale=256:-2", "-q:v", "5", "-an", "-f", "image2pipe", "-c:v", "mjpeg", "pipe:1"])
+        .stdin(std::process::Stdio::null())
+        .output()
+        .map_err(|e| format!("couldn't start FFmpeg: {e}"))?;
+    if !out.status.success() || out.stdout.len() < 100 {
+        return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
+    }
+    Ok(out.stdout)
+}
+
+/// Standard base64, for sending a thumbnail to the interface as a data URL.
+pub fn base64(bytes: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for c in bytes.chunks(3) {
+        let n = (c[0] as u32) << 16 | (*c.get(1).unwrap_or(&0) as u32) << 8 | *c.get(2).unwrap_or(&0) as u32;
+        out.push(T[(n >> 18) as usize & 63] as char);
+        out.push(T[(n >> 12) as usize & 63] as char);
+        out.push(if c.len() > 1 { T[(n >> 6) as usize & 63] as char } else { '=' });
+        out.push(if c.len() > 2 { T[n as usize & 63] as char } else { '=' });
+    }
+    out
+}
+
 /// A `Command` that never opens a console window on Windows.
 pub fn hidden_command(program: &Path) -> Command {
     #[allow(unused_mut)]
@@ -474,6 +503,15 @@ pub fn probe_encoder(ffmpeg: &Path, enc: Encoder) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn base64_matches_the_standard() {
+        assert_eq!(base64(b""), "");
+        assert_eq!(base64(b"f"), "Zg==");
+        assert_eq!(base64(b"fo"), "Zm8=");
+        assert_eq!(base64(b"foo"), "Zm9v");
+        assert_eq!(base64(b"foobar"), "Zm9vYmFy");
+    }
 
     fn spec() -> CaptureSpec {
         CaptureSpec { target: Target::Monitor { handle: 65537 }, fps: 60, cursor: true, width: 1920, height: 1080, quality: Quality::Ultra }

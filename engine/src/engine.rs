@@ -635,10 +635,14 @@ impl Engine {
             if result.is_err() {
                 let _ = std::fs::remove_file(&out_path); // the placeholder
             }
+            let thumb = result.as_ref().ok().map(|s| (s.path.clone(), s.duration_ms));
             if replay {
                 report_replay_saved(result, &label);
             } else {
                 report_saved(result, &label, false);
+            }
+            if let Some((path, ms)) = thumb {
+                send_thumbnail(&ffmpeg, &path, ms);
             }
         });
     }
@@ -701,7 +705,9 @@ impl Engine {
                 }
                 let label = active.label.clone();
                 send_event("status", json!({ "state": "saving" }));
-                report_saved(active.stop_and_save(&self.ffmpeg), &label, false);
+                let saved = active.stop_and_save(&self.ffmpeg);
+                thumbnail_later(&self.ffmpeg, &saved);
+                report_saved(saved, &label, false);
             }
             None => {}
         }
@@ -721,6 +727,30 @@ impl Engine {
         }
         // Keep the segment that holds `keep_from` (a save starts at its keyframe).
         a.prune(keep_from.saturating_sub(3 * 10_000_000));
+    }
+}
+
+/// The same, on its own thread, for saves made on the engine's main thread. It starts after the
+/// "saved" message is queued, as FFmpeg takes a moment to start.
+fn thumbnail_later(ffmpeg: &std::path::Path, saved: &Result<Saved, String>) {
+    if let Ok(s) = saved {
+        let (ffmpeg, path, ms) = (ffmpeg.to_path_buf(), s.path.clone(), s.duration_ms);
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+            send_thumbnail(&ffmpeg, &path, ms);
+        });
+    }
+}
+
+/// After a clip is saved: a small picture from its middle, for the clip list (on this thread,
+/// after the "saved" message, so saving is never slowed down by it).
+fn send_thumbnail(ffmpeg: &std::path::Path, path: &std::path::Path, duration_ms: u64) {
+    match ffmpeg::thumbnail(ffmpeg, path, duration_ms as f64 / 2000.0) {
+        Ok(jpeg) => send_event(
+            "clip_thumbnail",
+            json!({ "path": path.display().to_string(), "image": format!("data:image/jpeg;base64,{}", ffmpeg::base64(&jpeg)) }),
+        ),
+        Err(e) => log(&format!("no thumbnail for {}: {e}", path.display())),
     }
 }
 
@@ -1124,7 +1154,9 @@ impl Engine {
             let reason = if detail.is_empty() { String::new() } else { format!(" FFmpeg said: {detail}") };
             send_event("warning", json!({ "message": format!("Recording stopped unexpectedly (for example the window closed). Saving what was captured.{reason}") }));
             let label = active.label.clone();
-            report_saved(active.stop_and_save(&self.ffmpeg), &label, false);
+            let saved = active.stop_and_save(&self.ffmpeg);
+            thumbnail_later(&self.ffmpeg, &saved);
+            report_saved(saved, &label, false);
         }
     }
 

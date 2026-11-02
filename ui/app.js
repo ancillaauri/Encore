@@ -809,7 +809,7 @@
   const TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5.2c0-.7.5-1.2 1.2-1.2h2.6c.7 0 1.2.5 1.2 1.2V7M6.5 7l.8 11.6c.1 1 .9 1.9 2 1.9h5.4c1.1 0 1.9-.9 2-1.9L17.5 7"/><path d="M10.2 11v5.5M13.8 11v5.5"/></svg>';
   function renderClipName(li, d) {
     const name = li.querySelector('.rname');
-    name.replaceChildren(shortName(d.path));
+    name.replaceChildren(h('span', 'rn', shortName(d.path))); // the name shortens, the tag stays whole
     if (d.recovered) name.append(h('span', 'tag', 'recovered'));
     if (d.replay) name.append(h('span', 'tag replay-live', 'Echo'));
     li.title = `${d.path}\nClick to show in folder. Right-click for more`;
@@ -817,6 +817,7 @@
   function addRecent(d) {
     state.recent.unshift(d);
     const li = h('li');
+    d.li = li; // for its picture, which arrives a moment after the clip is saved
     const thumb = h('span', 'thumb');
     thumb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor" stroke="none"/></svg>';
     const text = h('div', 'rtext');
@@ -997,6 +998,18 @@
         break;
       }
         break;
+      case 'clip_thumbnail': {
+        // A picture from the middle of a clip just saved: replaces the placeholder.
+        const d = state.recent.find((x) => x.path === data.path);
+        if (d && d.li) {
+          const t = d.li.querySelector('.thumb');
+          const img = h('img');
+          img.alt = '';
+          img.onload = () => { t.replaceChildren(img); if (d.duration_ms) t.append(h('span', 'tlen', clock(d.duration_ms))); t.classList.add('pic'); };
+          img.src = data.image;
+        }
+        break;
+      }
       case 'replay_saved': {
         addRecent({ ...data, replay: true });
         const len = data.duration_ms ? ` (${lengthText(Math.round(data.duration_ms / 1000))})` : '';

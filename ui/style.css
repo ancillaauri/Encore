@@ -271,7 +271,9 @@ body.side-collapsed .layout { grid-template-columns: 80px minmax(0, 1fr); }
 .thumb { width: 64px; height: 36px; border-radius: 6px; background: linear-gradient(135deg, #1b1a24, #2a2838); flex: none; display: flex; align-items: center; justify-content: center; color: #6b6a6f; }
 .thumb svg { width: 16px; height: 16px; }
 .rtext { min-width: 0; }
-.rname { font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rname { font-size: 13.5px; font-weight: 500; white-space: nowrap; display: flex; align-items: baseline; min-width: 0; }
+.rname .rn { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rname .tag { flex: none; }
 .rmeta { font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; }
 .tag { color: var(--warn); font-size: 11.5px; margin-left: 6px; font-weight: 600; }
 /* Echo: a purple glow */
@@ -991,3 +993,9 @@ body.pcap-hidden .pcrow, body.pcap-hidden #rail-pcap { display: none; }
 
 /* The version next to Encore in the title bar: small and faded */
 .brand .tbver { font-size: 11px; font-weight: 500; color: var(--dim); opacity: .75; margin-left: -2px; font-variant-numeric: tabular-nums; }
+
+/* A clip's picture, with its length in the corner */
+.thumb.pic { position: relative; overflow: hidden; background: #000; }
+.thumb.pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb .tlen { position: absolute; right: 3px; bottom: 2px; padding: 0 3px; border-radius: 3px; background: rgba(0, 0, 0, .72); color: #e8e7ea; font-size: 9.5px; font-weight: 600; line-height: 13px; font-variant-numeric: tabular-nums; }
+.rname .rinput { flex: 1; min-width: 0; }
