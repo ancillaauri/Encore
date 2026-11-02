@@ -38,7 +38,7 @@ Keep KEY_SECRET the same forever: changing it stops Encore reading replies to ol
 
 `wrangler deploy` prints the Worker's address, like
 `https://encore-reports.<your-name>.workers.dev`. Send that address over and it goes into
-Encore (`REPORTS_URL` in ui/app.js).
+Encore (`REPORTS_URL` in ui/app.js). Encore's is https://encore-reports.ancillaauri.workers.dev.
 
 ## 4. Check it
 

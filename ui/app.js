@@ -1197,7 +1197,7 @@
   // ---------- problem reports: sent to Encore's report server, replies shown in My reports ----------
   // The server files each report in a private repository and hands replies back to this PC only.
   // Set once the report server is running (see report-worker/SETUP.md). Previews can set their own.
-  const REPORTS_URL = window.ENCORE_REPORTS_URL || '';
+  const REPORTS_URL = window.ENCORE_REPORTS_URL || 'https://encore-reports.ancillaauri.workers.dev';
   const replies = {}; // report number -> { state, replies: [{ body, at }] }
   let reportDetails = null;
   function unreadReplies() {
