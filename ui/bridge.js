@@ -35,6 +35,10 @@
     deleteClip: (path) => call('delete_clip', { path }),
     openLink: (url) => T.core.invoke('open_link', { url }),
     pickFolder: (start) => T.core.invoke('pick_folder', { start: start || null }),
+    locateClipEditor: () => T.core.invoke('locate_clip_editor'),
+    pickClipEditor: () => T.core.invoke('pick_clip_editor'),
+    openInEditor: (exe, path) => T.core.invoke('open_in_editor', { exe, path }),
+    openInPlayer: (path) => T.core.invoke('open_in_player', { path }),
     // Tray, hotkeys and quitting (the shell owns these)
     setRecordingState: (recording, label) => T.core.invoke('set_recording_state', { recording, label: label || null }),
     quitApp: () => T.core.invoke('quit_app'),

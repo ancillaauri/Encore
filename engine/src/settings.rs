@@ -143,6 +143,11 @@ pub struct Settings {
     pub priority_capture_understood: bool,
     /// Priority Capture's switch is shown at the bottom of the sidebar.
     pub pcap_in_sidebar: bool,
+    /// What clicking a clip in Saved this session does: "folder" (show it in Explorer),
+    /// "player" (Windows' video player) or "editor" (open it in Clip Editor).
+    pub clip_click: String,
+    /// Where Clip Editor is installed (its .exe), found by Locate or chosen with Browse.
+    pub clip_editor_path: String,
     /// Notification size, in percent of normal (one of NOTIFY_SIZES), on top of the screen's own
     /// scale.
     pub notify_size: u32,
@@ -150,6 +155,7 @@ pub struct Settings {
 
 pub const NOTIFY_SIZES: [u32; 5] = [100, 125, 150, 175, 200];
 
+pub const CLIP_CLICKS: [&str; 3] = ["folder", "player", "editor"];
 pub const NOTIFY_SPOTS: [&str; 8] = ["tl", "tc", "tr", "ml", "mr", "bl", "bc", "br"];
 pub const NOTIFY_SECONDS: std::ops::RangeInclusive<u32> = 2..=10;
 
@@ -222,6 +228,8 @@ impl Default for Settings {
             gpu_realtime: false,
             priority_capture_understood: false,
             pcap_in_sidebar: true,
+            clip_click: "folder".into(),
+            clip_editor_path: String::new(),
             notify_size: 100,
         }
     }
@@ -311,6 +319,9 @@ impl Settings {
         if !NOTIFY_SPOTS.contains(&updated.notify_pos.as_str()) {
             return Err("Unknown notification position".into());
         }
+        if !CLIP_CLICKS.contains(&updated.clip_click.as_str()) {
+            return Err("Unknown choice for clicking a clip".into());
+        }
         if !NOTIFY_SIZES.contains(&updated.notify_size) {
             return Err(format!("Notification size must be one of {:?} %", NOTIFY_SIZES));
         }
@@ -378,6 +389,9 @@ impl Settings {
         }
         if !NOTIFY_SPOTS.contains(&self.notify_pos.as_str()) {
             self.notify_pos = d.notify_pos.clone();
+        }
+        if !CLIP_CLICKS.contains(&self.clip_click.as_str()) {
+            self.clip_click = d.clip_click.clone();
         }
         if !NOTIFY_SIZES.contains(&self.notify_size) {
             self.notify_size = 100;

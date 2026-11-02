@@ -205,6 +205,14 @@ pub struct Sprite {
     pub card_h: f32,
 }
 
+/// The edge tab's timer: thickness, and where it runs (x, top, bottom), inside the rounded edge.
+const TAB_TIMER_W: f32 = 3.0;
+fn tab_timer(spot: Spot, x0: f32, x1: f32, y0: f32, y1: f32) -> (f32, f32, f32) {
+    let inset = 5.0 + TAB_TIMER_W / 2.0;
+    let x = if spot == Spot::Right { x0 + inset } else { x1 - inset };
+    (x, y0 + 9.0, y1 - 9.0)
+}
+
 pub fn draw_item(kind: Kind, title: &str, text: &str, spot: Spot, scale: f32) -> Option<Sprite> {
     let (line, border, glow) = kind.colours();
     let tab = spot.is_tab();
@@ -247,9 +255,12 @@ pub fn draw_item(kind: Kind, title: &str, text: &str, spot: Spot, scale: f32) ->
     body += &format!(r#"<path d="{border_path}" fill="none" stroke="{border}" stroke-width="1"/>"#);
     let mut ty = card_y + 12.0;
     if tab {
-        // The timer's rail on the inner side (the timer itself is drawn each frame).
-        let rail_x = if spot == Spot::Right { x0 } else { x1 - 4.0 };
-        body += &format!(r#"<rect x="{rail_x}" y="{y0}" width="4" height="{card_h}" fill="rgba(255,255,255,0.06)"/>"#);
+        // The timer's rail on the inner side, inside the rounded edge (the timer itself is drawn
+        // each frame, in the same place).
+        let (rx, ry0, ry1) = tab_timer(spot, x0, x1, y0, y1);
+        body += &format!(
+            r#"<line x1="{rx}" y1="{ry0}" x2="{rx}" y2="{ry1}" stroke="rgba(255,255,255,0.07)" stroke-width="{TAB_TIMER_W}" stroke-linecap="round"/>"#
+        );
         body += &format!(
             r#"<text x="{}" y="{}" font-family="{FONT}" font-size="11.5" font-weight="600" fill="{line}">{}</text>"#,
             card_x + text_x,
@@ -490,9 +501,24 @@ impl Stack {
                     Rect::from_xywh((cx + 12.0) * s, bar_y * s, (full * left).max(0.0) * s, 2.0 * s).into_iter().collect()
                 }
                 Spot::Right | Spot::Left => {
-                    let bar_x = if self.spot == Spot::Right { cx } else { cx + sp.card_w - 4.0 };
-                    let hgt = sp.card_h * left;
-                    Rect::from_xywh(bar_x * s, (cy + sp.card_h - hgt) * s, 4.0 * s, hgt.max(0.0) * s).into_iter().collect()
+                    // A rounded line inside the curved edge, shrinking towards the bottom.
+                    let (lx, ly0, ly1) = tab_timer(self.spot, cx, cx + sp.card_w, cy, cy + sp.card_h);
+                    let top = ly1 - (ly1 - ly0) * left;
+                    if ly1 - top > 0.5 {
+                        let mut pb = tiny_skia::PathBuilder::new();
+                        pb.move_to(lx * s, top * s);
+                        pb.line_to(lx * s, ly1 * s);
+                        if let Some(path) = pb.finish() {
+                            let mut paint = tiny_skia::Paint::default();
+                            paint.anti_alias = true;
+                            for (grow, a) in [(6.0, 0.10), (3.0, 0.20), (0.0, 1.0)] {
+                                paint.set_color_rgba8(r, g, b, (a * alpha * 255.0) as u8);
+                                let stroke = tiny_skia::Stroke { width: (TAB_TIMER_W + grow) * s, line_cap: tiny_skia::LineCap::Round, ..Default::default() };
+                                canvas.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
+                            }
+                        }
+                    }
+                    Vec::new()
                 }
             };
             for bar in bars {

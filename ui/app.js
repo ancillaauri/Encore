@@ -601,6 +601,7 @@
     renderInputs();
     renderCodecs();
     renderOutputNote();
+    renderClipEditor();
     renderHotkeys();
     renderReplay();
     renderSounds();
@@ -827,12 +828,15 @@
     bin.addEventListener('click', (e) => { e.stopPropagation(); startDelete(li, d); });
     li.append(thumb, text, bin);
     renderClipName(li, d);
-    li.onclick = () => { if (!li.classList.contains('deleting') && !li.querySelector('input')) bridge.revealFile(d.path).catch((e) => toast(String(e), 'error')); };
+    li.onclick = () => { if (!li.classList.contains('deleting') && !li.querySelector('input')) openClip(d, (state.settings && state.settings.clip_click) || 'folder'); };
     li.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       if (li.classList.contains('deleting')) return;
       openMenu(e.clientX, e.clientY, [
-        { text: 'Show in folder', run: () => bridge.revealFile(d.path).catch((err) => toast(String(err), 'error')) },
+        { text: 'Open in Clip Editor', run: () => openClip(d, 'editor') },
+        { text: 'Play in video player', run: () => openClip(d, 'player') },
+        { text: 'Show in folder', run: () => openClip(d, 'folder') },
+        '-',
         { text: 'Rename', run: () => startRename(li, d) },
         '-',
         { text: 'Delete', run: () => startDelete(li, d) },
@@ -841,6 +845,46 @@
     $('recent').prepend(li);
     $('recent-empty').hidden = true;
   }
+  // Opening a clip: its folder, Windows' video player, or Clip Editor (found first if need be).
+  async function openClip(d, how) {
+    try {
+      if (how === 'player') await bridge.openInPlayer(d.path);
+      else if (how === 'editor') {
+        const exe = await clipEditorPath();
+        if (!exe) { toast('Clip Editor wasn\u2019t found. Find it in Settings \u2192 Clips with Browse.', 'warning', 8000); return; }
+        await bridge.openInEditor(exe, d.path);
+      } else await bridge.revealFile(d.path);
+    } catch (e) { toast(String(e), 'error'); }
+  }
+  // The saved place, or one found now (and saved).
+  async function clipEditorPath() {
+    const saved = state.settings && state.settings.clip_editor_path;
+    if (saved) return saved;
+    return locateEditor(false);
+  }
+  async function locateEditor(say) {
+    let found = null;
+    try { found = await bridge.locateClipEditor(); } catch (e) { /* not found */ }
+    if (found) {
+      await saveSetting('clip_editor_path', found);
+      if (say) toast('Found Clip Editor.', 'info', 3000);
+    } else if (say) toast('Couldn\u2019t find Clip Editor. Use Browse to find Clip Editor.exe.', 'warning', 7000);
+    renderClipEditor();
+    return found;
+  }
+  function renderClipEditor() {
+    const p = state.settings && state.settings.clip_editor_path;
+    $('clip-editor-note').textContent = p
+      ? 'Clips open here ready to edit. Locate finds it again if it moves.'
+      : 'Not found yet. Locate looks where it\u2019s usually installed; Browse lets you find Clip Editor.exe yourself.';
+  }
+  $('locate-editor').addEventListener('click', () => locateEditor(true));
+  $('clip-click').addEventListener('change', (e) => { if (e.target.value === 'editor' && !(state.settings && state.settings.clip_editor_path)) setTimeout(() => locateEditor(true), 300); });
+  $('browse-editor').addEventListener('click', async () => {
+    const p = await bridge.pickClipEditor().catch(() => null);
+    if (p) { await saveSetting('clip_editor_path', p); renderClipEditor(); }
+  });
+
   // Each clip has its own 5 seconds: several can be on their way out at once.
   const UNDO_MS = 5000;
   function startDelete(li, d) {

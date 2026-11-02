@@ -5,6 +5,7 @@
 //! Keep this thin: no recording logic here (see ARCHITECTURE.md).
 
 mod admin;
+mod clip_editor;
 mod engine_link;
 mod hotkeys;
 mod notify;
@@ -152,6 +153,10 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             engine_call,
             reveal_in_folder,
+            clip_editor::locate_clip_editor,
+            clip_editor::pick_clip_editor,
+            clip_editor::open_in_editor,
+            clip_editor::open_in_player,
             open_folder,
             open_link,
             pick_folder,

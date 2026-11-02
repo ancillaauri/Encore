@@ -1,3 +1,16 @@
+## Encore 0.9.24 (beta), test build 45: open clips your way
+
+### What's new
+- **Choose what clicking a clip does** (Settings → Clips): show it in its folder, play it in
+  your video player, or **open it in Clip Editor** ready to edit. Right-click a clip for all
+  three. **Locate** finds Clip Editor for you; **Browse** if it's somewhere unusual.
+
+### Fixed
+- The timer on edge notifications now sits inside the rounded edge instead of running across it.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.24).
+
 ## Encore 0.9.23 (beta), test build 44: your microphone, found again
 
 ### What's new

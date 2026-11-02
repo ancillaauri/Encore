@@ -305,13 +305,36 @@
         </section>
 
         <section class="setsec">
+          <h3>Clips</h3>
+          <div class="setcard">
+            <label class="setrow"><span class="settext"><span class="setname">When I click a clip</span>
+              <span class="setsub wrap">In Saved this session. Right-click a clip for the other choices.</span></span>
+              <select class="dd" id="clip-click" data-setting="clip_click">
+                <option value="folder">Show it in its folder</option>
+                <option value="player">Play it in my video player</option>
+                <option value="editor">Open it in Clip Editor</option>
+              </select>
+            </label>
+            <div class="setrow">
+              <span class="settext"><span class="setname">Clip Editor</span>
+                <span class="setsub wrap" id="clip-editor-note">Not found yet. Locate looks where it's usually installed; Browse lets you find Clip Editor.exe yourself.</span></span>
+              <div class="with-button grow">
+                <input id="clip-editor" type="text" spellcheck="false" readonly data-setting="clip_editor_path" placeholder="Not found yet">
+                <button type="button" class="btn sm" id="locate-editor">Locate</button>
+                <button type="button" class="btn sm ghost" id="browse-editor">Browse…</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="setsec">
           <h3>General</h3>
           <p class="setnote">When you close Encore's window:</p>
           <div class="setcard" role="radiogroup" aria-label="When you close the window">
             <button type="button" class="setrow setopt" role="radio" data-close-to-tray="true">
               <span class="radio" aria-hidden="true"></span>
               <span class="settext"><span class="setname">Keep running in the tray</span>
-                <span class="setsub wrap">Recommended. Hotkeys keep working. Quit from the tray icon by the clock, or ≡ → File → Exit.</span></span>
+                <span class="setsub wrap">Recommended. Hotkeys keep working. Quit from the tray icon by the clock, or Main Menu → File → Exit.</span></span>
             </button>
             <button type="button" class="setrow setopt" role="radio" data-close-to-tray="false">
               <span class="radio" aria-hidden="true"></span>

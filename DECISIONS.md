@@ -710,3 +710,15 @@ Agreed design for game detection (to build next):
 - When it's plugged back in, Echoes start again so the microphone track comes back (Windows
   ends the old track when a device is unplugged). A recording in progress isn't restarted; it
   stays without the microphone until it's stopped.
+
+## 2026-11-02: Opening clips in Clip Editor or a video player; edge-tab timer inside the curve (0.9.24)
+- Settings → Clips → "When I click a clip": show it in its folder (as before, the default),
+  play it in Windows' video player, or open it in Clip Editor. Right-click a clip for all three.
+- Clip Editor already opens a video it's started with (and hands it to the copy that's open), so
+  Encore starts `Clip Editor.exe "<clip>"`; nothing was needed on the editor's side. Locate looks
+  in Windows' list of installed apps (InstallLocation or the uninstaller's folder of anything
+  named "Clip Editor"), then the usual install folders; Browse picks the .exe by hand. Choosing
+  "Open it in Clip Editor" locates it straight away, and the first click locates it if needed.
+  Only .mp4 files are opened, and only an .exe is started.
+- Edge tabs: the timer is a rounded line inside the curved edge (inset 5 px, clear of the
+  corners), with a rail in the same place, instead of a straight bar along the edge itself.

@@ -74,6 +74,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Warning when the capture falls behind (30 s, or more than 10 s behind) | 0.9.10, 0.9.12 | [x] |
 | Main Menu (Settings at top level), Sidebar naming, Priority Capture hideable from the sidebar | 0.9.21 | [x] |
 | Microphone found by name when its id changes; warning icon and menu when it isn't plugged in | 0.9.23 | [x] |
+| Clicking a clip: folder, video player or Clip Editor (Locate / Browse) | 0.9.24 | [x] |
 
 ## Out of scope (decided, with reasons)
 
