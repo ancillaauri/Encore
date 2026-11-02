@@ -809,3 +809,7 @@ Agreed design for game detection (to build next):
 - At most 3 reports a minute per address, 200 KB per report. Reports can't be sent until the
   Worker's address is put in Encore (REPORTS_URL).
 
+## 2026-11-02: My Reports checks when opened (0.9.29)
+- Opening My Reports asks for replies there and then (it shows "Checking…" for a moment, or
+  "Couldn't check" when the server can't be reached). Encore also checks when its window comes
+  back to the front, at most every 5 minutes, on top of 20 s after start and every 30 minutes.

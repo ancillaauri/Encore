@@ -1,3 +1,13 @@
+## Encore 0.9.29 (beta), test build 50: replies straight away
+
+### Fixed
+- **My Reports** now checks for replies as soon as you open it, instead of up to 30 minutes
+  later. Encore also checks when you come back to it, and says so if it can't reach the report
+  server.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.29).
+
 ## Encore 0.9.28 (beta), test build 49: noise reduction, your own bitrate, problem reports
 
 ### What's new
