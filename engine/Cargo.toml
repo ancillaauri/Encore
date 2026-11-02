@@ -8,6 +8,8 @@ license = "MIT"
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Microphone noise suppression (RNNoise, BSD-3-Clause), applied when a clip is saved.
+nnnoiseless = { version = "0.5.2", default-features = false }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = [

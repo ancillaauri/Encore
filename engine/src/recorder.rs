@@ -839,6 +839,7 @@ pub fn save_window(
             let out = work.join(&t.file);
             timeline::extract_frames(&base, from_frame, to_frame.max(from_frame), &out)
                 .map_err(|e| format!("Could not read the audio for {}: {e}", t.title))?;
+            let out = clean_mic(t, out, &work);
             tracks.push(audio::TrackInfo { file: out.to_string_lossy().into_owned(), ..t.clone() });
         }
         let audio: Vec<AudioOut> = audio::plan_output(&tracks)
@@ -894,6 +895,27 @@ pub fn finalise(ffmpeg_path: &Path, seg_dir: &Path, out_path: &Path, duration_ms
     Ok(Saved { path: out_path.to_path_buf(), duration_ms, size_bytes: size })
 }
 
+/// The microphone track with background noise reduced (Settings → Audio), written next to it;
+/// any other track, or if cleaning fails, the file as it was (the clip still saves).
+fn clean_mic(track: &audio::TrackInfo, file: PathBuf, dir: &Path) -> PathBuf {
+    let level = crate::denoise::current();
+    if track.kind != audio::TrackKind::Mic || level == crate::denoise::Level::Off {
+        return file;
+    }
+    let clean = dir.join(format!("clean-{}", track.file.rsplit(['/', '\\']).next().unwrap_or("mic.pcm")));
+    let started = std::time::Instant::now();
+    match crate::denoise::clean_file(&file, &clean, level) {
+        Ok(()) => {
+            log(&format!("microphone noise reduced ({level:?}) in {} ms", started.elapsed().as_millis()));
+            clean
+        }
+        Err(e) => {
+            log(&format!("couldn't reduce the microphone's noise ({e}); saving it as recorded"));
+            file
+        }
+    }
+}
+
 /// The audio tracks for the saved file (planned from the session's manifest) and how much to trim
 /// from the start of the recorded audio.
 fn audio_inputs(seg_dir: &Path) -> (Vec<AudioOut>, f64) {
@@ -901,7 +923,14 @@ fn audio_inputs(seg_dir: &Path) -> (Vec<AudioOut>, f64) {
     let present = |i: usize| std::fs::metadata(seg_dir.join(&m.tracks[i].file)).map(|md| md.len() > 0).unwrap_or(false);
     // Only plan with sources whose files actually have audio in them.
     let kept: Vec<usize> = (0..m.tracks.len()).filter(|&i| present(i)).collect();
-    let tracks: Vec<audio::TrackInfo> = kept.iter().map(|&i| m.tracks[i].clone()).collect();
+    let tracks: Vec<audio::TrackInfo> = kept
+        .iter()
+        .map(|&i| {
+            let t = &m.tracks[i];
+            let file = clean_mic(t, seg_dir.join(&t.file), seg_dir);
+            audio::TrackInfo { file: file.to_string_lossy().into_owned(), ..t.clone() }
+        })
+        .collect();
     let out = audio::plan_output(&tracks)
         .into_iter()
         .map(|t| AudioOut { title: t.title, files: t.sources.iter().map(|&i| seg_dir.join(&tracks[i].file)).collect() })

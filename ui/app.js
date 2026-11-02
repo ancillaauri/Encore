@@ -625,7 +625,10 @@
     const want = state.settings ? state.settings.mic_device : 'default';
     if (want !== 'default' && !state.inputs.some((d) => d.id === want)) add(want, `${(state.settings && state.settings.mic_name) || 'Saved microphone'} (not connected)`);
     sel.value = want;
-    $('mic-row').hidden = !(state.settings && state.settings.audio_mic);
+    const micOn = !!(state.settings && state.settings.audio_mic);
+    $('mic-row').hidden = !micOn;
+    $('denoise-row').hidden = !micOn;
+    $('q-denoise-row').classList.toggle('off', !micOn); // only matters with the microphone on
   }
 
   async function refreshInputs() {

@@ -81,16 +81,25 @@
               <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Records all sound from your PC in one track, including Windows’ own sounds. Turn this off to keep only the apps (with Split Application Audio on), or turn all three off for a silent recording.">i</span></span>
             <label class="aic" data-tip="Full System Audio: click to turn on or off"><input type="checkbox" class="aswitch" aria-label="Full System Audio" data-setting="audio_full_mix"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="12.5" height="9" rx="1.5"/><path d="M6 18.5h5.5M8.75 14v4.5"/><rect x="17" y="4" width="4.5" height="15" rx="1.2"/><path d="M18.4 7.5h1.7M18.4 10h1.7"/></svg></label>
           </div>
-          <div class="srow arow mic">
-            <span class="atext">Microphone</span>
-            <button type="button" class="micwarn" id="mic-warn" aria-haspopup="menu" aria-expanded="false" aria-label="Microphone not connected" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.2h.01"/></svg></button>
-            <label class="aic" data-tip="Microphone: click to turn on or off"><input type="checkbox" class="aswitch" aria-label="Microphone" data-setting="audio_mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/><path class="slash" d="M4.5 4.5l15 15"/></svg></label>
-          </div>
           <div class="srow arow blue">
             <span class="atext">Split Application Audio
               <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Gives every application that produces sound its own separate audio track, as well as the full mix. You can use an editor to adjust or mute the tracks.">i</span></span>
             <label class="aic" data-tip="Split Application Audio: click to turn on or off"><input type="checkbox" class="aswitch" aria-label="Split Application Audio" data-setting="audio_app_tracks"><svg viewBox="0 0 24 24"><path d="M6 20v-6M6 9V4M12 20v-9M12 6V4M18 20v-4M18 11V4"/><path d="M4 11.5h4M10 8.5h4M16 13.5h4"/></svg></label>
           </div>
+          <h3 class="sublab">Voice</h3>
+          <div class="srow arow mic">
+            <span class="atext">Microphone</span>
+            <button type="button" class="micwarn" id="mic-warn" aria-haspopup="menu" aria-expanded="false" aria-label="Microphone not connected" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.2h.01"/></svg></button>
+            <label class="aic" data-tip="Microphone: click to turn on or off"><input type="checkbox" class="aswitch" aria-label="Microphone" data-setting="audio_mic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/><path class="slash" d="M4.5 4.5l15 15"/></svg></label>
+          </div>
+          <label class="srow" id="q-denoise-row"><span class="atext">Noise reduction
+              <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Turns down keyboard clatter, fan and room noise on your microphone, and keeps your voice. Light keeps a little of the original so it sounds more natural; Strong removes the most. Done when a clip is saved, so it never slows recording down. Game sound, music and voice chat aren’t touched.">i</span></span>
+            <select class="dd" id="q-denoise" data-setting="mic_denoise">
+              <option value="off">Off</option>
+              <option value="light">Light</option>
+              <option value="strong">Strong</option>
+            </select>
+          </label>
           <p class="lock" id="lock-note" hidden>Locked while recording</p>
           <button type="button" class="linkbtn" data-open="settings">All settings</button>
         </section>
@@ -277,6 +286,14 @@
             </label>
             <label class="setrow" id="mic-row"><span class="setname">Which microphone</span>
               <select class="dd" id="mic-device"></select>
+            </label>
+            <label class="setrow" id="denoise-row"><span class="settext"><span class="setname">Noise reduction</span>
+              <span class="setsub wrap">Turns down keyboard, fan and room noise on your microphone and keeps your voice. Light sounds more natural; Strong removes the most. Applied when a clip is saved; nothing else is touched.</span></span>
+              <select class="dd" id="denoise" data-setting="mic_denoise">
+                <option value="off">Off</option>
+                <option value="light">Light</option>
+                <option value="strong">Strong</option>
+              </select>
             </label>
             <label class="setrow"><span class="settext"><span class="setname">Split Application Audio</span>
                 <span class="setsub">A separate audio track for each app that makes sound (game, music, voice chat), so you can adjust each one when editing</span></span>
@@ -688,7 +705,8 @@
         <p><button type="button" class="linkbtn" data-link="https://github.com/ancillaauri/Encore">github.com/ancillaauri/Encore</button></p>
         <h3>Open-source parts</h3>
         <p>FFmpeg (LGPL v2.1), used to capture and save videos. Source: <button type="button" class="linkbtn" data-link="https://ffmpeg.org/download.html">ffmpeg.org</button>, build: <button type="button" class="linkbtn" data-link="https://github.com/BtbN/FFmpeg-Builds">BtbN FFmpeg-Builds</button></p>
-        <p>Tauri (MIT / Apache 2.0). Full notices: <button type="button" class="linkbtn" data-link="https://github.com/ancillaauri/Encore/blob/main/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES</button></p>
+        <p>RNNoise, via nnnoiseless (BSD 3-Clause), for microphone noise reduction.</p>
+        <p>Tauri (MIT / Apache 2.0). Full notices (also in Encore's install folder): <button type="button" class="linkbtn" data-link="https://github.com/ancillaauri/Encore/blob/main/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES</button></p>
       </div>
     </div>
   </div>

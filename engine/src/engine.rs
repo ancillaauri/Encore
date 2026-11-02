@@ -179,6 +179,7 @@ impl Engine {
             log("Priority Capture was on last time: off at start");
         }
         platform::set_gpu_top(false);
+        crate::denoise::set(&settings.mic_denoise);
         Engine {
             ffmpeg,
             settings,
@@ -380,6 +381,7 @@ impl Engine {
         }
         updated.save()?;
         platform::set_gpu_top(updated.gpu_realtime);
+        crate::denoise::set(&updated.mic_denoise);
         let changed = updated.gpu_realtime != self.settings.gpu_realtime;
         if changed {
             log(&format!("Priority Capture {}", if updated.gpu_realtime { "on" } else { "off" }));

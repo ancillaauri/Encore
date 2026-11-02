@@ -7,6 +7,7 @@
 
 mod audio;
 mod clips;
+mod denoise;
 mod engine;
 mod ffmpeg;
 mod games;

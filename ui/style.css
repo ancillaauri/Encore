@@ -999,3 +999,8 @@ body.pcap-hidden .pcrow, body.pcap-hidden #rail-pcap { display: none; }
 .thumb.pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .thumb .tlen { position: absolute; right: 3px; bottom: 2px; padding: 0 3px; border-radius: 3px; background: rgba(0, 0, 0, .72); color: #e8e7ea; font-size: 9.5px; font-weight: 600; line-height: 13px; font-variant-numeric: tabular-nums; }
 .rname .rinput { flex: 1; min-width: 0; }
+
+/* Sidebar: a smaller heading inside a section (Voice, under Audio) */
+.sublab { font-size: 11.5px; font-weight: 600; color: var(--dim); margin: 10px 0 2px; }
+#q-denoise-row.off { opacity: .45; }
+#q-denoise-row .sortbtn { flex: 0 1 auto; min-width: 0; }

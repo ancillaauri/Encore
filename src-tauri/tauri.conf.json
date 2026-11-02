@@ -45,7 +45,8 @@
     ],
     "resources": {
       "resources/ffmpeg.exe": "ffmpeg.exe",
-      "resources/FFMPEG-LICENSE.txt": "FFMPEG-LICENSE.txt"
+      "resources/FFMPEG-LICENSE.txt": "FFMPEG-LICENSE.txt",
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md"
     },
     "windows": {
       "nsis": {

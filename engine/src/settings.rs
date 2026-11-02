@@ -56,6 +56,9 @@ pub struct Settings {
     /// The chosen microphone's name, so it can be found again when Windows gives it a new id
     /// (a driver update, another USB port). Empty for "default".
     pub mic_name: String,
+    /// Background noise reduction on the microphone when a clip is saved: "off", "light" or
+    /// "strong".
+    pub mic_denoise: String,
     /// Give each app that plays sound its own track.
     pub audio_app_tracks: bool,
     /// App updates: "manual" (check and tell me; I download and install), "auto_download"
@@ -182,6 +185,7 @@ impl Default for Settings {
             audio_mic: true,
             mic_device: "default".into(),
             mic_name: String::new(),
+            mic_denoise: "off".into(),
             audio_app_tracks: true,
             update_mode: "manual".into(),
             setup_done: false,
@@ -278,6 +282,9 @@ impl Settings {
         }
         if updated.output_dir.trim().is_empty() {
             return Err("Output folder cannot be empty".into());
+        }
+        if !crate::denoise::LEVELS.contains(&updated.mic_denoise.as_str()) {
+            return Err("Noise reduction must be off, light or strong".into());
         }
         if !["manual", "auto_download", "never"].contains(&updated.update_mode.as_str()) {
             return Err("Update mode must be manual, auto_download or never".into());

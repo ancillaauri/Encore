@@ -754,3 +754,21 @@ Agreed design for game detection (to build next):
 - Choosing a hotkey (Settings or the Save an Echo button) no longer also acts on it: the
   background keyboard watcher sees the keys a moment after the page does, so hotkeys are
   ignored for a second after choosing ends.
+
+## 2026-11-02: Microphone noise reduction; a Voice heading in the sidebar
+- Off / Light / Strong (setting `mic_denoise`, off by default), in the sidebar under a new
+  Voice heading (with the Microphone switch) and in Settings → Audio.
+- RNNoise (the nnnoiseless crate, BSD-3-Clause, model built in) runs when a clip is saved, on
+  the Microphone source only, so it can never make the capture fall behind and game sound, music
+  and voice chat are untouched. The cleaned microphone is used for both the Microphone track and
+  the Full mix. No extra "original" track. The recorded audio stays untouched until the save.
+- RNNoise returns each 10 ms frame one frame late: that delay is taken off (tested to the
+  sample), so the voice stays in time with the video. The voice is cleaned as one channel and
+  written to both. Light mixes 30 % of the original back in (more natural, removes less).
+- Speed: about 135× real time on a slow two-core test machine, so a 2-minute Echo gains well
+  under a second; a one-hour recording roughly 10–25 seconds. If cleaning fails, the clip saves
+  with the microphone as recorded.
+- On a real clip's microphone (no speech in it), background noise fell about 10 dB (Light) and
+  25 dB (Strong). Hearing it on real speech is the hands-on test.
+- THIRD_PARTY_NOTICES.md now ships in the install folder (BSD notices must go with the program).
+
