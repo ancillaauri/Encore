@@ -772,3 +772,24 @@ Agreed design for game detection (to build next):
   25 dB (Strong). Hearing it on real speech is the hands-on test.
 - THIRD_PARTY_NOTICES.md now ships in the install folder (BSD notices must go with the program).
 
+## 2026-11-02: Set the bitrate myself
+- Settings → Video → "Set the bitrate myself" (`bitrate_custom`, off) swaps Quality for a slider
+  (`bitrate_mbps`, 5–150 Mbps, default 30) in Settings and the sidebar. A small mark every 5 Mbps,
+  a longer one every 25, numbers at 5, 50, 100 and 150. No preset marks: people decide.
+- 5 Mbps is about the least that still looks right at 720p 30 fps; 150 Mbps is more than any game
+  recording needs and within what every hardware encoder accepts (the presets top out there too).
+- The bitrate is used exactly, whatever the resolution or frame rate. NVIDIA aims for it as an
+  average (VBR, ceiling 1.5×, spatial AQ, no quality target); AMD and Intel as before.
+- Echo sizes, the working-folder estimate and the readout ("45 Mbps, about 340 MB per minute")
+  follow the slider. Changing frame rate or resolution doesn't change it.
+
+## 2026-11-02: Warning when a game in exclusive fullscreen records black
+- Only when both are true: Windows reports a program in exclusive fullscreen (Direct3D), and
+  the game being recorded has given three 2-second segments in a row under 100 KB each. Every
+  segment starts with a full picture, so even a still menu is several hundred KB; under 100 KB
+  means black. Checked every 2 seconds, while a game window is being recorded.
+- Nothing can be drawn over exclusive fullscreen, so: a warning sound (three falling notes,
+  twice: not one of the save sounds; follows "Play sounds"), Encore's taskbar button flashes,
+  and a message waits in Encore until clicked. When the game leaves fullscreen, a notification
+  says it recorded black and to choose Borderless. Once per game per session.
+

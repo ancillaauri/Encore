@@ -1051,6 +1051,19 @@
           renderStage();
         }
         break;
+      case 'fullscreen_black': {
+        // Nothing can be drawn over exclusive fullscreen, so: a sound, the taskbar button
+        // flashes, and the message waits in Encore. A notification follows when the game leaves
+        // fullscreen.
+        const s = state.settings;
+        if (s && s.sounds) playSound('warning', Math.max(40, s.volume_save ?? 50));
+        bridge.win.requestAttention().catch(() => {});
+        toast(`${data.game} is recording black. It\u2019s in exclusive fullscreen, which Windows doesn\u2019t let Encore see. In the game\u2019s display settings, choose Borderless (or Windowed fullscreen).`, 'warning', 0);
+        break;
+      }
+      case 'fullscreen_left':
+        notify('problem', `${data.game} recorded black`, 'It was in exclusive fullscreen. Choose Borderless in the game\u2019s display settings so Encore can record it.');
+        break;
       case 'mic_found':
         // The engine found the chosen microphone under a new id.
         if (data.settings) { state.settings = data.settings; renderSettings(); renderInputs(); }
@@ -1424,6 +1437,10 @@
   // Volume 0–100; 50 is the old fixed level.
   let audioCtx = null;
   const SOUNDS = {
+    // Only for warnings (not one of the choices): three falling notes, twice, unlike any save sound.
+    warning: [0, 0.5].flatMap((at) => [
+      { f: 880, t: at, d: 0.14, wave: 'triangle' }, { f: 698, t: at + 0.15, d: 0.14, wave: 'triangle' }, { f: 523, t: at + 0.3, d: 0.18, wave: 'triangle' },
+    ]),
     rise: [{ f: 660, t: 0 }, { f: 880, t: 0.11 }],
     fall: [{ f: 880, t: 0 }, { f: 587, t: 0.11 }],
     double: [{ f: 988, t: 0 }, { f: 988, t: 0.11 }],

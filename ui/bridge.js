@@ -67,6 +67,8 @@
         isMaximized: () => w().isMaximized(),
         onResized: (callback) => w().onResized(() => callback()),
         onFocusChanged: (callback) => w().onFocusChanged((e) => callback(!!e.payload)),
+        // Flashes Encore's taskbar button until it's clicked (1: critical).
+        requestAttention: async () => w().requestUserAttention(1),
       };
     })(),
     onEvent: (callback) =>

@@ -108,6 +108,11 @@ pub struct Engine {
     /// Windows that only look like games because they fill the screen, and when they were first
     /// seen: they count once they've stayed a few seconds (screenshot tools and pop-ups don't).
     fullscreen_seen: HashMap<u64, Instant>,
+    /// Exclusive fullscreen check: when it last ran, the game it warned about while that game
+    /// is still in exclusive fullscreen, and the games already warned about this session.
+    fs_checked: Option<Instant>,
+    fs_warned: Option<String>,
+    fs_told: std::collections::HashSet<String>,
 }
 
 /// A recording taken from the instant-replay capture: from `from` until it is stopped.
@@ -200,6 +205,9 @@ impl Engine {
             replay_waiting: false,
             switch_fails: HashMap::new(),
             fullscreen_seen: HashMap::new(),
+            fs_checked: None,
+            fs_warned: None,
+            fs_told: Default::default(),
         }
     }
 
@@ -1136,6 +1144,7 @@ impl Engine {
             }
         }
         self.prune_replay();
+        self.fullscreen_watch();
         // A capture that ended while another is taking over (a game closed) isn't a failure.
         let stopped = matches!(self.active.as_mut().map(|a| a.has_exited() && a.switching_to().is_none()), Some(true));
         if stopped && self.active.as_ref().map(|a| a.is_replay()).unwrap_or(false) {
@@ -1157,6 +1166,39 @@ impl Engine {
             let saved = active.stop_and_save(&self.ffmpeg);
             thumbnail_later(&self.ffmpeg, &saved);
             report_saved(saved, &label, false);
+        }
+    }
+
+    /// A game in exclusive fullscreen that records black: says so once per game per session
+    /// (a sound and a message: nothing can be drawn over exclusive fullscreen), then again with a
+    /// notification as soon as the game leaves fullscreen. Checked every 2 seconds.
+    fn fullscreen_watch(&mut self) {
+        if self.fs_checked.map(|t| t.elapsed() < Duration::from_secs(2)).unwrap_or(false) {
+            return;
+        }
+        self.fs_checked = Some(Instant::now());
+        let exclusive = platform::exclusive_fullscreen();
+        if let Some(game) = self.fs_warned.clone() {
+            if !exclusive {
+                self.fs_warned = None;
+                send_event("fullscreen_left", json!({ "game": game }));
+            }
+            return;
+        }
+        if !exclusive {
+            return;
+        }
+        let Some(game) = self.current_game() else { return };
+        let Some(a) = &self.active else { return };
+        if !matches!(a.target(), Target::Window { handle } if handle == game.handle) || self.fs_told.contains(&game.name) {
+            return;
+        }
+        let sizes = a.recent_segment_sizes(3);
+        if recorder::looks_black(&sizes) {
+            log(&format!("{} is in exclusive fullscreen and records black (segments {sizes:?} bytes)", game.name));
+            self.fs_told.insert(game.name.clone());
+            self.fs_warned = Some(game.name.clone());
+            send_event("fullscreen_black", json!({ "game": game.name }));
         }
     }
 

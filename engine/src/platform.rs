@@ -172,6 +172,9 @@ mod other {
     pub fn window_exists(_handle: u64) -> bool {
         false
     }
+    pub fn exclusive_fullscreen() -> bool {
+        false
+    }
     pub fn window_size(_handle: u64) -> Option<(u32, u32)> {
         None
     }
@@ -862,6 +865,14 @@ mod win {
 
     pub fn window_exists(handle: u64) -> bool {
         unsafe { IsWindow(u2h(handle) as HWND) != 0 }
+    }
+
+    /// Windows says a program has the screen in exclusive fullscreen (Direct3D), the mode that
+    /// window capture often can't see into.
+    pub fn exclusive_fullscreen() -> bool {
+        use windows_sys::Win32::UI::Shell::{SHQueryUserNotificationState, QUNS_RUNNING_D3D_FULL_SCREEN};
+        let mut state = 0;
+        unsafe { SHQueryUserNotificationState(&mut state) == 0 && state == QUNS_RUNNING_D3D_FULL_SCREEN }
     }
 
     pub fn window_size(handle: u64) -> Option<(u32, u32)> {

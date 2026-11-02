@@ -132,6 +132,16 @@ fn segments(seg_dir: &Path) -> Vec<PathBuf> {
     files
 }
 
+/// A 2-second segment this small is black (or a frozen black picture): even a still image
+/// costs more, as every segment starts with a full picture. A game in exclusive fullscreen often
+/// records like this.
+pub const BLACK_SEGMENT_BYTES: u64 = 100_000;
+
+/// Whether the segments look black: at least three, all tiny.
+pub fn looks_black(sizes: &[u64]) -> bool {
+    sizes.len() >= 3 && sizes.iter().all(|&b| b < BLACK_SEGMENT_BYTES)
+}
+
 fn part_prefix(index: usize) -> String {
     if index == 0 { "seg_".into() } else { format!("p{index:03}_") }
 }
@@ -487,6 +497,15 @@ impl Active {
 
     pub fn fps(&self) -> u32 {
         self.spec.fps
+    }
+
+    /// Sizes of the newest finished video segments of the part being recorded (up to `n`,
+    /// oldest first). The newest file is still being written, so it's left out.
+    pub fn recent_segment_sizes(&self, n: usize) -> Vec<u64> {
+        let mut files = part_segments(&self.seg_dir, &part_prefix(self.proc.index));
+        files.pop();
+        let from = files.len().saturating_sub(n);
+        files[from..].iter().map(|p| std::fs::metadata(p).map(|m| m.len()).unwrap_or(0)).collect()
     }
 
     /// What is being recorded right now (the monitor or window).
@@ -984,6 +1003,14 @@ mod label_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn black_video_is_three_tiny_segments_in_a_row() {
+        assert!(looks_black(&[30_000, 31_000, 29_500]));
+        assert!(!looks_black(&[30_000, 31_000])); // not long enough to say
+        assert!(!looks_black(&[30_000, 900_000, 29_500])); // something showed in between
+        assert!(!looks_black(&[400_000, 380_000, 410_000])); // a still menu still costs this much
+    }
 
     fn t() -> LocalTime {
         LocalTime { year: 2026, month: 10, day: 31, hour: 9, minute: 5, second: 7 }
