@@ -832,7 +832,7 @@ body.gd-game:not(.recording) #picks .pick.on, body.gd-game:not(.recording) #pick
 .slead.center { text-align: center; }
 .sbody { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--dim); }
 .sbody strong { color: var(--text); }
-.sbody .kbd, .snote .kbd { font-size: 12px; font-weight: 600; color: #c9ceff; padding: 1px 6px; border-radius: 4px; background: rgba(138, 150, 255, .14); white-space: nowrap; }
+.sbody .kbd, .snote .kbd, .setnote .kbd { font-size: 12px; font-weight: 600; color: #c9ceff; padding: 1px 6px; border-radius: 4px; background: rgba(138, 150, 255, .14); white-space: nowrap; }
 .hrow > span { white-space: nowrap; }
 .hrow .sortbtn { flex: 0 1 auto; min-width: 0; }
 #replay-sec.restarting .esub { color: #f3c96b; }

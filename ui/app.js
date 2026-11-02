@@ -1500,6 +1500,9 @@
       b.textContent = !v && b.classList.contains('savekey') ? 'Set a hotkey' : hotkeyText(v);
       b.classList.toggle('empty', !v);
     });
+    // Keys mentioned in Settings' own text are the ones actually set.
+    document.querySelectorAll('#settings [data-key]').forEach((el) => { el.textContent = hotkeyText(s[el.dataset.key] || ''); });
+    $('lock-key-tip').hidden = !s.hotkey_lock_game;
     document.querySelectorAll('[data-close-to-tray]').forEach((o) =>
       o.setAttribute('aria-checked', String((o.dataset.closeToTray === 'true') === !!s.close_to_tray)));
     renderCustomLength();
