@@ -516,7 +516,6 @@ impl Engine {
             &self.work_root(),
             preferred,
             &audio_opts,
-            self.settings.audio_offset_ms,
             replay,
         )?;
         self.known_pipeline.insert(encoder.name(), active.pipeline);

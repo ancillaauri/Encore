@@ -58,8 +58,6 @@ pub struct Settings {
     pub mic_name: String,
     /// Give each app that plays sound its own track.
     pub audio_app_tracks: bool,
-    /// Fine-tunes audio/video sync in milliseconds (positive = audio later). Normally 0.
-    pub audio_offset_ms: i32,
     /// App updates: "manual" (check and tell me; I download and install), "auto_download"
     /// (download in the background; I choose when to install), or "never" (no checks).
     /// Read by the app shell, which owns updating.
@@ -185,7 +183,6 @@ impl Default for Settings {
             mic_device: "default".into(),
             mic_name: String::new(),
             audio_app_tracks: true,
-            audio_offset_ms: 0,
             update_mode: "manual".into(),
             setup_done: false,
             close_to_tray: true,
@@ -281,9 +278,6 @@ impl Settings {
         }
         if updated.output_dir.trim().is_empty() {
             return Err("Output folder cannot be empty".into());
-        }
-        if !(-1000..=1000).contains(&updated.audio_offset_ms) {
-            return Err("Audio offset must be between -1000 and 1000 ms".into());
         }
         if !["manual", "auto_download", "never"].contains(&updated.update_mode.as_str()) {
             return Err("Update mode must be manual, auto_download or never".into());
@@ -419,6 +413,12 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn old_settings_with_the_removed_audio_offset_still_load() {
+        let s: Settings = serde_json::from_str(r#"{"audio_offset_ms": 0, "fps": 60}"#).unwrap();
+        assert_eq!(s.fps, 60);
+    }
+
+    #[test]
     fn desktop_capture_reads_the_old_name_and_needs_game_detection_to_be_off() {
         let old: Settings = serde_json::from_value(json!({"game_detection": true, "replay_on_desktop": false})).unwrap();
         assert!(!old.desktop_capture);
@@ -468,9 +468,8 @@ mod tests {
         assert!(s.apply_patch(&json!({"monitor": "follow"})).is_ok());
         assert!(s.apply_patch(&json!({"output_dir": "  "})).is_err());
         assert!(s.apply_patch(&json!([1, 2])).is_err());
-        assert!(s.apply_patch(&json!({"audio_offset_ms": 5000})).is_err());
         assert!(s.apply_patch(&json!({"audio_mic": "yes"})).is_err());
-        assert!(s.apply_patch(&json!({"audio_mic": false, "audio_offset_ms": -40})).is_ok());
+        assert!(s.apply_patch(&json!({"audio_mic": false})).is_ok());
         assert!(s.apply_patch(&json!({"update_mode": "sometimes"})).is_err());
         assert_eq!(s.apply_patch(&json!({"update_mode": "never"})).unwrap().update_mode, "never");
     }

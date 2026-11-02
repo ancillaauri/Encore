@@ -127,8 +127,8 @@ Audio (steps 4 and 5) — built in batch 2:
 - Sync: FFmpeg's video timestamps and WASAPI packet timestamps are both Windows' QPC clock, but
   FFmpeg rebases video to start at zero. FFmpeg reports progress 20 times a second; the earliest
   `arrival time - video time` is taken as the video's start. Audio is trimmed by
-  `video start - origin` when the file is assembled. A hidden `audio_offset_ms` setting allows
-  fine adjustment if real-world tests show a constant offset.
+  `video start - origin` when the file is assembled. There's no manual offset: any track can be
+  moved in the editor if ever needed.
 - B-frames are disabled: with them, joining segments shifts video 2 frames late.
 - Output tracks are planned from the recorded sources (`audio::plan_output`) when the file is
   saved: Full mix = desktop audio (or, if that is off, every app) plus the mic, mixed with FFmpeg's

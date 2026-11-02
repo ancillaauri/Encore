@@ -41,7 +41,6 @@ pub struct TrackInfo {
 pub struct Manifest {
     pub origin_hns: u64,
     pub video_start_hns: Option<u64>,
-    pub audio_offset_ms: i32,
     pub tracks: Vec<TrackInfo>,
     /// Video parts, in order: a new part starts each time recording moves to another monitor.
     /// Empty in sessions from before 0.5 (one part, files `seg_*.mkv`).
@@ -254,8 +253,8 @@ fn add_track(dir: &Path, manifest: &Arc<Mutex<Manifest>>, title: String, kind: T
 }
 
 #[cfg(not(windows))]
-pub fn start(dir: &Path, origin_hns: u64, audio_offset_ms: i32, _opts: &AudioOptions) -> AudioSession {
-    let manifest = Manifest { origin_hns, video_start_hns: None, audio_offset_ms, tracks: Vec::new(), parts: Vec::new() };
+pub fn start(dir: &Path, origin_hns: u64, _opts: &AudioOptions) -> AudioSession {
+    let manifest = Manifest { origin_hns, video_start_hns: None, tracks: Vec::new(), parts: Vec::new() };
     manifest.save(dir);
     AudioSession {
         dir: dir.to_path_buf(),
@@ -505,11 +504,10 @@ mod win {
         out
     }
 
-    pub fn start(dir: &Path, origin_hns: u64, audio_offset_ms: i32, opts: &AudioOptions) -> AudioSession {
+    pub fn start(dir: &Path, origin_hns: u64, opts: &AudioOptions) -> AudioSession {
         let manifest = Arc::new(Mutex::new(Manifest {
             origin_hns,
             video_start_hns: None,
-            audio_offset_ms,
             tracks: Vec::new(),
             parts: Vec::new(),
         }));

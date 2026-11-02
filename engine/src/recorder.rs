@@ -254,7 +254,6 @@ pub fn start(
     temp_root: &Path,
     preferred: Option<Pipeline>,
     audio_opts: &AudioOptions,
-    audio_offset_ms: i32,
     replay: bool,
 ) -> Result<Active, String> {
     // Replay sessions keep only the last few minutes and are never saved whole.
@@ -269,7 +268,7 @@ pub fn start(
     std::fs::create_dir_all(&seg_dir).map_err(|e| format!("Could not create temp folder: {e}"))?;
     // Audio starts first so it covers the very first video frame; both share this origin.
     let origin = platform::now_hns();
-    let audio = audio::start(&seg_dir, origin, audio_offset_ms, audio_opts);
+    let audio = audio::start(&seg_dir, origin, audio_opts);
     let manifest = audio.manifest();
     let mut audio = Some(audio);
     let mut last_error = String::new();
@@ -824,9 +823,8 @@ pub fn save_window(
         }
         let list = work.join("segments.ffconcat");
         std::fs::write(&list, ffmpeg::concat_list_parts(&plan)).map_err(|e| format!("Could not write segment list: {e}"))?;
-        // Audio from the video's first frame (moved by the audio offset setting), to the end.
-        let offset = manifest.audio_offset_ms as i64 * 10_000;
-        let start = (video_start as i64 + offset - manifest.origin_hns as i64).max(0);
+        // Audio from the video's first frame to the end.
+        let start = (video_start as i64 - manifest.origin_hns as i64).max(0);
         let from_frame = timeline::hns_to_frames(start).max(0) as u64;
         let to_frame = timeline::hns_to_frames(to as i64 - manifest.origin_hns as i64).max(0) as u64;
         let mut tracks: Vec<audio::TrackInfo> = Vec::new();
@@ -908,7 +906,7 @@ fn audio_inputs(seg_dir: &Path) -> (Vec<AudioOut>, f64) {
         .into_iter()
         .map(|t| AudioOut { title: t.title, files: t.sources.iter().map(|&i| seg_dir.join(&tracks[i].file)).collect() })
         .collect();
-    let skip = timeline::audio_skip_seconds(m.origin_hns, m.video_start_hns, m.audio_offset_ms);
+    let skip = timeline::audio_skip_seconds(m.origin_hns, m.video_start_hns);
     (out, skip)
 }
 
@@ -1042,7 +1040,6 @@ mod e2e {
         let m = Manifest {
             origin_hns: 10_000_000,
             video_start_hns: Some(13_500_000),
-            audio_offset_ms: 0,
             tracks: vec![
                 TrackInfo { file: "a00_full.pcm".into(), title: "Desktop audio".into(), kind: TrackKind::FullMix },
                 TrackInfo { file: "a01_mic.pcm".into(), title: "Microphone".into(), kind: TrackKind::Mic },
@@ -1088,7 +1085,6 @@ mod e2e_switch {
         let m = Manifest {
             origin_hns: 10_000_000,
             video_start_hns: Some(13_500_000),
-            audio_offset_ms: 0,
             tracks: vec![TrackInfo { file: "a01_mic.pcm".into(), title: "Microphone".into(), kind: TrackKind::Mic }],
             parts: vec![
                 VideoPart { prefix: "seg_".into(), start_hns: Some(13_500_000), dropped: false, label: None },
@@ -1157,7 +1153,6 @@ mod e2e_replay {
         let m = Manifest {
             origin_hns: origin,
             video_start_hns: Some(s0),
-            audio_offset_ms: 0,
             tracks: vec![TrackInfo { file: "a01_mic.pcm".into(), title: "Microphone".into(), kind: TrackKind::Mic }],
             parts: vec![
                 VideoPart { prefix: "seg_".into(), start_hns: Some(s0), dropped: false, label: None },

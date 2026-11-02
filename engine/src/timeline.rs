@@ -157,12 +157,11 @@ pub fn parse_out_time_us(line: &str) -> Option<i64> {
 }
 
 /// Seconds of audio to skip so the audio files line up with the video (never negative).
-pub fn audio_skip_seconds(origin_hns: u64, video_start_hns: Option<u64>, offset_ms: i32) -> f64 {
-    let base = match video_start_hns {
+pub fn audio_skip_seconds(origin_hns: u64, video_start_hns: Option<u64>) -> f64 {
+    match video_start_hns {
         Some(v) if v > origin_hns => (v - origin_hns) as f64 / 1e7,
         _ => 0.0,
-    };
-    (base + offset_ms as f64 / 1000.0).max(0.0)
+    }
 }
 
 /// Bytes per audio frame in the files (stereo, 16-bit).
@@ -431,10 +430,8 @@ mod tests {
 
     #[test]
     fn skip_seconds() {
-        assert!((audio_skip_seconds(ORIGIN, Some(ORIGIN + 3_500_000), 0) - 0.35).abs() < 1e-9);
-        assert_eq!(audio_skip_seconds(ORIGIN, None, 0), 0.0);
-        assert_eq!(audio_skip_seconds(ORIGIN, Some(ORIGIN - 10), 0), 0.0);
-        assert!((audio_skip_seconds(ORIGIN, Some(ORIGIN + 3_500_000), -50) - 0.30).abs() < 1e-9);
-        assert_eq!(audio_skip_seconds(ORIGIN, Some(ORIGIN), -50), 0.0);
+        assert!((audio_skip_seconds(ORIGIN, Some(ORIGIN + 3_500_000)) - 0.35).abs() < 1e-9);
+        assert_eq!(audio_skip_seconds(ORIGIN, None), 0.0);
+        assert_eq!(audio_skip_seconds(ORIGIN, Some(ORIGIN - 10)), 0.0);
     }
 }
