@@ -9,7 +9,13 @@ the mock-ups and not yet in the app; they change here first when they change.
 Dark, quiet surfaces, with colour used as light: a soft neon glow on what's switched on or
 being pointed at, nothing glowing for decoration. Away from the Discord look Encore started
 with. The layout stays: custom title bar, Main Menu (≡), a 260 px sidebar on the left, the main
-screen, dialogs.
+screen, dialogs. **The backgrounds stay as they are** (dark grey, black sidebar): the purple
+replaces the old blue accent only, wherever it was used (links, main buttons, selection,
+focus on text boxes, ticks), and doesn't spread to anything else.
+
+Shapes are squarer than Discord's *(proposed)*: dialogs 4 px corners with a 2 px purple line
+along the top, buttons and text boxes 3–4 px, switches and sliders our own (being chosen:
+see the canvas, "Our own switches and sliders").
 
 ## Colours
 
