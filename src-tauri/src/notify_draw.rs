@@ -51,7 +51,7 @@ impl Kind {
     /// (lines and icon, border, glow): the same colours as the interface.
     fn colours(self) -> (&'static str, &'static str, &'static str) {
         match self {
-            Kind::Echo => ("#b4bbff", "rgba(138,150,255,0.55)", "rgba(88,101,242,0.45)"),
+            Kind::Echo => ("#c8a8ff", "rgba(176,139,255,0.55)", "rgba(155,107,255,0.45)"),
             Kind::Record => ("#ff8a8e", "rgba(255,120,124,0.55)", "rgba(242,63,67,0.42)"),
             Kind::Saved => ("#6fdc8c", "rgba(111,220,140,0.5)", "rgba(35,165,90,0.42)"),
             Kind::Game => ("#c3b4ff", "rgba(170,140,255,0.5)", "rgba(130,100,255,0.42)"),
@@ -60,7 +60,7 @@ impl Kind {
     }
     fn rgb(self) -> (u8, u8, u8) {
         match self {
-            Kind::Echo => (0xb4, 0xbb, 0xff),
+            Kind::Echo => (0xc8, 0xa8, 0xff),
             Kind::Record => (0xff, 0x8a, 0x8e),
             Kind::Saved => (0x6f, 0xdc, 0x8c),
             Kind::Game => (0xc3, 0xb4, 0xff),

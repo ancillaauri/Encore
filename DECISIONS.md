@@ -813,3 +813,20 @@ Agreed design for game detection (to build next):
 - Opening My Reports asks for replies there and then (it shows "Checking…" for a moment, or
   "Couldn't check" when the server can't be reached). Encore also checks when its window comes
   back to the front, at most every 5 minutes, on top of 20 s after start and every 30 minutes.
+
+## 2026-11-02: Encore's own look
+- Purple #9B6BFF replaces Discord's blue everywhere it was used (and in the Echo notification
+  cards); backgrounds stay. Keyboard focus keeps its blue so it's always visible. Game detection
+  notifications keep their lavender.
+- Switch: "Square slide" (squared track, a block that slides and glows). Slider: "Bar handle"
+  (thin line, a glowing bar instead of a round knob, bigger when hovered). Chosen from three
+  of each in mock-ups; the diamond handle is kept as an idea.
+- Everything clickable brightens when hovered and more when pressed. Dialogs have 4 px corners,
+  a thin glowing purple line along the top, and a darker strip for their buttons. The record
+  button's dot glows.
+- "Waiting for you" above Priority Capture and Do not disturb: an update to install (Restart to
+  update / Later; the title-bar Update button is gone), replies to reports (Read / Mark as read),
+  a game that recorded black (Dismiss). With the sidebar collapsed, a button with a purple dot
+  stands for it.
+- Written down in DESIGN.md for anyone building next to Encore.
+

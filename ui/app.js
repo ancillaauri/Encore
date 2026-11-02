@@ -590,6 +590,13 @@
   setInterval(tick, 250);
 
   // ---------- settings (the sidebar and the Settings window share the same controls) ----------
+  // Every slider's filled part follows its value.
+  function paintRange(el) {
+    const min = Number(el.min || 0), max = Number(el.max || 100);
+    el.style.setProperty('--fill', `${((Number(el.value) - min) / (max - min || 1)) * 100}%`);
+  }
+  document.addEventListener('input', (e) => { if (e.target.matches && e.target.matches('input[type="range"]')) paintRange(e.target); });
+
   function renderSettings() {
     const s = state.settings;
     if (!s) return;
@@ -613,6 +620,7 @@
     $('gpu-realtime').checked = !!s.gpu_realtime;
     $('pcap-in-sidebar').checked = s.pcap_in_sidebar !== false;
     if (!$('setup').hidden) renderSetup();
+    document.querySelectorAll('input[type="range"]').forEach(paintRange);
   }
 
   function renderInputs() {
@@ -1058,6 +1066,8 @@
         const s = state.settings;
         if (s && s.sounds) playSound('warning', Math.max(40, s.volume_save ?? 50));
         bridge.win.requestAttention().catch(() => {});
+        state.blackGames = [...new Set([...(state.blackGames || []), data.game])];
+        renderInbox();
         toast(`${data.game} is recording black. It\u2019s in exclusive fullscreen, which Windows doesn\u2019t let Encore see. In the game\u2019s display settings, choose Borderless (or Windowed fullscreen).`, 'warning', 0);
         break;
       }
@@ -1129,11 +1139,12 @@
   function renderUpdate() {
     const u = state.update || { status: 'none' };
     const b = $('update');
-    b.hidden = u.status === 'none';
+    b.hidden = true; // shown in the sidebar's "Waiting for you" instead (renderInbox)
     if (!b.disabled) $('update-text').textContent = u.status === 'ready' ? 'Update ready' : 'Update available';
     b.title = u.version ? `Install Encore ${u.version} and restart` : '';
     $('version-line').textContent = state.version ? `Version ${state.version} (beta)` : 'Beta';
-    if (u.status !== 'none') $('update-status').textContent = `Version ${u.version} is available. Use Update at the top to install it.`;
+    if (u.status !== 'none') $('update-status').textContent = `Version ${u.version} is available: Restart to update is in the sidebar.`;
+    renderInbox();
     const mode = state.settings ? state.settings.update_mode : 'manual';
     document.querySelectorAll('[data-update-mode]').forEach((o) =>
       o.setAttribute('aria-checked', String(o.dataset.updateMode === mode)));
@@ -1147,7 +1158,7 @@
       state.update = await bridge.checkForUpdates();
       $('update-status').textContent = state.update.status === 'none'
         ? `You're up to date.`
-        : `Version ${state.update.version} is available. Use Update at the top to install it.`;
+        : `Version ${state.update.version} is available: Restart to update is in the sidebar.`;
       if (state.update.status !== 'none') toast(`Encore ${state.update.version} is available.`, 'ok');
       else if (!$('settings').hidden) { /* status line is enough */ } else toast("You're up to date.", 'ok', 4000);
     } catch (e) {
@@ -1266,10 +1277,80 @@
     }));
     replyCheckFailed = failed;
     const now = unreadReplies();
+    renderInbox();
     if (tellIfNew && now > before) {
       toast(`You have ${now === 1 ? 'a reply' : `${now} replies`} to a problem you reported.`, 'info', 0, { label: 'Read', run: openReports });
     }
   }
+  // ---------- "Waiting for you": things that need the person, above Do not disturb ----------
+  // An update to install, a reply to a report, a game that recorded black. Each stays until it's
+  // dealt with; with nothing waiting the area isn't there.
+  const later = { update: '', black: [] };
+  const INBOX_ICONS = {
+    update: '<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/>',
+    reply: '<path d="M4.5 6.5h15v9h-9l-4 3.5v-3.5h-2z"/>',
+    warn: '<path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.2h.01"/>',
+  };
+  function inboxItems() {
+    const items = [];
+    const u = state.update || { status: 'none' };
+    if (u.status !== 'none' && later.update !== u.version) {
+      items.push({
+        icon: 'update', title: u.status === 'ready' ? `Encore ${u.version} is ready` : `Encore ${u.version} is out`,
+        buttons: [
+          { text: u.status === 'ready' ? 'Restart to update' : 'Update', main: true, run: installUpdate },
+          { text: 'Later', run: () => { later.update = u.version; renderInbox(); } },
+        ],
+      });
+    }
+    const n = unreadReplies();
+    if (n) {
+      const r = ((state.settings && state.settings.reports) || []).find((x) => ((replies[x.number] || {}).replies || []).length > (x.seen || 0));
+      items.push({
+        icon: 'reply', title: n === 1 ? 'A reply to your report' : `${n} replies to your reports`, sub: r ? r.title : '',
+        buttons: [{ text: 'Read', main: true, run: openReports }, { text: 'Mark as read', run: () => { markRepliesRead(); renderInbox(); } }],
+      });
+    }
+    for (const game of state.blackGames || []) {
+      if (later.black.includes(game)) continue;
+      items.push({
+        icon: 'warn', warn: true, title: `${game} recorded black`, sub: 'Choose Borderless in its display settings',
+        buttons: [{ text: 'Dismiss', run: () => { later.black.push(game); renderInbox(); } }],
+      });
+    }
+    return items;
+  }
+  function renderInbox() {
+    const items = inboxItems();
+    const box = $('inbox');
+    box.replaceChildren();
+    box.hidden = !items.length;
+    $('rail-inbox').hidden = !items.length;
+    $('rail-inbox').dataset.railTip = items.length === 1 ? items[0].title : `${items.length} things waiting for you`;
+    if (!items.length) return;
+    const head = h('div', 'inbox-head');
+    head.append(h('span', '', 'Waiting for you'), h('span', '', String(items.length)));
+    box.append(head);
+    for (const it of items) {
+      const card = h('div', `icard ${it.warn ? 'warn' : ''}`);
+      const top = h('div', 'icard-top');
+      top.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${INBOX_ICONS[it.icon]}</svg>`;
+      top.append(h('span', '', it.title));
+      card.append(top);
+      if (it.sub) card.append(h('div', 'icard-sub', it.sub));
+      const btns = h('div', 'icard-btns');
+      for (const b of it.buttons) {
+        const el = h('button', b.main ? 'main' : '', b.text);
+        el.type = 'button';
+        el.addEventListener('click', b.run);
+        btns.append(el);
+      }
+      card.append(btns);
+      box.append(card);
+    }
+  }
+  $('rail-inbox').addEventListener('click', () => setSideCollapsed(false));
+
   function renderReports() {
     const list = [...((state.settings && state.settings.reports) || [])].reverse();
     const body = $('reports-body');
@@ -1296,7 +1377,7 @@
   // Everything shown counts as read.
   function markRepliesRead() {
     const now = ((state.settings && state.settings.reports) || []).map((r) => ({ ...r, seen: Math.max(r.seen || 0, ((replies[r.number] || {}).replies || []).length) }));
-    if (JSON.stringify(now) !== JSON.stringify(state.settings.reports)) saveSetting('reports', now);
+    if (JSON.stringify(now) !== JSON.stringify(state.settings.reports)) saveSetting('reports', now).then(renderInbox);
   }
   // Opening My Reports asks for replies there and then (it shows what's known meanwhile).
   async function openReports() {

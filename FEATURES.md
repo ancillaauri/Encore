@@ -61,12 +61,12 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 
 | Item | Notes | Status |
 |---|---|---|
-| Move away from Discord's look; the "match the editor" rule set aside for now | DEVELOPMENT.md → Design | [ ] |
-| Accent from Discord blue (#5865f2) to a purple | Hue to choose from mock-ups | [ ] |
-| Sliders and on/off switches in the soft neon glow style of the sidebar icon switches | Applies to every slider and toggle | [ ] |
-| Every button (now and future) brightens on hover | A design-system rule | [ ] |
-| The record button's red dot glows instead of flat red | From the mock-up, liked | [ ] |
-| Unread messages above Do not disturb in the sidebar (e.g. a reply to a report), with Read and Mark as read | Today only a passing message and "My Reports (1 new)" in Help show it | [ ] |
+| Move away from Discord's look; the "match the editor" rule set aside for now | DEVELOPMENT.md → Design |[~] |
+| Accent from Discord blue (#5865f2) to a purple | Hue to choose from mock-ups |[~] |
+| Sliders and on/off switches in the soft neon glow style of the sidebar icon switches | Applies to every slider and toggle |[~] |
+| Every button (now and future) brightens on hover | A design-system rule |[~] |
+| The record button's red dot glows instead of flat red | From the mock-up, liked |[~] |
+| Unread messages above Do not disturb in the sidebar (e.g. a reply to a report), with Read and Mark as read | Today only a passing message and "My Reports (1 new)" in Help show it |[~] |
 
 ## Later (agreed, after core works)
 

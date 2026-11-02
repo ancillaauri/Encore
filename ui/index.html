@@ -117,6 +117,7 @@
       </div>
 
       <div class="side-foot">
+        <div class="inbox" id="inbox" hidden aria-live="polite"></div>
         <div class="pcrow">
           <button type="button" class="dnd pcap" id="pcap" aria-pressed="false">
             <span class="dnd-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5 5 13.5h6l-1 8 8-11h-6l1-8z"/></svg></span>
@@ -139,6 +140,10 @@
         </button>
         <button type="button" class="railbtn dndrail" id="rail-dnd" tabindex="-1" data-rail-tip="Do not disturb" aria-pressed="false">
           <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/></svg></span>
+        </button>
+        <button type="button" class="railbtn" id="rail-inbox" tabindex="-1" data-rail-tip="Waiting for you" hidden>
+          <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13.5h4.5l1.5 2.5h4l1.5-2.5H20M5.5 6.5h13L20 13.5v5H4v-5z"/></svg></span>
+          <span class="rail-dot"></span>
         </button>
         <button type="button" class="railbtn" id="rail-folder" tabindex="-1" data-rail-tip="Open recordings folder">
           <span class="gav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg></span>
