@@ -47,7 +47,7 @@
       <div class="side-body">
         <section class="sec" id="quick">
           <h2 class="lab">Video</h2>
-          <label class="srow"><span>Quality <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Quality sets how much detail every frame keeps. Encore works out the bitrate for you from your resolution and frame rate, so Ultra looks just as sharp at 120 fps as at 60, but 120 fps uses about twice the space. The number next to each option is what it uses right now.">i</span></span>
+          <label class="srow" id="q-quality-row"><span>Quality <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Quality sets how much detail every frame keeps. Encore works out the bitrate for you from your resolution and frame rate, so Ultra looks just as sharp at 120 fps as at 60, but 120 fps uses about twice the space. The number next to each option is what it uses right now.">i</span></span>
             <select class="dd" id="q-quality" data-setting="quality">
               <option value="ultra">Ultra</option>
               <option value="high">High</option>
@@ -55,6 +55,10 @@
               <option value="low">Low</option>
             </select>
           </label>
+          <div class="bblock" id="q-bitrate-block" hidden>
+            <div class="srow"><span>Bitrate <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="You chose to set the bitrate yourself (Settings → Video). Encore uses exactly this, whatever the resolution or frame rate: higher looks sharper and makes bigger files.">i</span></span><b class="bval" id="q-bitrate-val"></b></div>
+            <div class="bslider"><input type="range" class="brange" id="q-bitrate" min="5" max="150" step="1" data-setting="bitrate_mbps" data-number aria-label="Bitrate in Mbps"><div class="bticks" aria-hidden="true"></div></div>
+          </div>
           <label class="srow"><span>Frame rate</span>
             <select class="dd" id="q-fps" data-setting="fps" data-number>
               <option value="30">30 fps</option>
@@ -259,7 +263,15 @@
                 <option value="720p">720p</option>
               </select>
             </label>
-            <label class="setrow"><span class="settext"><span class="setname">Quality <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Quality sets how much detail every frame keeps. Encore works out the bitrate for you from your resolution and frame rate, so Ultra looks just as sharp at 120 fps as at 60, but 120 fps uses about twice the space. The number next to each option is what it uses right now.">i</span></span>
+            <label class="setrow"><span class="settext"><span class="setname">Set the bitrate myself</span>
+              <span class="setsub wrap">Replaces Quality with a bitrate slider, here and in the sidebar. Encore then uses exactly that bitrate, whatever the resolution or frame rate.</span></span>
+              <input type="checkbox" class="toggle" id="bitrate-custom" data-setting="bitrate_custom"></label>
+            <div class="setrow bset" id="bitrate-row" hidden>
+              <span class="settext"><span class="setname">Bitrate</span>
+                <span class="setsub" id="bitrate-line"></span></span>
+              <div class="bslider"><input type="range" class="brange" id="bitrate" min="5" max="150" step="1" data-setting="bitrate_mbps" data-number aria-label="Bitrate in Mbps"><div class="bticks" aria-hidden="true"></div></div>
+            </div>
+            <label class="setrow" id="quality-row"><span class="settext"><span class="setname">Quality <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Quality sets how much detail every frame keeps. Encore works out the bitrate for you from your resolution and frame rate, so Ultra looks just as sharp at 120 fps as at 60, but 120 fps uses about twice the space. The number next to each option is what it uses right now.">i</span></span>
               <span class="setsub" id="quality-line"></span></span>
               <select class="dd" id="quality" data-setting="quality">
                 <option value="ultra">Ultra</option>

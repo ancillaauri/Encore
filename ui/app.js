@@ -295,7 +295,7 @@
     const custom = (s.work_dir || '').trim();
     $('work-dir').value = custom ? `${custom.replace(/\\$/, '')}\\Encore temp` : 'Default (on the C: drive)';
     $('default-work').disabled = !custom;
-    const replay = sizeText(mbPerMinute(s.quality) * (s.replay_seconds + 6) / 60);
+    const replay = sizeText(mbPerMinuteNow() * (s.replay_seconds + 6) / 60);
     $('work-note').textContent = `Where recordings are written while they\u2019re being made, and where Echoes keeps its last few minutes (about ${replay} at your settings). Choose a drive with plenty of free space; an SSD is best. Encore makes an \u201cEncore temp\u201d folder inside.`;
   }
   async function setWorkDir(dir) {
@@ -740,7 +740,8 @@
   }
 
   async function saveSetting(key, value) {
-    const before = (key === 'fps' || key === 'resolution') && state.settings ? presetKbps(state.settings.quality) : 0;
+    // (Not with a bitrate set by hand: that stays as chosen.)
+    const before = (key === 'fps' || key === 'resolution') && state.settings && !state.settings.bitrate_custom ? presetKbps(state.settings.quality) : 0;
     try {
       state.settings = await bridge.setSettings({ [key]: value });
       if (before) {
@@ -1345,18 +1346,18 @@
     $('replay-on').disabled = state.replayBusy || (state.phase !== 'idle' && !on);
     $('save-replay').disabled = !on || state.replayBusy;
     const key = s.hotkey_save_replay ? s.hotkey_save_replay.replace(/\+/g, ' + ') : '';
-    const disk = sizeText(mbPerMinute(s.quality) * (s.replay_seconds + 6) / 60);
+    const disk = sizeText(mbPerMinuteNow() * (s.replay_seconds + 6) / 60);
     if (!$('save-key').classList.contains('listening')) $('save-key').textContent = key || 'Set a hotkey';
     $('echo-btn').dataset.tip = on
       ? `Echoes: On. Keeping the last ${replayLength()}. Click to turn off.`
       : 'Echoes: Off. Click to keep the last few minutes, so you can save great moments after they happen.';
     $('q-replay').closest('.hrow').dataset.tip = `Uses about ${disk} of disk space while Echoes is on (at your video settings).`;
     // How big a saved Echo is: at most the preset's bitrate, usually a little less (quiet scenes need less).
-    $('echo-size').textContent = `Each Echo is up to about ${sizeText(mbPerMinute(s.quality) * s.replay_seconds / 60)}`;
+    $('echo-size').textContent = `Each Echo is up to about ${sizeText(mbPerMinuteNow() * s.replay_seconds / 60)}`;
     $('set-echo-size').textContent = `${$('echo-size').textContent} at your video settings`;
     $('set-replay-on').checked = on || !!state.replayRestarting;
     $('set-replay-on').disabled = $('replay-on').disabled;
-    $('echo-size').dataset.tip = `At ${QUALITY_NAMES[s.quality]}, ${s.fps} fps and your resolution. Saving the last 30 seconds or minute makes a smaller file.`;
+    $('echo-size').dataset.tip = `At ${s.bitrate_custom ? `${s.bitrate_mbps} Mbps` : QUALITY_NAMES[s.quality]}, ${s.fps} fps and your resolution. Saving the last 30 seconds or minute makes a smaller file.`;
     $('replay-sec').classList.toggle('lit', on);
     $('replay-sec').classList.toggle('restarting', !!state.replayRestarting);
     $('qs-replay-sub').textContent = state.replayRestarting ? 'Restarting with your new settings\u2026'
@@ -1389,7 +1390,7 @@
     renderStage();
   }
   // Settings that change what's captured restart the buffer (it starts again from now).
-  const CAPTURE_KEYS = ['work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks'];
+  const CAPTURE_KEYS = ['work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks', 'bitrate_custom', 'bitrate_mbps'];
   let replayRestart = null;
   // Shown in amber while Echoes restarts for a settings change (it starts again from now).
   function restartReplay() {
@@ -1669,6 +1670,51 @@
     return Math.min(150000, Math.max(2000, kbps));
   }
   const mbpsText = (kbps) => `${Math.round(kbps / 1000)} Mbps`;
+  // What the video uses right now: the bitrate set by hand, or the Quality preset's.
+  function currentKbps() {
+    const s = state.settings;
+    if (!s) return 0;
+    return s.bitrate_custom ? s.bitrate_mbps * 1000 : presetKbps(s.quality);
+  }
+  function mbPerMinuteNow() { return ((currentKbps() + 600) * 60) / 8 / 1000; } // plus audio
+
+  // ---------- "Set the bitrate myself": a slider instead of Quality ----------
+  const BITRATE_MIN = 5;
+  const BITRATE_MAX = 150;
+  // A small mark every 5 Mbps, a longer one every 25, numbers at 5, 50, 100 and 150.
+  document.querySelectorAll('.bticks').forEach((box) => {
+    for (let v = BITRATE_MIN; v <= BITRATE_MAX; v += 5) {
+      const t = h('i', v % 25 === 0 || v === BITRATE_MIN ? 'major' : '');
+      t.style.left = `${((v - BITRATE_MIN) / (BITRATE_MAX - BITRATE_MIN)) * 100}%`;
+      if ([5, 50, 100, 150].includes(v)) t.dataset.n = v;
+      box.append(t);
+    }
+  });
+  function renderBitrate(live) {
+    const s = state.settings;
+    if (!s) return;
+    const custom = !!s.bitrate_custom;
+    const mbps = live || s.bitrate_mbps;
+    $('q-quality-row').hidden = custom;
+    $('q-bitrate-block').hidden = !custom;
+    $('quality-row').hidden = custom;
+    $('bitrate-row').hidden = !custom;
+    const perMin = sizeText(((mbps * 1000 + 600) * 60) / 8 / 1000);
+    $('q-bitrate-val').textContent = `${mbps} Mbps`;
+    $('q-bitrate-block').dataset.tip = `About ${perMin} per minute`;
+    $('bitrate-line').textContent = `${mbps} Mbps, about ${perMin} per minute`;
+    for (const id of ['q-bitrate', 'bitrate']) {
+      if (live && document.activeElement === $(id)) continue;
+      $(id).value = String(mbps);
+      $(id).style.setProperty('--fill', `${((mbps - BITRATE_MIN) / (BITRATE_MAX - BITRATE_MIN)) * 100}%`);
+    }
+  }
+  for (const id of ['q-bitrate', 'bitrate']) {
+    $(id).addEventListener('input', (e) => {
+      e.target.style.setProperty('--fill', `${((e.target.value - BITRATE_MIN) / (BITRATE_MAX - BITRATE_MIN)) * 100}%`);
+      renderBitrate(Number(e.target.value));
+    });
+  }
   const QUALITY_NAMES = { ultra: 'Ultra', high: 'High', medium: 'Medium', low: 'Low' };
   // Each option shows the bitrate it uses at the current resolution and frame rate.
   function renderQualityLabels() {
@@ -1678,6 +1724,7 @@
       for (const o of $(id).options) o.textContent = `${QUALITY_NAMES[o.value]}: ${mbpsText(presetKbps(o.value))}`;
     }
     const { h } = outputSize(s.resolution);
+    renderBitrate();
     $('quality-line').textContent = `${QUALITY_NAMES[s.quality]} at ${h}p ${s.fps} fps: ${mbpsText(presetKbps(s.quality))}, about ${sizeText(mbPerMinute(s.quality))} per minute`;
   }
   function sizeText(mb) {

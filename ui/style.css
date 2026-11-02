@@ -1004,3 +1004,20 @@ body.pcap-hidden .pcrow, body.pcap-hidden #rail-pcap { display: none; }
 .sublab { font-size: 11.5px; font-weight: 600; color: var(--dim); margin: 10px 0 2px; }
 #q-denoise-row.off { opacity: .45; }
 #q-denoise-row .sortbtn { flex: 0 1 auto; min-width: 0; }
+
+/* "Set the bitrate myself": a slider with a mark every 5 Mbps */
+.bblock { display: flex; flex-direction: column; }
+.bval { font-size: 13px; font-weight: 600; color: #c9ceff; font-variant-numeric: tabular-nums; }
+.bslider { position: relative; padding: 4px 0 16px; width: 100%; }
+.setrow.bset { flex-wrap: wrap; }
+.setrow.bset .bslider { flex: 1 1 280px; max-width: 420px; }
+.brange { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; margin: 0; background: transparent; cursor: pointer; position: relative; z-index: 1; --fill: 0%; }
+.brange::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--acc) var(--fill), #34333a var(--fill)); }
+.brange::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: #e0e3ff; box-shadow: 0 0 0 3px rgba(88, 101, 242, .35), 0 0 8px rgba(110, 120, 255, .6); }
+.brange:focus-visible { outline: none; }
+.brange:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--focus); }
+/* The marks line up with the thumb's centre (7 px in from each end) */
+.bticks { position: absolute; left: 7px; right: 7px; top: 20px; height: 12px; pointer-events: none; }
+.bticks i { position: absolute; top: 0; width: 1px; height: 4px; background: #4a4950; transform: translateX(-.5px); }
+.bticks i.major { height: 7px; background: #6b6a6f; }
+.bticks i[data-n]::after { content: attr(data-n); position: absolute; top: 8px; left: 50%; transform: translateX(-50%); font-size: 9.5px; font-style: normal; color: var(--dim); font-variant-numeric: tabular-nums; }

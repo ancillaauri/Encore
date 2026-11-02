@@ -69,6 +69,9 @@ pub struct CaptureSpec {
     pub height: u32,
     /// The quality preset: sets the encoder's quality target (the bitrate is its ceiling).
     pub quality: Quality,
+    /// "Set the bitrate myself": the bitrate is what to aim for, not a ceiling over a quality
+    /// target, and the preset is ignored.
+    pub custom: bool,
 }
 
 /// Output size for a source of `src_w` x `src_h`. Never upscales. Always even, aspect kept.
@@ -140,7 +143,7 @@ pub fn nvenc_cq(quality: Quality) -> u32 {
     }
 }
 
-fn encoder_args(enc: Encoder, kbps: u32, quality: Quality) -> Vec<String> {
+fn encoder_args(enc: Encoder, kbps: u32, quality: Quality, custom: bool) -> Vec<String> {
     let b = format!("{kbps}k");
     let max = format!("{}k", kbps * 3 / 2);
     let buf = format!("{}k", kbps * 2);
@@ -153,9 +156,17 @@ fn encoder_args(enc: Encoder, kbps: u32, quality: Quality) -> Vec<String> {
             // bits where the eye notices (dark areas, gradients, edges); every NVIDIA encoder
             // generation supports it.
             a.extend(["-preset", "p4", "-tune", "hq", "-rc", "vbr"].map(String::from));
-            a.extend(["-cq".into(), nvenc_cq(quality).to_string(), "-spatial-aq".into(), "1".into()]);
+            if !custom {
+                a.extend(["-cq".into(), nvenc_cq(quality).to_string()]);
+            }
+            a.extend(["-spatial-aq", "1"].map(String::from));
             if enc.codec != Codec::Av1 {
                 a.extend(["-forced-idr", "1"].map(String::from));
+            }
+            if custom {
+                // The bitrate the person chose is the average to aim for.
+                a.extend(["-b:v".into(), b, "-maxrate".into(), max, "-bufsize".into(), buf, "-bf".into(), "0".into()]);
+                return a;
             }
             // Ceiling only: the average comes from the quality target.
             let cap = format!("{}k", kbps * 5 / 4);
@@ -206,7 +217,7 @@ pub fn record_args(
         "-c:v".into(),
         enc.name().into(),
     ];
-    a.extend(encoder_args(enc, kbps, spec.quality));
+    a.extend(encoder_args(enc, kbps, spec.quality, spec.custom));
     a.extend([
         "-g".into(),
         gop.to_string(),
@@ -514,7 +525,7 @@ mod tests {
     }
 
     fn spec() -> CaptureSpec {
-        CaptureSpec { target: Target::Monitor { handle: 65537 }, fps: 60, cursor: true, width: 1920, height: 1080, quality: Quality::Ultra }
+        CaptureSpec { target: Target::Monitor { handle: 65537 }, fps: 60, cursor: true, width: 1920, height: 1080, quality: Quality::Ultra, custom: false }
     }
 
     #[test]
@@ -585,6 +596,9 @@ mod tests {
         assert!(record_args(&spec(), amd, Pipeline::ZeroCopy, 37_000, Path::new("x"), "seg_").join(" ").contains("-b:v 37000k -maxrate 55500k -bufsize 74000k"));
         let low = CaptureSpec { quality: Quality::Low, ..spec() };
         assert!(record_args(&low, enc, Pipeline::ZeroCopy, 22_000, Path::new("x"), "seg_").join(" ").contains("-cq 27"));
+        // A bitrate set by hand: aimed for, with no quality target.
+        let mine = record_args(&CaptureSpec { custom: true, ..spec() }, enc, Pipeline::ZeroCopy, 45_000, Path::new("x"), "seg_").join(" ");
+        assert!(mine.contains("-b:v 45000k -maxrate 67500k -bufsize 90000k") && !mine.contains("-cq"));
         assert!(joined.contains("-g 120"));
         assert!(joined.contains("-forced-idr 1"));
         assert!(joined.contains("-bf 0"));

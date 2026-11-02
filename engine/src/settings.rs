@@ -5,6 +5,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
 
+/// The range for "Set the bitrate myself", in Mbps: from what still looks right at 720p 30 fps
+/// to what no game recording needs more than (and what every hardware encoder accepts).
+pub const BITRATE_MBPS_MIN: u32 = 5;
+pub const BITRATE_MBPS_MAX: u32 = 150;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Codec {
@@ -59,6 +64,10 @@ pub struct Settings {
     /// Background noise reduction on the microphone when a clip is saved: "off", "light" or
     /// "strong".
     pub mic_denoise: String,
+    /// "Set the bitrate myself": use `bitrate_mbps` instead of the Quality preset.
+    pub bitrate_custom: bool,
+    /// The bitrate chosen by hand, in Mbps (BITRATE_MBPS_MIN..=BITRATE_MBPS_MAX).
+    pub bitrate_mbps: u32,
     /// Give each app that plays sound its own track.
     pub audio_app_tracks: bool,
     /// App updates: "manual" (check and tell me; I download and install), "auto_download"
@@ -186,6 +195,8 @@ impl Default for Settings {
             mic_device: "default".into(),
             mic_name: String::new(),
             mic_denoise: "off".into(),
+            bitrate_custom: false,
+            bitrate_mbps: 30,
             audio_app_tracks: true,
             update_mode: "manual".into(),
             setup_done: false,
@@ -282,6 +293,9 @@ impl Settings {
         }
         if updated.output_dir.trim().is_empty() {
             return Err("Output folder cannot be empty".into());
+        }
+        if !(BITRATE_MBPS_MIN..=BITRATE_MBPS_MAX).contains(&updated.bitrate_mbps) {
+            return Err(format!("The bitrate must be {BITRATE_MBPS_MIN} to {BITRATE_MBPS_MAX} Mbps"));
         }
         if !crate::denoise::LEVELS.contains(&updated.mic_denoise.as_str()) {
             return Err("Noise reduction must be off, light or strong".into());
@@ -476,6 +490,9 @@ mod tests {
         assert!(s.apply_patch(&json!({"output_dir": "  "})).is_err());
         assert!(s.apply_patch(&json!([1, 2])).is_err());
         assert!(s.apply_patch(&json!({"audio_mic": "yes"})).is_err());
+        assert!(s.apply_patch(&json!({"bitrate_mbps": 2})).is_err());
+        assert!(s.apply_patch(&json!({"bitrate_mbps": 151})).is_err());
+        assert_eq!(s.apply_patch(&json!({"bitrate_custom": true, "bitrate_mbps": 45})).unwrap().bitrate_mbps, 45);
         assert!(s.apply_patch(&json!({"audio_mic": false})).is_ok());
         assert!(s.apply_patch(&json!({"update_mode": "sometimes"})).is_err());
         assert_eq!(s.apply_patch(&json!({"update_mode": "never"})).unwrap().update_mode, "never");
