@@ -123,7 +123,7 @@
             <span class="dnd-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5 5 13.5h6l-1 8 8-11h-6l1-8z"/></svg></span>
             <span class="dnd-text"><span class="dnd-name">Priority Capture</span><span class="dnd-sub" id="pcap-sub">Off</span></span>
           </button>
-          <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Puts Encore’s recording ahead of everything else on your graphics card, including the game. Turn it on for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and Echoes don’t fall behind. While it’s on, other programs that use the graphics card, on any screen, may slow down or freeze. It turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error. The same switch is in Settings → Advanced, where you can also hide it from the sidebar.">i</span>
+          <span class="info" tabindex="0" role="img" aria-label="What this does" data-tip="Puts Encore’s recording ahead of everything else on your graphics card, including the game. Turn it on for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and replays don’t fall behind. While it’s on, other programs that use the graphics card, on any screen, may slow down or freeze. It turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error. The same switch is in Settings → Advanced, where you can also hide it from the sidebar.">i</span>
         </div>
         <button type="button" class="dnd" id="dnd" aria-pressed="false" title="Do not disturb: Encore's notifications stay hidden">
           <span class="dnd-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/></svg></span>
@@ -155,8 +155,8 @@
       <div class="hero">
         <div class="hero-side hero-left" id="replay-sec">
           <div class="ehead">
-            <h2 class="hlab">Echoes</h2>
-            <label class="aic echo-btn" id="echo-btn"><input type="checkbox" class="aswitch" id="replay-on" aria-label="Echoes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/></svg></label>
+            <h2 class="hlab">Replay</h2>
+            <label class="aic replay-btn" id="replay-btn"><input type="checkbox" class="aswitch" id="replay-on" aria-label="Replay"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/></svg></label>
           </div>
           <p class="esub" id="qs-replay-sub">Off</p>
           <label class="hrow"><span>Keeps the last</span>
@@ -170,9 +170,9 @@
               <option value="1200">20 minutes</option>
             </select>
           </label>
-          <p class="esize" id="echo-size"></p>
+          <p class="esize" id="replay-size"></p>
           <div class="saverow">
-            <button type="button" class="btn sm savecho" id="save-replay" disabled><span>Save an Echo</span></button>
+            <button type="button" class="btn sm savereplay" id="save-replay" disabled><span>Save a replay</span></button>
             <button type="button" class="savekey" id="save-key" data-hotkey="hotkey_save_replay" data-tip="Click to change the hotkey"></button>
           </div>
         </div>
@@ -320,14 +320,14 @@
         </section>
 
         <section class="setsec">
-          <h3>Echoes</h3>
-          <p class="setnote">Echoes keeps the last few minutes of what you're playing, so you can save a great moment after it happens.</p>
+          <h3>Replay</h3>
+          <p class="setnote">Replay keeps the last few minutes of what you're playing, so you can save a great moment after it happens.</p>
           <div class="setcard">
-            <label class="setrow"><span class="settext"><span class="setname">Echoes</span>
+            <label class="setrow"><span class="settext"><span class="setname">Replay</span>
               <span class="setsub">The same switch as on the main screen</span></span>
               <input type="checkbox" class="toggle" id="set-replay-on"></label>
             <label class="setrow"><span class="settext"><span class="setname">Keeps the last</span>
-              <span class="setsub" id="set-echo-size"></span></span>
+              <span class="setsub" id="set-replay-size"></span></span>
               <select class="dd" id="set-replay" data-setting="replay_seconds" data-number>
                 <option value="30">30 seconds</option>
                 <option value="60">1 minute</option>
@@ -350,7 +350,7 @@
               </span>
             </div>
           </div>
-          <p class="snote">The keys to save an Echo are under Hotkeys.</p>
+          <p class="snote">The keys to save a replay are under Hotkeys.</p>
         </section>
 
         <section class="setsec">
@@ -414,7 +414,7 @@
           </div>
           <div class="setcard spaced">
             <label class="setrow"><span class="settext"><span class="setname">Start Encore when Windows starts</span>
-              <span class="setsub wrap">Opens in the tray, so hotkeys and Echoes are ready straight away.</span></span>
+              <span class="setsub wrap">Opens in the tray, so hotkeys and Replay are ready straight away.</span></span>
               <input type="checkbox" class="toggle" id="autostart"></label>
           </div>
         </section>
@@ -429,24 +429,24 @@
               <button type="button" class="btn sm ghost" id="hotkey-record-clear">Clear</button>
             </div>
             <div class="setrow">
-              <span class="settext"><span class="setname">Save an Echo</span>
-                <span class="setsub">Saves everything Echoes is keeping (the length you chose)</span></span>
+              <span class="settext"><span class="setname">Save a replay</span>
+                <span class="setsub">Saves everything Replay is keeping (the length you chose)</span></span>
               <button type="button" class="hotkey" id="hotkey-replay" data-hotkey="hotkey_save_replay"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_replay">Clear</button>
             </div>
             <div class="setrow">
-              <span class="settext"><span class="setname">Save an Echo: last 30 seconds</span></span>
+              <span class="settext"><span class="setname">Save a replay: last 30 seconds</span></span>
               <button type="button" class="hotkey" data-hotkey="hotkey_save_30s"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_30s">Clear</button>
             </div>
             <div class="setrow">
-              <span class="settext"><span class="setname">Save an Echo: last minute</span></span>
+              <span class="settext"><span class="setname">Save a replay: last minute</span></span>
               <button type="button" class="hotkey" data-hotkey="hotkey_save_60s"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_60s">Clear</button>
             </div>
             <div class="setrow">
-              <span class="settext"><span class="setname">Save an Echo: custom length</span>
-                <span class="setsub" id="custom-hotkey-note">Saves the custom length set under Echoes</span></span>
+              <span class="settext"><span class="setname">Save a replay: custom length</span>
+                <span class="setsub" id="custom-hotkey-note">Saves the custom length set under Replay</span></span>
               <button type="button" class="hotkey" data-hotkey="hotkey_save_custom"></button>
               <button type="button" class="btn sm ghost" data-hotkey-clear="hotkey_save_custom">Clear</button>
             </div>
@@ -472,7 +472,7 @@
               <span class="setsub wrap">Records games on their own as they open, and goes back to your chosen screen when they close.</span></span>
               <input type="checkbox" class="toggle" id="set-game-on" data-setting="game_detection"></label>
             <label class="setrow"><span class="settext"><span class="setname">Desktop Capture</span>
-              <span class="setsub wrap" id="set-dc-note">Also records your screen, for recordings and Echoes, when no game is open. Off: Encore only records games.</span></span>
+              <span class="setsub wrap" id="set-dc-note">Also records your screen, for recordings and Replay, when no game is open. Off: Encore only records games.</span></span>
               <input type="checkbox" class="toggle" id="set-dc-on" data-setting="desktop_capture"></label>
           </div>
           <p class="setnote spaced">When more than one game is open, record:</p>
@@ -499,7 +499,7 @@
             <button type="button" class="setrow setopt" role="radio" data-game-end="stop">
               <span class="radio" aria-hidden="true"></span>
               <span class="settext"><span class="setname">Stop and save</span>
-                <span class="setsub wrap">The recording ends with the game. Echoes keeps going.</span></span>
+                <span class="setsub wrap">The recording ends with the game. Replay keeps going.</span></span>
             </button>
           </div>
           <div class="setcard spaced">
@@ -555,8 +555,8 @@
               <button type="button" class="btn sm ghost" data-preview="stop" aria-label="Play recording stopped sound">Play</button>
             </div>
             <div class="setrow soundrow">
-              <span class="settext"><span class="setname">Echo saved</span></span>
-              <select class="dd" data-setting="sound_save" aria-label="Echo saved: sound">
+              <span class="settext"><span class="setname">Replay saved</span></span>
+              <select class="dd" data-setting="sound_save" aria-label="Replay saved: sound">
                   <option value="rise">Rising chime</option>
                   <option value="fall">Falling chime</option>
                   <option value="double">Double beep</option>
@@ -567,15 +567,15 @@
                   <option value="shutter">Camera shutter</option>
                   <option value="none">No sound</option>
               </select>
-              <input type="range" class="vol" min="0" max="100" step="5" data-setting="volume_save" data-number aria-label="Echo saved: volume">
-              <button type="button" class="btn sm ghost" data-preview="save" aria-label="Play the Echo saved sound">Play</button>
+              <input type="range" class="vol" min="0" max="100" step="5" data-setting="volume_save" data-number aria-label="Replay saved: volume">
+              <button type="button" class="btn sm ghost" data-preview="save" aria-label="Play the Replay saved sound">Play</button>
             </div>
           </div>
         </section>
 
         <section class="setsec">
           <h3>Notifications</h3>
-          <p class="setnote">Small pop-ups over your game when you save an Echo, start or stop recording, or Encore changes game. They never appear in your recordings or Echoes.</p>
+          <p class="setnote">Small pop-ups over your game when you save a replay, start or stop recording, or Encore changes game. They never appear in your recordings or replays.</p>
           <div class="setcard">
             <label class="setrow"><span class="settext"><span class="setname">Show notifications</span>
               <span class="setsub">Do not disturb hides them all</span></span>
@@ -617,8 +617,8 @@
           </div>
           <h4 class="sethead">What to show</h4>
           <div class="setcard" data-ntf-dim>
-            <label class="setrow"><span class="settext"><span class="setname">Echo saved</span><span class="setsub">Shows how much was saved</span></span>
-              <input type="checkbox" class="toggle" data-setting="notify_echo"></label>
+            <label class="setrow"><span class="settext"><span class="setname">Replay saved</span><span class="setsub">Shows how much was saved</span></span>
+              <input type="checkbox" class="toggle" data-setting="notify_replay"></label>
             <label class="setrow"><span class="settext"><span class="setname">Recording started</span><span class="setsub">And what is being recorded</span></span>
               <input type="checkbox" class="toggle" data-setting="notify_record"></label>
             <label class="setrow"><span class="settext"><span class="setname">Recording saved</span><span class="setsub">Its length and name</span></span>
@@ -691,7 +691,7 @@
       <h2 id="report-title">Report a problem</h2>
       <div class="modal-body rform">
         <label class="rlab" for="report-what">What happened?</label>
-        <textarea id="report-what" rows="4" maxlength="4000" placeholder="For example: I saved an Echo and it had no sound"></textarea>
+        <textarea id="report-what" rows="4" maxlength="4000" placeholder="For example: I saved a replay and it had no sound"></textarea>
         <label class="rlab" for="report-doing">What were you doing? <span>(optional)</span></label>
         <textarea id="report-doing" rows="2" maxlength="2000" placeholder="The game, and what you pressed"></textarea>
         <label class="rcheck"><input type="checkbox" id="report-details" checked> Include Encore's log and my PC details</label>
@@ -733,7 +733,7 @@
       <button type="button" class="modal-x" data-close aria-label="Cancel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button>
       <h2 id="pcap-title">Before you turn on Priority Capture</h2>
       <div class="modal-body">
-        <p>Priority Capture puts Encore's recording ahead of everything else on your graphics card, including your game. Use it for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and Echoes don't fall behind.</p>
+        <p>Priority Capture puts Encore's recording ahead of everything else on your graphics card, including your game. Use it for games that put a heavy load on your graphics card, or if your graphics card is less powerful, so recordings and replays don't fall behind.</p>
         <p><strong>While it's on, other programs that use the graphics card, such as videos, streams or games on your other screens, may slow down, stutter or freeze</strong> until you turn it off.</p>
         <p>On a PC with an unstable graphics driver it can also make the screen go black for a moment, or freeze the PC. If that happens, turn it off.</p>
         <p>It turns itself off whenever Encore starts, once no game has been detected for a minute, and if the capture hits an error.</p>
@@ -843,7 +843,7 @@
       </div>
 
       <div class="sstep" data-step="4" data-title="Game detection" hidden>
-        <div class="echo-hero purple" aria-hidden="true">
+        <div class="replay-hero purple" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/><path d="M8 11.5v2M7 12.5h2M15.5 12h.01M17.5 13h.01"/></svg>
         </div>
         <p class="sbody">Start a game and Encore switches to it by itself, recording just the game window: no desktop, no pop-ups. Files are named after the game, so your clips sort themselves.</p>
@@ -858,19 +858,19 @@
         <p class="snote" id="setup-lock-tip">Playing two games at once? Press <span class="kbd" data-key="hotkey_lock_game"></span> in the one you want and Encore stays on it.</p>
       </div>
 
-      <div class="sstep" data-step="5" data-title="Echoes" hidden>
-        <div class="echo-hero" aria-hidden="true">
+      <div class="sstep" data-step="5" data-title="Replay" hidden>
+        <div class="replay-hero" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/></svg>
         </div>
         <p class="slead center">Shadow every play</p>
-        <p class="sbody">With <strong>Echoes</strong> on, Encore quietly keeps the last few minutes of whatever you're playing. Pull off something great, press <span class="kbd" data-key="hotkey_save_replay"></span>, and it's saved, even though you weren't recording.</p>
-        <p class="sbody">Older footage is let go as you play, so Echoes never fills up your drive.</p>
+        <p class="sbody">With <strong>Replay</strong> on, Encore quietly keeps the last few minutes of whatever you're playing. Pull off something great, press <span class="kbd" data-key="hotkey_save_replay"></span>, and it's saved, even though you weren't recording.</p>
+        <p class="sbody">Older footage is let go as you play, so Replay never fills up your drive.</p>
         <div class="setcard spaced">
-          <label class="setrow"><span class="settext"><span class="setname">Turn on Echoes</span>
+          <label class="setrow"><span class="settext"><span class="setname">Turn on Replay</span>
             <span class="setsub">You can switch it on or off any time, top left</span></span>
-            <input type="checkbox" class="toggle" id="setup-echo" checked></label>
+            <input type="checkbox" class="toggle" id="setup-replay" checked></label>
           <label class="setrow"><span class="setname">Keep the last</span>
-            <select class="dd" id="setup-echo-len" data-setting="replay_seconds" data-number>
+            <select class="dd" id="setup-replay-len" data-setting="replay_seconds" data-number>
               <option value="30">30 seconds</option>
               <option value="60">1 minute</option>
               <option value="120">2 minutes</option>
@@ -886,10 +886,10 @@
 
 
       <div class="sstep" data-step="6" data-title="Notifications" hidden>
-        <div class="echo-hero" aria-hidden="true">
+        <div class="replay-hero" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
         </div>
-        <p class="sbody">Encore shows a small pop-up over your game when you save an Echo, record, or it switches game. <strong>Pick where it goes and how long it stays.</strong> It never shows up in your recordings.</p>
+        <p class="sbody">Encore shows a small pop-up over your game when you save a replay, record, or it switches game. <strong>Pick where it goes and how long it stays.</strong> It never shows up in your recordings.</p>
         <div class="setcard spaced ntf-setup">
           <div class="ntf-pick small" id="setup-notify-pick"></div>
           <p class="snote ntf-center">Click a spot to move it. <strong id="setup-notify-name"></strong></p>
@@ -909,7 +909,7 @@
         <p class="slead">A few handy keys</p>
         <div class="keys">
           <span class="kbd" data-key="hotkey_record"></span><span>Start or stop recording</span>
-          <span class="kbd" data-key="hotkey_save_replay"></span><span>Save an Echo</span>
+          <span class="kbd" data-key="hotkey_save_replay"></span><span>Save a replay</span>
           <span class="kbd" data-key="hotkey_save_30s"></span><span>Save the last 30 seconds</span>
           <span class="kbd" data-key="hotkey_save_60s"></span><span>Save the last minute</span>
           <span class="kbd" data-key="hotkey_lock_game"></span><span>Record the game you're in</span>

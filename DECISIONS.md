@@ -863,3 +863,13 @@ Agreed design for game detection (to build next):
   recently. With game detection off, only programs Encore knows are games count (not ones that
   just fill the screen). No game open: Desktop, as before.
 
+## 2026-11-02: Echoes is now Replay (0.9.33)
+- The instant replay is called **Replay** everywhere people see it: the feature is "Replay"
+  ("Replay is on", "Turn on Replay"), a saved clip is "a replay" ("Save a replay", "Replay
+  saved"), and clips carry a "Replay" tag. Setup, Settings, the sidebar, Main Menu, the tray,
+  notifications, messages from the engine, the release notes (shown as the Changelog) and the
+  docs all follow. Earlier entries in this file keep the name used at the time.
+- Code names follow too (`replayRetry`, `replay-btn`, `Kind::Replay`, notification kind
+  `replay`). The setting `notify_echo` is now `notify_replay`; the old name is still read, so
+  nobody's choice is lost. The notification overlay also still accepts the old kind `echo`.
+

@@ -1,6 +1,6 @@
 [package]
 name = "encore"
-version = "0.9.32"
+version = "0.9.33"
 edition = "2021"
 description = "Encore game recorder (app shell)"
 license = "MIT"

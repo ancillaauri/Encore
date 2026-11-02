@@ -118,7 +118,7 @@ pub fn start(app: AppHandle) {
     std::thread::spawn(move || {
         let mut held: Vec<bool> = Vec::new();
         // When each action last fired: a second press of the same hotkey within REPEAT_GAP is
-        // taken as one press (two identical Echoes were saved from one quick double tap).
+        // taken as one press (two identical replays were saved from one quick double tap).
         let mut last_fired: std::collections::HashMap<&'static str, std::time::Instant> = Default::default();
         loop {
             std::thread::sleep(Duration::from_millis(10));

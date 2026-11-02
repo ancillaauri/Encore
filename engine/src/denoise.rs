@@ -36,7 +36,7 @@ impl Level {
     }
 }
 
-/// The current setting, read when a clip is saved (so a change applies to the next save, Echoes
+/// The current setting, read when a clip is saved (so a change applies to the next save, Replay
 /// included, without restarting anything).
 static LEVEL: AtomicU8 = AtomicU8::new(0);
 

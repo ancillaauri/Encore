@@ -23,10 +23,10 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Pause / resume manual recording | 6 | [ ] |
 | Screenshot hotkey | 6 | [ ] |
 | "Saved" feedback: sound + Encore's own notification over the game | 6 | [x] 0.9.8 |
-| Echoes (instant replay) (rolling buffer, 30 s – 20 min, save hotkey, tray item, recording while on shares the capture) | 7 | [x] |
+| Replay (instant replay: rolling buffer, 30 s – 20 min, save hotkey, tray item, recording while on shares the capture) | 7 | [x] |
 | Multiple save hotkeys (last 30 s, last minute, custom length, full buffer) | 7 | [x] |
 | Auto-start replay when a game is detected, stop when it closes (Desktop Capture off) | 7 | [x] 0.9 |
-| Storage: estimated disk use and Echo size [x]; max library size + auto-delete oldest, low-disk warning [ ] | 7 | [~] |
+| Storage: estimated disk use and replay size [x]; max library size + auto-delete oldest, low-disk warning [ ] | 7 | [~] |
 | Installer + updates (check, download and install from the app; user chooses the update mode) | 8 | [x] |
 | Settings dialog, Main Menu, sidebar (quick settings, saved this session), About, changelog skeleton, first-run setup | 6 | [x] |
 | Companion editor reads our per-app tracks (change on the editor side) | 9 | [x] editor 1.46.0 |
@@ -86,7 +86,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Main Menu (Settings at top level), Sidebar naming, Priority Capture hideable from the sidebar | 0.9.21 | [x] |
 | Microphone found by name when its id changes; warning icon and menu when it isn't plugged in | 0.9.23 | [x] |
 | Clicking a clip: folder, video player or Clip Editor (Locate / Browse) | 0.9.24 | [x] |
-| Settings reorganised (Echoes, Files, Games switches), Save an Echo hotkey changeable in place, Echo size, version in title bar | 0.9.26 | [x] |
+| Settings reorganised (Replay, Files, Games switches), Save a replay hotkey changeable in place, replay size, version in title bar | 0.9.26 | [x] |
 | Clip pictures in Saved this session | 0.9.27 | [x] |
 | Microphone noise reduction (Off / Light / Strong), Voice heading in the sidebar. Tested: Light leaves faint clicks and fan; Strong removes both and keeps the start of words | 0.9.28 | [x] |
 | Set the bitrate myself (5–150 Mbps slider) | 0.9.28 | [~] |

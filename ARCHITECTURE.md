@@ -34,7 +34,7 @@ The interface calls only these. Each shell provides its own implementation of th
 | Function | Purpose |
 |---|---|
 | `startRecording()` / `stopRecording()` | Manual recording |
-| `startReplay()` / `stopReplay()` / `saveReplay()` | Echoes (the instant replay buffer) |
+| `startReplay()` / `stopReplay()` / `saveReplay()` | Replay (the instant replay buffer) |
 | `showNotification(device, pos, item)` | A notification over the game (shell window, never recorded) |
 | `getStatus()` | Current state (idle / recording / replay on, elapsed time, disk use) |
 | `getSettings()` / `setSettings(obj)` | Read/write settings |
@@ -141,7 +141,7 @@ Audio (steps 4 and 5) — built in batch 2:
 - Audio is encoded to AAC when the recording is saved, so saving a long recording with many
   tracks takes a little while. Encoding during recording is a later optimisation.
 
-Echoes, the instant replay (built in 0.7; called Echoes from 0.9.1; "replay" in the code):
+Replay, the instant replay (built in 0.7; called Echoes from 0.9.1 to 0.9.32, Replay from 0.9.33; "replay" in the code):
 - `start_replay` starts a capture session like a recording, in a `replay-<time>` temp folder. Video
   is the usual 2 s segments (parts for monitor switches); each audio track is written in 10 s
   pieces (`a00_full.000123.pcm`, `timeline::ChunkedWriter`).
@@ -266,7 +266,7 @@ FFmpeg part before the next one starts; the join stretches that part's last file
 the concat list) so everything after stays in time with the audio. Each part carries a label
 (game name or "Desktop"); saves and recordings are named after the label on screen for most of the
 saved stretch. Settings: `game_pick` (newest / focused), `game_end` (continue / stop),
-`games_always`, `games_never`, `desktop_capture` (off, games only: Echoes waits for a game and its
+`games_always`, `games_never`, `desktop_capture` (off, games only: Replay waits for a game and its
 buffer is dropped when games close; recordings end with their game; recording with no game is refused), hotkeys `hotkey_lock_game`, `hotkey_next_game`. Select Application
 (`source: window`) pauses detection. Commands: `lock_game`, `lock_focused_game`,
 `next_game`; event `games` (list, active, locked, paused) and `game_switched`.

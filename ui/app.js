@@ -296,7 +296,7 @@
     $('work-dir').value = custom ? `${custom.replace(/\\$/, '')}\\Encore temp` : 'Default (on the C: drive)';
     $('default-work').disabled = !custom;
     const replay = sizeText(mbPerMinuteNow() * (s.replay_seconds + 6) / 60);
-    $('work-note').textContent = `Where recordings are written while they\u2019re being made, and where Echoes keeps its last few minutes (about ${replay} at your settings). Choose a drive with plenty of free space; an SSD is best. Encore makes an \u201cEncore temp\u201d folder inside.`;
+    $('work-note').textContent = `Where recordings are written while they\u2019re being made, and where Replay keeps its last few minutes (about ${replay} at your settings). Choose a drive with plenty of free space; an SSD is best. Encore makes an \u201cEncore temp\u201d folder inside.`;
   }
   async function setWorkDir(dir) {
     if (state.phase === 'recording') { toast('Stop the recording first, then change the working folder.', 'warning', 6000); return; }
@@ -395,10 +395,10 @@
     $('pick-note').textContent = note;
     const s = state.settings;
     $('pick-sub').innerHTML = gamesOnly()
-      ? 'Encore only records games. Turn on Desktop Capture to record your screen, or keep Echoes, when no game is open.'
+      ? 'Encore only records games. Turn on Desktop Capture to record your screen, or keep Replay running, when no game is open.'
       : s && s.game_detection
-        ? 'When no game is open, Encore records the screen you choose below (recordings and Echoes). Games take over when they start.'
-        : 'Encore records the screen you choose below, for recordings and Echoes. <strong>Follow</strong> is recommended.';
+        ? 'When no game is open, Encore records the screen you choose below (recordings and Replay). Games take over when they start.'
+        : 'Encore records the screen you choose below, for recordings and Replay. <strong>Follow</strong> is recommended.';
     const dc = !s || !!s.desktop_capture;
     $('dc-on').checked = dc;
     $('dc-on').disabled = !!(s && !s.game_detection) || state.phase !== 'idle';
@@ -495,7 +495,7 @@
     } else {
       $('what').textContent = describeTarget();
       $('detail').textContent = state.settings
-        ? (state.replay.on ? `Echoes is on \u00b7 saved to ${encoreRoot()}` : `Saved to ${encoreRoot()}`)
+        ? (state.replay.on ? `Replay is on \u00b7 saved to ${encoreRoot()}` : `Saved to ${encoreRoot()}`)
         : '';
       $('timer').textContent = '0:00';
       $('ring-sweep').style.strokeDashoffset = RING;
@@ -556,10 +556,10 @@
       else add('good', 'Game detection', gamesOnly() ? 'Waiting for a game' : 'Scanning for games');
     }
     // Instant replay
-    if (state.replayRestarting) add('warn', 'Echoes', 'Restarting with your new settings');
-    else if (state.replay && state.replay.on && state.replay.waiting) add('', 'Echoes', 'Waiting for a game');
-    else if (state.replay && state.replay.on) add('good', 'Echoes', `Keeping the last ${replayLength()}`);
-    else add('', 'Echoes', 'Off');
+    if (state.replayRestarting) add('warn', 'Replay', 'Restarting with your new settings');
+    else if (state.replay && state.replay.on && state.replay.waiting) add('', 'Replay', 'Waiting for a game');
+    else if (state.replay && state.replay.on) add('good', 'Replay', `Keeping the last ${replayLength()}`);
+    else add('', 'Replay', 'Off');
     // Audio tracks while recording
     const tracks = state.phase === 'recording' && state.recording ? state.recording.audio_tracks || [] : [];
     if (tracks.length) add('', `${tracks.length} audio track${tracks.length === 1 ? '' : 's'}`, tracks.join(', '));
@@ -668,7 +668,7 @@
         micFixing = true;
         try { await saveSetting('mic_device', same[0].id); } finally { micFixing = false; }
         toast(`Found your microphone again: ${s.mic_name}.`, 'info', 5000);
-        micWas = 'ok'; // saving it already restarts Echoes
+        micWas = 'ok'; // saving it already restarts Replay
       }
     }
     // Older settings: remember the chosen microphone's name.
@@ -682,7 +682,7 @@
         const what = now === 'none' ? 'No microphone is plugged in.' : `${s.mic_name || 'Your microphone'} isn't plugged in.`;
         notify('problem', 'Microphone not connected', `${what} Recordings have no microphone.`);
       } else if (micWas !== 'ok' && s.audio_mic) {
-        // Plugged back in: Windows stopped the old microphone track, so start Echoes again to pick it up.
+        // Plugged back in: Windows stopped the old microphone track, so start Replay again to pick it up.
         toast(`Microphone connected${s.mic_name ? `: ${s.mic_name}` : ''}.`, 'info', 4000);
         restartReplay();
       }
@@ -775,7 +775,7 @@
   async function refreshMonitors() {
     try { state.monitors = await bridge.listMonitors(); } catch (e) { state.monitors = []; }
     renderQualityLabels(); // the bitrates depend on the screen's size
-    renderReplay(); // and so does the size of an Echo
+    renderReplay(); // and so does the size of a replay
     renderStage();
   }
 
@@ -823,7 +823,7 @@
     const name = li.querySelector('.rname');
     name.replaceChildren(h('span', 'rn', shortName(d.path))); // the name shortens, the tag stays whole
     if (d.recovered) name.append(h('span', 'tag', 'recovered'));
-    if (d.replay) name.append(h('span', 'tag replay-live', 'Echo'));
+    if (d.replay) name.append(h('span', 'tag replay-live', 'Replay'));
     li.title = `${d.path}\nClick to show in folder. Right-click for more`;
   }
   function addRecent(d) {
@@ -970,9 +970,9 @@
     input.addEventListener('blur', () => finish(true));
   }
 
-  // "Saving an Echo…" notifications waiting for their file, oldest first (saves finish in order).
-  let echoSeq = 0;
-  const echoIds = [];
+  // "Saving a replay…" notifications waiting for their file, oldest first (saves finish in order).
+  let replaySeq = 0;
+  const replayIds = [];
 
   // ---------- engine events ----------
   bridge.onEvent((event, data) => {
@@ -1010,10 +1010,10 @@
       case 'replay_saving': {
         const what = data.seconds ? lengthText(data.seconds) : replayLength();
         toast(`Saving the last ${what}…`, 'info', 3000);
-        // Shown straight away; it turns into "Echo saved" in the same place when the file's done.
-        const id = `echo-${++echoSeq}`;
-        echoIds.push(id);
-        notify('echo', 'Saving an Echo…', `The last ${what}`, false, { id, seconds: 30, timer: false });
+        // Shown straight away; it turns into "Replay saved" in the same place when the file's done.
+        const id = `replay-${++replaySeq}`;
+        replayIds.push(id);
+        notify('replay', 'Saving a replay…', `The last ${what}`, false, { id, seconds: 30, timer: false });
         break;
       }
         break;
@@ -1032,9 +1032,9 @@
       case 'replay_saved': {
         addRecent({ ...data, replay: true });
         const len = data.duration_ms ? ` (${lengthText(Math.round(data.duration_ms / 1000))})` : '';
-        toast(`Saved an Echo${len}: ${fileName(data.path)}`, 'ok', 5000);
+        toast(`Saved a replay${len}: ${fileName(data.path)}`, 'ok', 5000);
         const of = /^(Game|Window): /.test(data.label || '') ? ` of ${labelName(data.label)}` : '';
-        notify('echo', 'Echo saved', data.duration_ms ? `Last ${lengthText(Math.round(data.duration_ms / 1000))}${of}` : `Saved${of}`, false, { id: echoIds.shift() });
+        notify('replay', 'Replay saved', data.duration_ms ? `Last ${lengthText(Math.round(data.duration_ms / 1000))}${of}` : `Saved${of}`, false, { id: replayIds.shift() });
         break;
       }
       case 'games':
@@ -1101,8 +1101,8 @@
       case 'error':
         if (state.phase === 'saving') state.phase = 'idle';
         toast(data.message, 'error', 20000);
-        // A failed Echo replaces its "Saving an Echo…" card.
-        notify('problem', 'Something went wrong', data.message, false, { id: /^Couldn.t save the Echo/.test(data.message || '') ? echoIds.shift() : null });
+        // A failed replay replaces its "Saving a replay…" card.
+        notify('problem', 'Something went wrong', data.message, false, { id: /^Couldn.t save the replay/.test(data.message || '') ? replayIds.shift() : null });
         renderStage();
         break;
       case 'engine_exited':
@@ -1323,12 +1323,12 @@
         buttons: [{ text: 'Read', main: true, run: openReports }, { text: 'Mark as read', run: () => { markRepliesRead(); renderInbox(); } }],
       });
     }
-    if (echoesRetry.failed && !state.replay.on) {
+    if (replayRetry.failed && !state.replay.on) {
       items.push({
-        icon: 'warn', warn: true, title: 'Echoes couldn\u2019t start', sub: echoesRetry.failed,
+        icon: 'warn', warn: true, title: 'Replay couldn\u2019t start', sub: replayRetry.failed,
         buttons: [
-          { text: 'Try again', main: true, run: () => echoesRetry.start() },
-          { text: 'Dismiss', run: () => { echoesRetry.failed = ''; renderInbox(); } },
+          { text: 'Try again', main: true, run: () => replayRetry.start() },
+          { text: 'Dismiss', run: () => { replayRetry.failed = ''; renderInbox(); } },
         ],
       });
     }
@@ -1612,8 +1612,8 @@
     const n = state.settings ? state.settings.replay_seconds : 120;
     return n === 60 ? 'minute' : REPLAY_NAMES[n] || `${n} seconds`;
   }
-  // What Echoes is keeping: the game, the window, or the screen.
-  function echoTarget() {
+  // What Replay is keeping: the game, the window, or the screen.
+  function replayTarget() {
     const g = gameActive();
     if (g && state.source === 'desktop') return g.name;
     if (state.source === 'window') return state.windowTitle || '';
@@ -1630,28 +1630,28 @@
     const key = s.hotkey_save_replay ? s.hotkey_save_replay.replace(/\+/g, ' + ') : '';
     const disk = sizeText(mbPerMinuteNow() * (s.replay_seconds + 6) / 60);
     if (!$('save-key').classList.contains('listening')) $('save-key').textContent = key || 'Set a hotkey';
-    $('echo-btn').dataset.tip = on
-      ? `Echoes: On. Keeping the last ${replayLength()}. Click to turn off.`
-      : 'Echoes: Off. Click to keep the last few minutes, so you can save great moments after they happen.';
-    $('q-replay').closest('.hrow').dataset.tip = `Uses about ${disk} of disk space while Echoes is on (at your video settings).`;
-    // How big a saved Echo is: at most the preset's bitrate, usually a little less (quiet scenes need less).
-    $('echo-size').textContent = `Each Echo is up to about ${sizeText(mbPerMinuteNow() * s.replay_seconds / 60)}`;
-    $('set-echo-size').textContent = `${$('echo-size').textContent} at your video settings`;
+    $('replay-btn').dataset.tip = on
+      ? `Replay: On. Keeping the last ${replayLength()}. Click to turn off.`
+      : 'Replay: Off. Click to keep the last few minutes, so you can save great moments after they happen.';
+    $('q-replay').closest('.hrow').dataset.tip = `Uses about ${disk} of disk space while Replay is on (at your video settings).`;
+    // How big a saved replay is: at most the preset's bitrate, usually a little less (quiet scenes need less).
+    $('replay-size').textContent = `Each replay is up to about ${sizeText(mbPerMinuteNow() * s.replay_seconds / 60)}`;
+    $('set-replay-size').textContent = `${$('replay-size').textContent} at your video settings`;
     $('set-replay-on').checked = on || !!state.replayRestarting;
     $('set-replay-on').disabled = $('replay-on').disabled;
-    $('echo-size').dataset.tip = `At ${s.bitrate_custom ? `${s.bitrate_mbps} Mbps` : QUALITY_NAMES[s.quality]}, ${s.fps} fps and your resolution. Saving the last 30 seconds or minute makes a smaller file.`;
+    $('replay-size').dataset.tip = `At ${s.bitrate_custom ? `${s.bitrate_mbps} Mbps` : QUALITY_NAMES[s.quality]}, ${s.fps} fps and your resolution. Saving the last 30 seconds or minute makes a smaller file.`;
     $('replay-sec').classList.toggle('lit', on);
     $('replay-sec').classList.toggle('restarting', !!state.replayRestarting);
     $('qs-replay-sub').textContent = state.replayRestarting ? 'Restarting with your new settings\u2026'
       : state.replay.waiting ? 'Waiting for a game'
-      : on ? `On \u00b7 keeping the last ${replayLength()}${echoTarget() ? ` of ${echoTarget()}` : ''}`
+      : on ? `On \u00b7 keeping the last ${replayLength()}${replayTarget() ? ` of ${replayTarget()}` : ''}`
       : 'Off \u00b7 save great moments after they happen';
     renderStatus();
   }
   // Returns '' when it worked, else the reason. `quiet`: no message (Encore retries by itself).
   async function setReplay(on, remember = true, quiet = false) {
     if (state.replayBusy) return 'busy';
-    if (remember) echoesRetry.stop(); // switched by hand: Encore stops trying by itself
+    if (remember) replayRetry.stop(); // switched by hand: Encore stops trying by itself
     state.replayBusy = true;
     let failed = '';
     renderReplay();
@@ -1677,10 +1677,10 @@
     return failed;
   }
 
-  // Echoes was on last time: turn it back on when Encore opens. Straight after a PC restart the
+  // Replay was on last time: turn it back on when Encore opens. Straight after a PC restart the
   // graphics driver and antivirus can hold things up, so a first try that fails isn't the end:
   // Encore tries again every 10 seconds for 3 minutes, then says why in "Waiting for you".
-  const echoesRetry = {
+  const replayRetry = {
     timer: null,
     tries: 0,
     failed: '', // set when Encore has given up: shown in Waiting for you
@@ -1692,23 +1692,23 @@
       this.tries += 1;
       const why = await setReplay(true, false, true);
       if (!why || state.replay.on) {
-        if (this.tries > 1) bridge.note(`Echoes started on try ${this.tries}`).catch(() => {});
+        if (this.tries > 1) bridge.note(`Replay started on try ${this.tries}`).catch(() => {});
         this.failed = '';
         renderInbox();
         return;
       }
-      bridge.note(`Echoes couldn't start when Encore opened (try ${this.tries}): ${why}`).catch(() => {});
+      bridge.note(`Replay couldn't start when Encore opened (try ${this.tries}): ${why}`).catch(() => {});
       if (this.tries < 18) { this.timer = setTimeout(() => this.attempt(), 10000); return; }
       this.failed = why;
       renderInbox();
-      notify('problem', 'Echoes couldn\u2019t start', why);
+      notify('problem', 'Replay couldn\u2019t start', why);
     },
     start() { this.stop(); this.tries = 0; this.failed = ''; this.attempt(); },
   };
   // Settings that change what's captured restart the buffer (it starts again from now).
   const CAPTURE_KEYS = ['work_dir', 'codec', 'fps', 'resolution', 'quality', 'capture_cursor', 'monitor', 'audio_full_mix', 'audio_mic', 'mic_device', 'audio_app_tracks', 'bitrate_custom', 'bitrate_mbps'];
   let replayRestart = null;
-  // Shown in amber while Echoes restarts for a settings change (it starts again from now).
+  // Shown in amber while Replay restarts for a settings change (it starts again from now).
   function restartReplay() {
     if (!state.replay.on || state.phase !== 'idle') return;
     clearTimeout(replayRestart);
@@ -1725,7 +1725,7 @@
     }, 400);
   }
   async function saveReplay(seconds) {
-    if (!state.replay.on) { toast('Turn on Echoes first (top left).', 'warning', 5000); return; }
+    if (!state.replay.on) { toast('Turn on Replay first (top left).', 'warning', 5000); return; }
     try {
       await bridge.saveReplay(seconds);
       playCue('save');
@@ -1866,7 +1866,7 @@
     }
     const max = s.replay_seconds;
     $('custom-len-note').textContent = sec > max
-      ? `Longer than Echoes keeps, so it saves ${lengthText(max)}`
+      ? `Longer than Replay keeps, so it saves ${lengthText(max)}`
       : `Saves the last ${lengthText(sec)}`;
     $('custom-len-note').classList.toggle('warn', sec > max);
   }
@@ -1926,7 +1926,7 @@
     stopListening();
     listening = b;
     b.classList.add('listening');
-    // The hotkey next to Save an Echo is small: just say how to back out.
+    // The hotkey next to Save a replay is small: just say how to back out.
     b.textContent = b.classList.contains('savekey') ? 'Esc to cancel' : 'Press the keys\u2026';
   }));
   document.addEventListener('keydown', (e) => {
@@ -2094,7 +2094,7 @@
     const s0 = state.settings;
     $('setup-games').checked = !s0 || !s0.setup_done || !!s0.game_detection;
     $('setup-desktop').checked = !s0 || !s0.setup_done || !!s0.desktop_capture;
-    $('setup-echo').checked = !s0 || !s0.setup_done || !!s0.replay_on;
+    $('setup-replay').checked = !s0 || !s0.setup_done || !!s0.replay_on;
     bridge.autostartStatus().then((on) => { $('setup-autostart').checked = !!on; }).catch(() => {});
     renderSetup();
     openDialog('setup');
@@ -2311,7 +2311,7 @@
 
   // ---------- notifications over the game (drawn by the shell's notification window) ----------
   const NOTIFY_SPOTS = [['tl', 'Top left'], ['tc', 'Top centre'], ['tr', 'Top right'], ['ml', 'Left edge'], ['mr', 'Right edge'], ['bl', 'Bottom left'], ['bc', 'Bottom centre'], ['br', 'Bottom right']];
-  const NOTIFY_KEYS = { echo: 'notify_echo', record: 'notify_record', saved: 'notify_saved', game: 'notify_game', problem: 'notify_problems' };
+  const NOTIFY_KEYS = { replay: 'notify_replay', record: 'notify_record', saved: 'notify_saved', game: 'notify_game', problem: 'notify_problems' };
   const spotStyle = (p) => (p === 'ml' || p === 'mr' ? 'edge tab' : 'hologram card');
   const spotName = (p) => `${(NOTIFY_SPOTS.find(([id]) => id === p) || NOTIFY_SPOTS[2])[1]} (${spotStyle(p)})`;
   const plain = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -2373,7 +2373,7 @@
   $('notify-screen').addEventListener('change', (e) => saveSetting('notify_screen', e.target.value));
   document.querySelectorAll('.ntf-secs').forEach((el) => el.addEventListener('input', () => renderNotify(Number(el.value))));
   for (const id of ['notify-test', 'setup-notify-test']) {
-    $(id).addEventListener('click', () => notify('echo', 'Echo saved', 'A test: this is how your notifications will look', true));
+    $(id).addEventListener('click', () => notify('replay', 'Replay saved', 'A test: this is how your notifications will look', true));
   }
 
   function renderGameSettings() {
@@ -2382,7 +2382,7 @@
     // Desktop Capture can only be off with game detection on (otherwise nothing would be recorded).
     $('set-dc-on').disabled = !s.game_detection || state.phase !== 'idle';
     $('set-dc-note').textContent = s.game_detection
-      ? 'Also records your screen, for recordings and Echoes, when no game is open. Off: Encore only records games.'
+      ? 'Also records your screen, for recordings and Replay, when no game is open. Off: Encore only records games.'
       : 'Always on while game detection is off, so there\u2019s something to record.';
     document.querySelectorAll('[data-game-pick]').forEach((o) => o.setAttribute('aria-checked', String(o.dataset.gamePick === s.game_pick)));
     document.querySelectorAll('[data-game-end]').forEach((o) => o.setAttribute('aria-checked', String(o.dataset.gameEnd === s.game_end)));
@@ -2418,7 +2418,7 @@
     const r = btn.getBoundingClientRect();
     openMenu(r.left, r.bottom + 6, items.length ? items : [{ text: 'No apps open', disabled: true, run: () => {} }]);
   }
-  // Desktop Capture: off records games only (Echoes waits for a game; the engine enforces the rest).
+  // Desktop Capture: off records games only (Replay waits for a game; the engine enforces the rest).
   $('dc-on').addEventListener('change', async (e) => {
     await saveSetting('desktop_capture', e.target.checked);
     renderStage();
@@ -2501,7 +2501,7 @@
   async function completeSetup() {
     const want = $('setup-admin').checked;
     const change = want !== !!state.startAsAdmin;
-    const echoes = $('setup-echo').checked;
+    const replayWanted = $('setup-replay').checked;
     const games = $('setup-games').checked;
     const desktop = !games || $('setup-desktop').checked;
     const autostart = $('setup-autostart').checked;
@@ -2510,8 +2510,8 @@
     if (state.settings && games !== !!state.settings.game_detection) await saveSetting('game_detection', games);
     if (state.settings && desktop !== !!state.settings.desktop_capture) await saveSetting('desktop_capture', desktop);
     try { if (autostart !== !!(await bridge.autostartStatus())) await bridge.setAutostart(autostart); } catch (e) { toast(String(e), 'error'); }
-    if (echoes && !state.replay.on && state.phase === 'idle') await setReplay(true);
-    else if (!echoes && state.replay.on) await setReplay(false);
+    if (replayWanted && !state.replay.on && state.phase === 'idle') await setReplay(true);
+    else if (!replayWanted && state.replay.on) await setReplay(false);
     if (change) await setStartAsAdmin(want, { restart: 'now' });
   }
   $('setup-skip').addEventListener('click', () => closeDialog($('setup')));
@@ -2546,8 +2546,8 @@
     await refreshMonitors();
     await refreshInputs();
     if (state.settings && !state.settings.setup_done && state.phase === 'idle') openSetup();
-    // Echoes was on last time: turn it back on (trying again for a while if it can't yet).
-    if (state.settings && state.settings.replay_on && !state.replay.on && state.phase === 'idle') echoesRetry.start();
+    // Replay was on last time: turn it back on (trying again for a while if it can't yet).
+    if (state.settings && state.settings.replay_on && !state.replay.on && state.phase === 'idle') replayRetry.start();
     // Capabilities arrive as an event, but may have been sent before we were listening.
     for (let i = 0; i < 40 && !(state.caps && state.caps.probed); i++) {
       try { state.caps = await bridge.getCapabilities(); } catch (e) { /* engine still starting */ }

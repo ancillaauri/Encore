@@ -31,7 +31,7 @@ const SLIDE: f32 = 0.2;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Kind {
-    Echo,
+    Replay,
     Record,
     Saved,
     Game,
@@ -41,7 +41,7 @@ pub enum Kind {
 impl Kind {
     pub fn parse(s: &str) -> Kind {
         match s {
-            "echo" => Kind::Echo,
+            "replay" | "echo" => Kind::Replay,
             "record" => Kind::Record,
             "saved" => Kind::Saved,
             "game" => Kind::Game,
@@ -51,7 +51,7 @@ impl Kind {
     /// (lines and icon, border, glow): the same colours as the interface.
     fn colours(self) -> (&'static str, &'static str, &'static str) {
         match self {
-            Kind::Echo => ("#c8a8ff", "rgba(176,139,255,0.55)", "rgba(155,107,255,0.45)"),
+            Kind::Replay => ("#c8a8ff", "rgba(176,139,255,0.55)", "rgba(155,107,255,0.45)"),
             Kind::Record => ("#ff8a8e", "rgba(255,120,124,0.55)", "rgba(242,63,67,0.42)"),
             Kind::Saved => ("#6fdc8c", "rgba(111,220,140,0.5)", "rgba(35,165,90,0.42)"),
             Kind::Game => ("#c3b4ff", "rgba(170,140,255,0.5)", "rgba(130,100,255,0.42)"),
@@ -60,7 +60,7 @@ impl Kind {
     }
     fn rgb(self) -> (u8, u8, u8) {
         match self {
-            Kind::Echo => (0xc8, 0xa8, 0xff),
+            Kind::Replay => (0xc8, 0xa8, 0xff),
             Kind::Record => (0xff, 0x8a, 0x8e),
             Kind::Saved => (0x6f, 0xdc, 0x8c),
             Kind::Game => (0xc3, 0xb4, 0xff),
@@ -70,7 +70,7 @@ impl Kind {
     /// The small heading on edge tabs.
     fn heading(self) -> &'static str {
         match self {
-            Kind::Echo => "Echoes",
+            Kind::Replay => "Replay",
             Kind::Record | Kind::Saved => "Recording",
             Kind::Game => "Game detection",
             Kind::Problem => "Encore",
@@ -78,7 +78,7 @@ impl Kind {
     }
     fn icon(self) -> &'static str {
         match self {
-            Kind::Echo => r#"<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/>"#,
+            Kind::Replay => r#"<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/>"#,
             Kind::Record => r#"<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/>"#,
             Kind::Saved => r#"<path d="M20 6 9 17l-5-5"/>"#,
             Kind::Game => r#"<path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/><path d="M8 11.5v2M7 12.5h2M15.5 12h.01M17.5 13h.01"/>"#,
@@ -318,8 +318,8 @@ pub struct Shown {
     pub kind: Kind,
     pub sprite: Sprite,
     pub seconds: f32,
-    /// Notifications with the same id replace each other in place ("Saving an Echo…" turning
-    /// into "Echo saved").
+    /// Notifications with the same id replace each other in place ("Saving a replay…" turning
+    /// into "Replay saved").
     pub id: Option<String>,
     /// Whether the timer line shows (not while something is still being saved).
     pub timer: bool,
@@ -541,7 +541,7 @@ mod tests {
     fn stack_png(spot: Spot, name: &str) {
         let mut st = Stack::new(spot, 1.0);
         let items = [
-            (Kind::Echo, "Echo saved", "Last 30 seconds of Warframe"),
+            (Kind::Replay, "Replay saved", "Last 30 seconds of Warframe"),
             (Kind::Game, "Now following Warframe", "Press Ctrl+Alt+G to stay on this game"),
             (Kind::Problem, "Recording is falling behind", "Warframe is using all of your graphics card, so Encore can't keep up. Capping the game's frame rate a little below your monitor's usually fixes it."),
         ];
@@ -580,8 +580,8 @@ mod tests {
     fn the_stack_keeps_three_and_lets_them_go() {
         let mut st = Stack::new(Spot::Top, 1.0);
         for i in 0..4 {
-            let sp = draw_item(Kind::Echo, "Echo saved", "", Spot::Top, 1.0).unwrap();
-            st.add(Shown::new(Kind::Echo, sp, 5.0, i as f32), i as f32);
+            let sp = draw_item(Kind::Replay, "Replay saved", "", Spot::Top, 1.0).unwrap();
+            st.add(Shown::new(Kind::Replay, sp, 5.0, i as f32), i as f32);
         }
         assert_eq!(st.items.iter().filter(|i| i.leaving.is_none()).count(), 3);
         st.update(3.0 + OUT + 0.01);
@@ -594,12 +594,12 @@ mod tests {
     #[test]
     fn a_saving_card_turns_into_the_saved_one_in_place() {
         let mut st = Stack::new(Spot::Top, 1.0);
-        let saving = draw_item(Kind::Echo, "Saving an Echo…", "The last minute", Spot::Top, 1.0).unwrap();
-        st.add(Shown::new(Kind::Echo, saving, 30.0, 0.0).with_id(Some("e1".into()), false), 0.0);
+        let saving = draw_item(Kind::Replay, "Saving a replay…", "The last minute", Spot::Top, 1.0).unwrap();
+        st.add(Shown::new(Kind::Replay, saving, 30.0, 0.0).with_id(Some("e1".into()), false), 0.0);
         let other = draw_item(Kind::Game, "Now following Warframe", "", Spot::Top, 1.0).unwrap();
         st.add(Shown::new(Kind::Game, other, 5.0, 1.0), 1.0);
-        let saved = draw_item(Kind::Echo, "Echo saved", "Last 60 seconds", Spot::Top, 1.0).unwrap();
-        st.add(Shown::new(Kind::Echo, saved, 5.0, 4.0).with_id(Some("e1".into()), true), 4.0);
+        let saved = draw_item(Kind::Replay, "Replay saved", "Last 60 seconds", Spot::Top, 1.0).unwrap();
+        st.add(Shown::new(Kind::Replay, saved, 5.0, 4.0).with_id(Some("e1".into()), true), 4.0);
         assert_eq!(st.items.len(), 2); // replaced, not added
         assert!(st.items[0].timer && st.items[0].id.as_deref() == Some("e1"));
         // Its timer started again when it was replaced.

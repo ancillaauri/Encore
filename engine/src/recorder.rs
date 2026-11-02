@@ -403,7 +403,7 @@ fn watch_progress(
 
 /// Notices when a capture falls behind real time (the game is using all of the graphics card and
 /// the capture can't keep up). Every slip of more than a few seconds is logged, with when it
-/// catches up. The interface is told (once per capture part) only when it matters for Echoes:
+/// catches up. The interface is told (once per capture part) only when it matters for Replay:
 /// still behind after 30 seconds, or more than 10 seconds behind. A short slip while a game
 /// loads catches up by itself.
 #[derive(Default)]

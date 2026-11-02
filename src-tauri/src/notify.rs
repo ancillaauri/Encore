@@ -7,7 +7,7 @@
 //!
 //! The window is a plain Windows "layered" window: see-through where the picture is, always on
 //! top, clicks pass through to the game, never takes focus, no taskbar button, and marked so
-//! screen capture leaves it out (never in recordings or Echoes, nor screen sharing or
+//! screen capture leaves it out (never in recordings or replays, nor screen sharing or
 //! screenshots). It runs on its own thread, hidden until there's something to show. While
 //! notifications show it is put back on top every POKE, and anything still above it is logged.
 //!

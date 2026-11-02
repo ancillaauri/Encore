@@ -1,3 +1,14 @@
+## Encore 0.9.33 (beta), test build 54: Echoes is now Replay
+
+### Changed
+- **Echoes is now called Replay**, everywhere: the main screen, the sidebar, Settings, setup,
+  Main Menu, the tray, notifications and the tag on clips saved this session. A saved clip is
+  "a replay" ("Save a replay", "Replay saved"). Nothing else changes: your settings, hotkeys
+  and clips carry over as they are.
+
+### Install
+Update from inside Encore (Restart to update in the sidebar).
+
 ## Encore 0.9.32 (beta), test build 53: Backstage, and clips in the game's folder
 
 ### Changed
@@ -11,14 +22,14 @@
 ### Install
 Update from inside Encore (Restart to update in the sidebar).
 
-## Encore 0.9.31 (beta), test build 52: answer the developer, Echoes after a restart
+## Encore 0.9.31 (beta), test build 52: answer the developer, Replay after a restart
 
 ### What's new
 - **Reply to the developer** from Help → My Reports: each report shows as a conversation,
   with a box to answer.
 
 ### Fixed
-- **Echoes stayed off after a PC restart or reopening Encore** if it couldn't start straight
+- **Replay stayed off after a PC restart or reopening Encore** if it couldn't start straight
   away. Encore now keeps trying for 3 minutes, and if it still can't, says why in Waiting for you.
 - A report removed by the developer no longer sits in My Reports saying "Couldn't check".
 
@@ -76,8 +87,8 @@ Update from inside Encore (Main Menu → Help → Update to 0.9.28).
   its length in the corner.
 
 ### Fixed
-- Pressing your Save an Echo keys to set them as the hotkey no longer saves an Echo too.
-- The Echo tag on a clip with a long name no longer gets cut off.
+- Pressing the Save a replay keys to set them as its hotkey no longer saves a replay too.
+- The Replay tag on a clip with a long name no longer gets cut off.
 
 ### Install
 Update from inside Encore (Main Menu → Help → Update to 0.9.27).
@@ -85,13 +96,13 @@ Update from inside Encore (Main Menu → Help → Update to 0.9.27).
 ## Encore 0.9.26 (beta), test build 47: tidier Settings, hotkey you can click
 
 ### What's new
-- **Click the hotkey on Save an Echo to change it.** It shows "Esc to cancel" while it waits
-  for your keys. Clicking the rest of the button saves an Echo as before.
-- **Echoes shows how big each Echo is**, under Keeps the last.
+- **Click the hotkey on Save a replay to change it.** It shows "Esc to cancel" while it waits
+  for your keys. Clicking the rest of the button saves a replay as before.
+- **Replay shows how big each replay is**, under Keeps the last.
 - **The version** shows next to Encore in the title bar.
 
 ### Changed
-- Settings has an **Echoes** section, **Game detection** and **Desktop Capture** switches in
+- Settings has a **Replay** section, **Game detection** and **Desktop Capture** switches in
   Games, **Files** (where recordings go, and what clicking a clip does), and **Start Encore as
   administrator** under Advanced.
 - No more browser menu when you right-click, and the browser's reload and print keys do nothing.
@@ -131,7 +142,7 @@ Update from inside Encore (Main Menu → Help → Update to 0.9.24).
   different USB port, so it doesn't silently drop out of your recordings.
 - **A warning when your microphone isn't plugged in**: a yellow icon next to Microphone in the
   sidebar, and a notification. Click the icon to use another microphone.
-- When you plug it back in, Echoes pick it up again by themselves.
+- When you plug it back in, Replay picks it up again by itself.
 
 ### Install
 Update from inside Encore (Main Menu → Help → Update to 0.9.23).
@@ -142,7 +153,7 @@ Update from inside Encore (Main Menu → Help → Update to 0.9.23).
 - With Desktop Capture off, the note under the screens no longer says the highlighted screen is
   used again when the game closes. It says Encore waits for the next game.
 - Removed a line under Settings → Audio that repeated what Split Application Audio says.
-- The **Echo** tag on saved clips is now purple.
+- The **Replay** tag on saved clips is now purple.
 
 ### Install
 Update from inside Encore (Main Menu → Help → Update to 0.9.22).
@@ -163,7 +174,7 @@ Update from inside Encore (Main Menu → Help → Update to 0.9.21).
 - **Rename and delete clips** under Saved this session: right-click a clip, or use the small bin
   in its corner. A deleted clip dims with an **Undo** button and a 5-second timer; delete several
   at once, each with its own timer. Deleted clips go to the Recycle Bin.
-- **"Saving an Echo…"** appears the moment you press the hotkey and turns into "Echo saved" when
+- **"Saving a replay…"** appears the moment you press the hotkey and turns into "Replay saved" when
   the file is ready.
 
 ### Fixed
@@ -193,7 +204,7 @@ Update from inside Encore (≡ → Help → Update to 0.9.19).
   Turn it on for the session when you need it.
 - **It turns itself off** once no game has been detected for a minute, and if the capture hits an
   error while it's on. You're told when it does.
-- **Switching it on or off no longer restarts Echoes,** so you keep what's already saved up.
+- **Switching it on or off no longer restarts Replay,** so you keep what's already saved up.
 
 ### Install
 Update from inside Encore (≡ → Help → Update to 0.9.18). This update also includes 0.9.16 and
@@ -257,10 +268,10 @@ Update from inside Encore (≡ → Help → Update to 0.9.13).
 ## Encore 0.9.12 (beta), test build 33: fewer false alarms, no double saves
 
 ### Changed
-- **The "Recording is falling behind" warning** now only appears when it affects your Echoes:
+- **The "Recording is falling behind" warning** now only appears when it affects your replays:
   the capture is still behind after 30 seconds, or more than 10 seconds behind. A short slip
   while a game loads no longer sets it off. Every slip is still noted in Encore's log.
-- **Pressing a save hotkey twice by accident** (within a second and a half) saves one Echo, not
+- **Pressing a save hotkey twice by accident** (within a second and a half) saves one replay, not
   two identical ones.
 
 ### Install
@@ -283,7 +294,7 @@ Update from inside Encore (≡ → Help → Update to 0.9.11).
 ### What's new
 - **Settings → Advanced → Top graphics priority.** For games that use all of your graphics card
   (Warframe, for one). It puts Encore's capture first on the graphics card so recordings and
-  Echoes don't fall behind. Off by default, with a warning and a confirmation: on a PC with an
+  replays don't fall behind. Off by default, with a warning and a confirmation: on a PC with an
   unstable graphics driver it can black the screen for a moment or freeze the PC.
 - **A warning when the recording falls behind.** If a game takes so much of the graphics card
   that Encore can't keep up, you're told once per game, with how to fix it.
@@ -291,14 +302,14 @@ Update from inside Encore (≡ → Help → Update to 0.9.11).
 ### Install
 Update from inside Encore (≡ → Help → Update to 0.9.10).
 
-## Encore 0.9.9 (beta), test build 30: admin after updates, Echoes that fell behind
+## Encore 0.9.9 (beta), test build 30: admin after updates, Replay that fell behind
 
 ### Fixed
 - **Encore lost administrator rights after every update.** With "Start Encore as administrator"
   on, an updated Encore now comes back as administrator. This update is the last one that
   arrives without it: start Encore again once afterwards, or use File → Restart as Administrator.
-- **Echoes failing with "Nothing has been recorded for that moment yet".** When the game stalls
-  and the capture falls behind, saving an Echo now saves the newest moments recorded instead of
+- **Replay failing with "Nothing has been recorded for that moment yet".** When the game stalls
+  and the capture falls behind, saving a replay now saves the newest moments recorded instead of
   failing.
 - Encore's log now notes when notifications appear and disappear, to track down the lag.
 
@@ -308,9 +319,9 @@ Update from inside Encore (≡ → Help → Update to 0.9.9).
 ## Encore 0.9.8 (beta), test build 29: notifications
 
 ### What's new
-- **Notifications over your game.** A small pop-up when you save an Echo, start or save a
+- **Notifications over your game.** A small pop-up when you save a replay, start or save a
   recording, or Encore follows or locks a game, plus warnings. They never appear in your
-  recordings or Echoes.
+  recordings or replays.
 - **Two looks, chosen by where you put them.** The hologram card in the corners and at top and
   bottom centre, with a timer line on the side facing into the screen. The edge tab at the middle
   of the left or right edge, sliding in from the side.
@@ -331,7 +342,7 @@ Update from inside Encore (≡ → Help → Update to 0.9.8).
   now).
 - The game detection page is up to date with Desktop Capture, and its Desktop Capture switch can
   only be turned off with game detection on.
-- Echoes' page now says **Shadow every play**.
+- The Replay page now says **Shadow every play**.
 - Setup shows your actual hotkeys everywhere (it said Ctrl+Alt+1, 2 and G whatever you'd set).
 - The last page points to **Settings → Hotkeys**, with a button to go straight there.
 

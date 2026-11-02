@@ -30,7 +30,7 @@ Ideas kept for later: a diamond slider handle, if the look ever takes on more di
 | `--text` / `--mute` / `--dim` | `#e2e1e4` / `#949398` / `#6b6a6f` | Text, secondary, faint |
 | `--acc` | `#9B6BFF` (was #5865f2) | Purple: the accent. Main buttons, switches on, sliders, selection |
 | `--acc-hover` | `#B08BFF` | Accent, hovered |
-| `--acc-press` | `#7E52E6` | Accent, pressed; the hotkey half of Save an Echo |
+| `--acc-press` | `#7E52E6` | Accent, pressed; the hotkey half of Save a replay |
 | `--acc-text` | `#D9C9FF` | Accent-coloured text on dark (values, the BETA pill) |
 | `--glow` | `rgba(155,107,255, .35–.95)` | Glow around anything in the accent |
 
@@ -42,7 +42,7 @@ Colours that keep their own meaning and are **not** replaced by the accent:
 | Microphone off / an icon switch off | `#ff7a7e` (glow `rgba(255,92,97,…)`) | Off state of icon switches |
 | Record | `#f23f43` | The record button |
 | Warning | `#f0b232` | Warnings, the microphone-missing icon |
-| Good | `#23a55a` | "Echoes on" dot, success |
+| Good | `#23a55a` | "Replay on" dot, success |
 | Keyboard focus | `#00a8fc` | Focus rings (never removed) |
 
 ## Glow recipes
@@ -69,7 +69,7 @@ Colours that keep their own meaning and are **not** replaced by the accent:
    switch still reads as a switch).
 3. Never colour alone: every state also has words (tooltips say "On"/"Off"), and colours that
    must be told apart differ in lightness too.
-4. Text is in UK English and sentence case. Buttons say what they do ("Save an Echo",
+4. Text is in UK English and sentence case. Buttons say what they do ("Save a replay",
    "Restart to update").
 
 ## Waiting for you (the sidebar's inbox)

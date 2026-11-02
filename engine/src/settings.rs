@@ -120,8 +120,8 @@ pub struct Settings {
     /// Hotkeys: lock onto the game in front; move to the next open game.
     pub hotkey_lock_game: String,
     pub hotkey_next_game: String,
-    /// Desktop Capture: Encore may record and keep Echoes outside games (your screen, an app).
-    /// Off (games only, needs game detection): Echoes waits for a game, a recording ends with its
+    /// Desktop Capture: Encore may record and keep Replay running outside games (your screen, an app).
+    /// Off (games only, needs game detection): Replay waits for a game, a recording ends with its
     /// game, and recording with no game open is refused. Older settings called this
     /// `replay_on_desktop`.
     #[serde(alias = "replay_on_desktop")]
@@ -154,7 +154,9 @@ pub struct Settings {
     /// Which screen: "game" (the screen in use) or a monitor id ("id:…").
     pub notify_screen: String,
     /// Which events show one.
-    pub notify_echo: bool,
+    /// Show a notification when a replay is saved (was called `notify_echo`).
+    #[serde(alias = "notify_echo")]
+    pub notify_replay: bool,
     pub notify_record: bool,
     pub notify_saved: bool,
     pub notify_game: bool,
@@ -247,7 +249,7 @@ impl Default for Settings {
             notify_pos: "tr".into(),
             notify_seconds: 5,
             notify_screen: "game".into(),
-            notify_echo: true,
+            notify_replay: true,
             notify_record: true,
             notify_saved: true,
             notify_game: true,
@@ -319,7 +321,7 @@ impl Settings {
             return Err("Update mode must be manual, auto_download or never".into());
         }
         if !REPLAY_SECONDS.contains(&updated.replay_seconds) {
-            return Err(format!("Echoes length must be one of {:?} seconds", REPLAY_SECONDS));
+            return Err(format!("Replay length must be one of {:?} seconds", REPLAY_SECONDS));
         }
         if !["newest", "focused"].contains(&updated.game_pick.as_str()) {
             return Err("Game choice must be newest or focused".into());
@@ -449,6 +451,12 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn the_old_echo_notification_setting_carries_over() {
+        let s: Settings = serde_json::from_str(r#"{"notify_echo": false}"#).unwrap();
+        assert!(!s.notify_replay);
+    }
+
+    #[test]
     fn old_settings_with_the_removed_audio_offset_still_load() {
         let s: Settings = serde_json::from_str(r#"{"audio_offset_ms": 0, "fps": 60}"#).unwrap();
         assert_eq!(s.fps, 60);
@@ -544,7 +552,7 @@ mod tests {
         assert_eq!(s.replay_custom_seconds, 90);
         assert_eq!((s.sound_start.as_str(), s.sound_stop.as_str(), s.sound_save.as_str()), ("rise", "fall", "double"));
         assert_eq!((s.volume_start, s.volume_stop, s.volume_save), (50, 50, 50));
-        assert!(s.notifications && s.notify_echo && s.notify_record && s.notify_saved && s.notify_game && s.notify_problems);
+        assert!(s.notifications && s.notify_replay && s.notify_record && s.notify_saved && s.notify_game && s.notify_problems);
         assert_eq!((s.notify_pos.as_str(), s.notify_seconds, s.notify_screen.as_str()), ("tr", 5, "game"));
         assert!(!s.gpu_realtime); // opt-in only
     }

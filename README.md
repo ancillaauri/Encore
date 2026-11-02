@@ -4,8 +4,8 @@ A lightweight game and screen recorder for Windows 11, made as a pair with the c
 
 - **What to record:** Follow (the screen you click on), always one monitor, or Select Application
   (a single app's window)
-- **Echoes:** Encore quietly keeps the last 30 seconds to 20 minutes, so you can save a great
-  moment after it happens (Save an Echo), or just the last 30 seconds, minute or a length you
+- **Replay:** Encore quietly keeps the last 30 seconds to 20 minutes, so you can save a great
+  moment after it happens (Save a replay), or just the last 30 seconds, minute or a length you
   choose, with hotkeys that work in games
 - **Split Application Audio:** a separate audio track for each app that makes sound (game, music,
   browser, voice chat), plus Full mix (everything, including your mic), Microphone and Desktop audio.

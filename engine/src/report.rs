@@ -15,7 +15,7 @@ pub fn details(settings: &crate::settings::Settings, encoders: &[String]) -> Val
     let s = settings;
     let name = |v: Value| v.as_str().map(String::from).unwrap_or_else(|| v.to_string());
     let summary = format!(
-        "{} {} fps, {}, {}, game detection {}, Desktop Capture {}, Echoes {} ({} s), microphone {} (noise reduction {}), Split Application Audio {}, Priority Capture {}",
+        "{} {} fps, {}, {}, game detection {}, Desktop Capture {}, Replay {} ({} s), microphone {} (noise reduction {}), Split Application Audio {}, Priority Capture {}",
         name(json!(s.codec)),
         s.fps,
         name(json!(s.resolution)),
