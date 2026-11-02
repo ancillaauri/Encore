@@ -1268,14 +1268,19 @@
     if (!REPORTS_URL || !list.length) return;
     const before = unreadReplies();
     let failed = false;
+    const gone = [];
     await Promise.all(list.map(async (r) => {
       try {
         const res = await fetch(`${REPORTS_URL}/replies?n=${r.number}&key=${encodeURIComponent(r.key)}`);
         if (res.ok) replies[r.number] = await res.json();
+        else if (res.status === 410) gone.push(r.number); // deleted on GitHub
         else failed = true;
       } catch (e) { failed = true; } // offline: try again later
     }));
     replyCheckFailed = failed;
+    if (gone.length && state.settings) {
+      await saveSetting('reports', (state.settings.reports || []).filter((r) => !gone.includes(r.number)));
+    }
     const now = unreadReplies();
     renderInbox();
     if (tellIfNew && now > before) {

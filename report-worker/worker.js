@@ -104,6 +104,8 @@ async function replies(url, env, reply) {
     github(env, `/repos/${env.REPO}/issues/${n}`),
     github(env, `/repos/${env.REPO}/issues/${n}/comments?per_page=100`),
   ]);
+  // Deleted on GitHub: say so, and Encore takes it off its list.
+  if (issueRes.status === 404 || issueRes.status === 410) return reply({ error: 'That report was removed.', gone: true }, 410);
   if (!issueRes.ok || !commentsRes.ok) return reply({ error: 'Replies couldn\u2019t be fetched. Try again later.' }, 502);
   const issue = await issueRes.json();
   const comments = await commentsRes.json();
@@ -138,6 +140,7 @@ async function reporterReply(request, env, reply) {
     method: 'POST',
     body: JSON.stringify({ body: `${REPORTER_MARK}\n${REPORTER_HEAD}\n\n${body}` }),
   });
+  if (res.status === 404 || res.status === 410) return reply({ error: 'That report was removed, so it can\u2019t be answered.', gone: true }, 410);
   if (!res.ok) return reply({ error: 'The message couldn\u2019t be sent. Try again later.' }, 502);
   // A closed report that gets a reply opens again, so it isn't missed.
   await github(env, `/repos/${env.REPO}/issues/${n}`, { method: 'PATCH', body: JSON.stringify({ state: 'open' }) });
