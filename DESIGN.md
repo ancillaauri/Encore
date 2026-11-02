@@ -55,6 +55,7 @@ Colours that keep their own meaning and are **not** replaced by the accent:
 - **Slider** *(proposed)*: 4 px track; the filled part in the accent with an 8 px glow; a 14 px
   near-white knob with a 3 px accent ring and a glow, both larger while hovered or dragged.
   Marks under it where values matter (bitrate: every 5 Mbps, numbers at 5, 50, 100, 150).
+- **Record button** *(proposed, liked)*: the red dot glows (`box-shadow: 0 0 16px rgba(242,63,67,.6)`) instead of flat red.
 - **Main button:** accent fill, 10 px glow; hovered: `--acc-hover` and a 16 px glow; pressed:
   `--acc-press` and a 22 px glow.
 
