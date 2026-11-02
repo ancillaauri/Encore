@@ -1,3 +1,16 @@
+## Encore 0.9.32 (beta), test build 53: Backstage, and clips in the game's folder
+
+### Changed
+- **Clip Editor is now Backstage.** Encore finds it under either name (Settings → Files →
+  Locate), and finds it again by itself if it moved.
+
+### Fixed
+- Recording your screen while a game is open now saves the clip in that game's folder, named
+  after it, instead of in Desktop.
+
+### Install
+Update from inside Encore (Restart to update in the sidebar).
+
 ## Encore 0.9.31 (beta), test build 52: answer the developer, Echoes after a restart
 
 ### What's new
