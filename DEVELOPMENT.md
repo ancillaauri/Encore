@@ -48,6 +48,9 @@ sidebar, dialogs). Whether the two apps line up again afterwards is to be agreed
 editor's side. Never copy the editor's code without adding its MIT notice to
 THIRD_PARTY_NOTICES.md.
 
+The look itself (colours, glows, rules) is written down in DESIGN.md, for anyone building
+next to Encore.
+
 Colour tokens until the redesign (from the editor's Discord "Midnight" palette):
 
 ```css

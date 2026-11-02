@@ -39,6 +39,7 @@ app (Main Menu → Help).
 
 - [DEVELOPMENT.md](DEVELOPMENT.md): how this project is worked on, and the hard rules
 - [ARCHITECTURE.md](ARCHITECTURE.md): how the app is put together, and the recording file format
+- [DESIGN.md](DESIGN.md): Encore's look (colours, glows, rules), being redesigned
 - [DECISIONS.md](DECISIONS.md): what was decided and why, test results and the performance log
 - [FEATURES.md](FEATURES.md): the feature backlog and progress
 - [BUILDING.md](BUILDING.md): how builds and releases are produced
