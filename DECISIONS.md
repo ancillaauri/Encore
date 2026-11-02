@@ -722,3 +722,7 @@ Agreed design for game detection (to build next):
   Only .mp4 files are opened, and only an .exe is started.
 - Edge tabs: the timer is a rounded line inside the curved edge (inset 5 px, clear of the
   corners), with a rail in the same place, instead of a straight bar along the edge itself.
+
+## 2026-11-02: Settings sections spaced apart (0.9.25)
+- Each section in Settings now starts below a line, with more room above and below, and its
+  heading is larger with a short accent bar, so the sections don't run together.

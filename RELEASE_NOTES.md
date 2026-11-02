@@ -1,3 +1,11 @@
+## Encore 0.9.25 (beta), test build 46: easier to read Settings
+
+### Changed
+- The sections in Settings are spaced apart, with a line between each and clearer headings.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.25).
+
 ## Encore 0.9.24 (beta), test build 45: open clips your way
 
 ### What's new
