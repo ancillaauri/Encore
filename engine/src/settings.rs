@@ -53,6 +53,9 @@ pub struct Settings {
     pub audio_mic: bool,
     /// "default" or a microphone id from `list_audio_inputs`.
     pub mic_device: String,
+    /// The chosen microphone's name, so it can be found again when Windows gives it a new id
+    /// (a driver update, another USB port). Empty for "default".
+    pub mic_name: String,
     /// Give each app that plays sound its own track.
     pub audio_app_tracks: bool,
     /// Fine-tunes audio/video sync in milliseconds (positive = audio later). Normally 0.
@@ -174,6 +177,7 @@ impl Default for Settings {
             audio_full_mix: true,
             audio_mic: true,
             mic_device: "default".into(),
+            mic_name: String::new(),
             audio_app_tracks: true,
             audio_offset_ms: 0,
             update_mode: "manual".into(),

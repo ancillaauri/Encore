@@ -622,15 +622,89 @@
     add('default', def ? `Windows default (${def.name})` : 'Windows default');
     for (const d of state.inputs) add(d.id, d.name);
     const want = state.settings ? state.settings.mic_device : 'default';
-    if (want !== 'default' && !state.inputs.some((d) => d.id === want)) add(want, 'Saved microphone (not connected)');
+    if (want !== 'default' && !state.inputs.some((d) => d.id === want)) add(want, `${(state.settings && state.settings.mic_name) || 'Saved microphone'} (not connected)`);
     sel.value = want;
     $('mic-row').hidden = !(state.settings && state.settings.audio_mic);
   }
 
   async function refreshInputs() {
-    try { state.inputs = await bridge.listAudioInputs(); } catch (e) { state.inputs = []; }
-    renderInputs();
+    let list;
+    try { list = await bridge.listAudioInputs(); } catch (e) { list = []; }
+    const changed = JSON.stringify(list) !== JSON.stringify(state.inputs);
+    state.inputs = list;
+    if (changed) renderInputs(); // rebuilding the list while it's open would close it
+    checkMic();
   }
+
+  // ---------- the microphone: found again by name, or a warning when it isn't plugged in ----------
+  // 'ok', 'missing' (the chosen one isn't plugged in) or 'none' (no microphone at all).
+  function micState() {
+    const s = state.settings;
+    if (!s || !s.audio_mic) return 'ok';
+    if (s.mic_device === 'default') return state.inputs.length ? 'ok' : 'none';
+    return state.inputs.some((d) => d.id === s.mic_device) ? 'ok' : 'missing';
+  }
+  let micWas = 'ok';
+  let micFixing = false;
+  async function checkMic() {
+    const s = state.settings;
+    if (!s || micFixing) return;
+    // Windows gave it a new id (a driver update, another USB port): the same name, just one of them.
+    if (s.audio_mic && s.mic_device !== 'default' && s.mic_name && micState() === 'missing') {
+      const same = state.inputs.filter((d) => d.name.trim().toLowerCase() === s.mic_name.trim().toLowerCase());
+      if (same.length === 1) {
+        micFixing = true;
+        try { await saveSetting('mic_device', same[0].id); } finally { micFixing = false; }
+        toast(`Found your microphone again: ${s.mic_name}.`, 'info', 5000);
+        micWas = 'ok'; // saving it already restarts Echoes
+      }
+    }
+    // Older settings: remember the chosen microphone's name.
+    if (s.mic_device !== 'default' && !s.mic_name) {
+      const d = state.inputs.find((x) => x.id === s.mic_device);
+      if (d) { try { state.settings = await bridge.setSettings({ mic_name: d.name }); } catch (e) { /* tried again next time */ } }
+    }
+    const now = micState();
+    if (now !== micWas) {
+      if (now !== 'ok') {
+        const what = now === 'none' ? 'No microphone is plugged in.' : `${s.mic_name || 'Your microphone'} isn't plugged in.`;
+        notify('problem', 'Microphone not connected', `${what} Recordings have no microphone.`);
+      } else if (micWas !== 'ok' && s.audio_mic) {
+        // Plugged back in: Windows stopped the old microphone track, so start Echoes again to pick it up.
+        toast(`Microphone connected${s.mic_name ? `: ${s.mic_name}` : ''}.`, 'info', 4000);
+        restartReplay();
+      }
+      micWas = now;
+    }
+    renderMicWarn();
+  }
+  function renderMicWarn() {
+    const st = micState();
+    const b = $('mic-warn');
+    b.hidden = st === 'ok';
+    if (st === 'ok') return;
+    const s = state.settings;
+    const what = st === 'none' ? 'No microphone is plugged in.' : `${s.mic_name || 'Your chosen microphone'} isn't plugged in.`;
+    b.dataset.tip = `${what} Recordings have no microphone until it's back. Click to choose another.`;
+  }
+  async function chooseMic(id) {
+    const d = state.inputs.find((x) => x.id === id);
+    try { state.settings = await bridge.setSettings({ mic_name: d ? d.name : '' }); } catch (e) { /* the id is what matters */ }
+    await saveSetting('mic_device', id);
+    renderInputs();
+    checkMic();
+  }
+  menuButton($('mic-warn'), () => {
+    const def = state.inputs.find((d) => d.default);
+    if (!state.inputs.length) return [{ text: 'No microphone is plugged in', disabled: true }];
+    return [
+      { text: def ? `Use Windows default (${def.name})` : 'Use Windows default', run: () => chooseMic('default') },
+      '-',
+      ...state.inputs.map((d) => ({ text: d.name, run: () => chooseMic(d.id) })),
+    ];
+  });
+  // Notice a microphone being unplugged or plugged in (it's quick: Windows lists them).
+  setInterval(() => { if (state.settings && state.settings.audio_mic) refreshInputs(); }, 4000);
 
   function renderCodecs() {
     if (!state.caps || !state.caps.probed) return;
@@ -673,7 +747,7 @@
           toast(`${QUALITY_NAMES[state.settings.quality]} now uses ${mbpsText(after)} (was ${Math.round(before / 1000)}) to keep the same detail at ${at}. That's about ${sizeText(mbPerMinute(state.settings.quality))} per minute.`, 'info', 7000);
         }
       }
-      if (key === 'audio_mic') renderInputs();
+      if (key === 'audio_mic') { renderInputs(); micWas = 'ok'; checkMic(); }
       if (key === 'codec') renderEngineLine();
       if (CAPTURE_KEYS.includes(key) || key === 'desktop_capture' || (key === 'game_detection' && state.replay.waiting)) restartReplay();
       renderSettings();
@@ -915,6 +989,10 @@
           renderStage();
         }
         break;
+      case 'mic_found':
+        // The engine found the chosen microphone under a new id.
+        if (data.settings) { state.settings = data.settings; renderSettings(); renderInputs(); }
+        break;
       case 'priority_capture_off':
         // Turned itself off (no game for a minute, or a capture error).
         if (data.settings) { state.settings = data.settings; renderSettings(); }
@@ -955,7 +1033,7 @@
   const openOutput = () => { if (state.settings) bridge.openFolder(encoreRoot()).catch((e) => toast(String(e), 'error')); };
   $('open-folder').addEventListener('click', openOutput);
   $('rail-folder').addEventListener('click', openOutput);
-  $('mic-device').addEventListener('change', (e) => saveSetting('mic_device', e.target.value));
+  $('mic-device').addEventListener('change', (e) => chooseMic(e.target.value));
   document.querySelectorAll('[data-setting]').forEach((el) => {
     if (el.id === 'output') {
       el.addEventListener('change', () => saveSetting('output_dir', el.value.trim()));

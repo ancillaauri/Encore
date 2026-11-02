@@ -78,6 +78,37 @@ impl Manifest {
     }
 }
 
+/// Which microphone to use, given the saved choice (its id and name) and what's plugged in.
+#[derive(Debug, PartialEq)]
+pub enum MicPick {
+    /// Windows' default microphone was chosen.
+    Default,
+    /// The saved microphone is there under its saved id.
+    Same,
+    /// Not under its saved id, but a microphone with the same name is: this is its new id.
+    Moved(String),
+    /// Not plugged in.
+    Missing,
+}
+
+pub fn pick_mic(inputs: &[InputDevice], id: &str, name: &str) -> MicPick {
+    if id == "default" {
+        return MicPick::Default;
+    }
+    if inputs.iter().any(|d| d.id == id) {
+        return MicPick::Same;
+    }
+    let name = name.trim();
+    if !name.is_empty() {
+        // Exactly one with that name, so two identical headsets aren't mixed up.
+        let same: Vec<&InputDevice> = inputs.iter().filter(|d| d.name.trim().eq_ignore_ascii_case(name)).collect();
+        if same.len() == 1 {
+            return MicPick::Moved(same[0].id.clone());
+        }
+    }
+    MicPick::Missing
+}
+
 #[derive(Debug, Clone)]
 pub struct AudioOptions {
     pub full_mix: bool,
@@ -627,5 +658,28 @@ mod tests {
         let loaded = Manifest::load(&dir).unwrap();
         assert_eq!(loaded, *m.lock().unwrap());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod mic_tests {
+    use super::*;
+
+    fn dev(id: &str, name: &str) -> InputDevice {
+        InputDevice { id: id.into(), name: name.into(), default: false }
+    }
+
+    #[test]
+    fn the_microphone_is_found_by_name_when_its_id_changes() {
+        let now = [dev("{new}", "Headset Microphone (CORSAIR VIRTUOSO)"), dev("{cam}", "Webcam Microphone")];
+        assert_eq!(pick_mic(&now, "default", ""), MicPick::Default);
+        assert_eq!(pick_mic(&now, "{cam}", "Webcam Microphone"), MicPick::Same);
+        assert_eq!(pick_mic(&now, "{old}", "Headset Microphone (CORSAIR VIRTUOSO)"), MicPick::Moved("{new}".into()));
+        // No name saved (older settings), or not plugged in.
+        assert_eq!(pick_mic(&now, "{old}", ""), MicPick::Missing);
+        assert_eq!(pick_mic(&[dev("{cam}", "Webcam Microphone")], "{old}", "Headset Microphone (CORSAIR VIRTUOSO)"), MicPick::Missing);
+        // Two with the same name: don't guess.
+        let two = [dev("{a}", "USB Microphone"), dev("{b}", "USB Microphone")];
+        assert_eq!(pick_mic(&two, "{old}", "USB Microphone"), MicPick::Missing);
     }
 }

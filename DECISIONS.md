@@ -696,3 +696,17 @@ Agreed design for game detection (to build next):
 - With Desktop Capture off, the note under the screens says Encore waits for the next game when
   the game closes, instead of saying the highlighted screen is used again.
 - The "Echo" tag on clips in Saved this session is purple with a soft glow, not yellow.
+
+## 2026-11-02: The microphone is found by name; a warning when it isn't plugged in (0.9.23)
+- Settings keep the chosen microphone's name (`mic_name`) as well as its Windows id. If the id
+  isn't there any more (a driver update, another USB port) but exactly one microphone has the
+  same name, Encore uses that one: the engine checks before every capture starts (event
+  `mic_found`), and the interface checks every 4 seconds while the microphone is on. Two
+  microphones with the same name are never guessed between.
+- When the chosen microphone isn't plugged in (or there's none at all), a yellow warning icon
+  with a soft glow shows next to Microphone in the sidebar, and a notification says recordings
+  have no microphone. Clicking the icon lists Windows' default and the microphones that are
+  plugged in. Older settings get the name filled in the first time the microphone is seen.
+- When it's plugged back in, Echoes start again so the microphone track comes back (Windows
+  ends the old track when a device is unplugged). A recording in progress isn't restarted; it
+  stays without the microphone until it's stopped.

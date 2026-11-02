@@ -1,3 +1,15 @@
+## Encore 0.9.23 (beta), test build 44: your microphone, found again
+
+### What's new
+- **Your microphone is found by name** if Windows gives it a new id after a driver update or a
+  different USB port, so it doesn't silently drop out of your recordings.
+- **A warning when your microphone isn't plugged in**: a yellow icon next to Microphone in the
+  sidebar, and a notification. Click the icon to use another microphone.
+- When you plug it back in, Echoes pick it up again by themselves.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.23).
+
 ## Encore 0.9.22 (beta), test build 43: small fixes
 
 ### Fixed

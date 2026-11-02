@@ -496,6 +496,7 @@ impl Engine {
         let out_dir = PathBuf::from(&self.settings.output_dir);
         let out_path = recorder::output_path(&out_dir, &label, platform::local_time());
         let preferred = self.known_pipeline.get(encoder.name()).copied();
+        self.find_mic();
         let audio_opts = AudioOptions {
             full_mix: self.settings.audio_full_mix,
             mic: self.settings.audio_mic,
@@ -1039,6 +1040,36 @@ impl Engine {
     }
 
     /// Turns Priority Capture off by itself, lowers the running capture, and tells the interface.
+    /// Before a capture starts: if Windows gave the chosen microphone a new id, use the new one
+    /// (found by its name) and tell the interface. Also fills in the name for older settings.
+    fn find_mic(&mut self) {
+        if !self.settings.audio_mic || self.settings.mic_device == "default" {
+            return;
+        }
+        let inputs = audio::list_inputs();
+        match audio::pick_mic(&inputs, &self.settings.mic_device, &self.settings.mic_name) {
+            audio::MicPick::Same => {
+                if self.settings.mic_name.is_empty() {
+                    if let Some(d) = inputs.iter().find(|d| d.id == self.settings.mic_device) {
+                        self.settings.mic_name = d.name.clone();
+                        let _ = self.settings.save();
+                    }
+                }
+            }
+            audio::MicPick::Moved(id) => {
+                log(&format!("microphone {} has a new id: {} (was {})", self.settings.mic_name, id, self.settings.mic_device));
+                self.settings.mic_device = id;
+                let _ = self.settings.save();
+                send_event(
+                    "mic_found",
+                    json!({ "name": self.settings.mic_name, "settings": serde_json::to_value(&self.settings).unwrap_or(Value::Null) }),
+                );
+            }
+            audio::MicPick::Missing => log(&format!("chosen microphone {} isn't connected", if self.settings.mic_name.is_empty() { &self.settings.mic_device } else { &self.settings.mic_name })),
+            audio::MicPick::Default => {}
+        }
+    }
+
     fn priority_off(&mut self, reason: &str, message: &str) {
         if !self.settings.gpu_realtime {
             return;

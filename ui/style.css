@@ -970,3 +970,9 @@ body.gd-wait .ps.rec-tag { color: #8fdca5; }
 
 /* Priority Capture hidden from the sidebar (Settings → Advanced, or Main Menu → View) */
 body.pcap-hidden .pcrow, body.pcap-hidden #rail-pcap { display: none; }
+
+/* Microphone not plugged in: a yellow warning that glows like the other icons; click to pick another */
+.micwarn { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border: 0; border-radius: 8px; background: rgba(240, 178, 50, .08); box-shadow: inset 0 0 0 1px rgba(240, 178, 50, .22); cursor: pointer; margin-right: -4px; }
+.micwarn[hidden] { display: none; }
+.micwarn:hover, .micwarn.open { background: rgba(240, 178, 50, .16); }
+.micwarn svg { width: 19px; height: 19px; fill: none; stroke: #ffc94d; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 2px rgba(240, 178, 50, .95)) drop-shadow(0 0 6px rgba(240, 178, 50, .5)); }
