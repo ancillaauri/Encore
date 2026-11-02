@@ -8,36 +8,36 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Feature | Build step | Status |
 |---|---|---|
 | Manual recording (start/stop) | 3 | [x] |
-| Capture modes: Game window / Desktop (toggle style TBC) | 3, 6 | [ ] |
+| Capture modes: Game window / Desktop (game detection, and Desktop Capture on or off) | 3, 6 | [x] 0.9 |
 | Monitor selection for Desktop mode: follow the screen you click on (default) or always one monitor | 3 | [x] 0.5 |
-| "What's being recorded" indicator (tray + window) | 6 | [ ] |
-| Codec choice: H.264 default, HEVC and AV1 optional | 3 | [~] |
-| Quality settings: resolution (native/downscaled), frame rate up to 144, quality/bitrate presets | 3 | [~] |
+| "What's being recorded" indicator (tray + window: status panel, tray label) | 6 | [x] |
+| Codec choice: H.264 default, HEVC and AV1 optional (HEVC/AV1 not yet tried on a real PC) | 3 | [~] |
+| Quality settings: resolution (native/downscaled), frame rate up to 240, quality presets that scale with resolution and frame rate | 3 | [x] 0.9.19 |
 | Full System Audio (all PC sound, minus Encore's own) + microphone tracks | 4 | [x] |
-| Microphone choice (push-to-talk comes with hotkeys) | 4 | [~] |
+| Microphone choice, found again by name; push-to-talk not built | 4 | [x] 0.9.23 |
 | Split Application Audio: one audio track per app (cap 8; extras only in Full mix; always/never lists later) | 5 | [x] |
-| Global hotkeys (start/stop recording; more with replay), tray icon, close to tray, sounds | 6 | [~] 0.6.0 |
+| Global hotkeys (start/stop recording; more with replay), tray icon, close to tray, sounds | 6 | [x] |
 | Game detection: games recorded on their own (window only), green fallback screen, lock/next game (click, tray, Ctrl+Alt+G / Ctrl+Alt+N), newest or focused game, always/never lists, names from Steam/library folders, saves named after the game | 6 | [x] 0.9 |
 | Recording moves to the monitor you click on, mid-recording, with no gap | 6 | [x] 0.5 |
-| Switch Game ↔ Desktop mid-recording (reuses the same mechanism) | 6 | [ ] |
+| Switch Game ↔ Desktop mid-recording (reuses the same mechanism) | 6 | [x] 0.9 |
 | Pause / resume manual recording | 6 | [ ] |
 | Screenshot hotkey | 6 | [ ] |
-| "Saved" feedback: sound + Windows notification | 6 | [ ] |
-| Echoes (instant replay) (rolling buffer, 30 s – 20 min, save hotkey Ctrl+Alt+S, tray item, recording while on shares the capture) | 7 | [~] 0.7.0 |
-| Multiple save hotkeys (e.g. last 30 s / 2 min / full buffer) | 7 | [ ] |
-| Auto-start replay when a game is detected, stop when it closes | 7 | [ ] |
-| Storage: estimated disk use beside replay length [~] 0.7.0; max library size + auto-delete oldest, low-disk warning [ ] | 7 | [~] |
-| Installer + updates (check, download and install from the app; user chooses the update mode) | 8 | [~] |
+| "Saved" feedback: sound + Encore's own notification over the game | 6 | [x] 0.9.8 |
+| Echoes (instant replay) (rolling buffer, 30 s – 20 min, save hotkey, tray item, recording while on shares the capture) | 7 | [x] |
+| Multiple save hotkeys (last 30 s, last minute, custom length, full buffer) | 7 | [x] |
+| Auto-start replay when a game is detected, stop when it closes (Desktop Capture off) | 7 | [x] 0.9 |
+| Storage: estimated disk use and Echo size [x]; max library size + auto-delete oldest, low-disk warning [ ] | 7 | [~] |
+| Installer + updates (check, download and install from the app; user chooses the update mode) | 8 | [x] |
 | Settings dialog, Main Menu, sidebar (quick settings, saved this session), About, changelog skeleton, first-run setup | 6 | [x] |
-| Companion editor reads our per-app tracks (change on the editor side) | 9 | [ ] |
+| Companion editor reads our per-app tracks (change on the editor side) | 9 | [x] editor 1.46.0 |
 
 ## Found in testing (0.3.0 desktop test, 2026-10-31)
 
 | Issue | Finding | Status |
 |---|---|---|
 | Raw file in VLC has no mic | First track "Full mix" now includes the mic; new "Desktop audio" track has system sound without it (0.4.0). | [x] |
-| Companion editor shows only "Game / Desktop" + "Microphone", audio doubled | Encore's file was correct (Full mix, Microphone, Spotify, Microsoft Edge). The editor doesn't read per-app tracks yet and lumps Full mix + app tracks together. Needs the "Companion editor change" in ARCHITECTURE.md (editor side). | [ ] |
-| Mic track "had everything" in the editor | Measured: Encore's Microphone track contains only the voice (no correlation with any app audio). Cause is the editor's lumping/preview; fixed by the same editor change. | [ ] |
+| Companion editor shows only "Game / Desktop" + "Microphone", audio doubled | Encore's file was correct (Full mix, Microphone, Spotify, Microsoft Edge). The editor doesn't read per-app tracks yet and lumps Full mix + app tracks together. Needs the "Companion editor change" in ARCHITECTURE.md (editor side). Done in the editor (1.46.0). | [x] |
+| Mic track "had everything" in the editor | Measured: Encore's Microphone track contains only the voice (no correlation with any app audio). Cause is the editor's lumping/preview; fixed by the same editor change. | [x] |
 | Per-app split | Confirmed working: Spotify and Edge on separate tracks, fully separated; all tracks within 5 ms of each other, no drift over 63 s. | [x] |
 
 ## Found in testing (0.5.1, 2026-10-31)
@@ -64,7 +64,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Bookmarks: hotkey marks a moment, stored as MP4 chapters | Needs the companion editor to display them; agree format together (step 9+) | [ ] |
 | Full-session recording: auto-record whole match/session from game launch | Pairs with bookmarks | [ ] |
 | Microphone noise suppression (optional) | Raw mic track kept untouched | [ ] |
-| Custom bitrate option + expected size per minute beside Quality | Presets stay as the default | [ ] |
+| Custom bitrate option ("Set the bitrate myself" slider with preset marks, Mbps and MB/min) | Presets stay as the default; designed, next to build | [ ] |
 | Apps on a non-default sound device (e.g. Discord on a headset) get their own track | Today only apps on the default output are found | [ ] |
 | Discord: your user ID via Discord's local connection (hello message only; no login, nothing private) | Purpose to confirm with the companion editor side; needs a free Discord developer app | [ ] |
 | Lower suggested frame rate in setup for weaker graphics cards | Uses the PC specs collected for the performance log | [ ] |
