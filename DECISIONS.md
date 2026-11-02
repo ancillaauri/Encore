@@ -726,3 +726,20 @@ Agreed design for game detection (to build next):
 ## 2026-11-02: Settings sections spaced apart (0.9.25)
 - Each section in Settings now starts below a line, with more room above and below, and its
   heading is larger with a short accent bar, so the sections don't run together.
+
+## 2026-11-02: Settings reorganised; Save an Echo's hotkey can be changed in place (0.9.26)
+- Save an Echo's hotkey is its own part of the button, on the right: clicking it lets you
+  press a new key ("Esc to cancel" while it waits); clicking the rest saves an Echo. People
+  clicked the shown key expecting to change it.
+- No browser right-click menu anywhere (only clips and the game buttons have their own), and
+  the browser's reload, print and back/forward keys are off: a reload would reset the window.
+- Alt + F4 can't be a hotkey (it closes windows).
+- Echoes shows how big a saved Echo is, as "up to about": the most at the current settings;
+  real clips are usually smaller.
+- Settings: a new Echoes section (the switch, Keeps the last, the custom save length); Game
+  detection and Desktop Capture switches at the top of Games; Saving and Clips merged as Files
+  (with "Saved this session" for the clip rows); Start Encore as administrator moved to
+  Advanced, next to Priority Capture. The lock-game key in Games' text is the one actually set.
+- The version shows next to Encore in the title bar.
+- The hidden manual audio offset (always 0, no control) is removed. Sync is automatic, and any
+  track can be moved in the editor. Old settings files that still have it load normally.

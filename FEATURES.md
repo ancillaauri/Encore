@@ -75,6 +75,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 | Main Menu (Settings at top level), Sidebar naming, Priority Capture hideable from the sidebar | 0.9.21 | [x] |
 | Microphone found by name when its id changes; warning icon and menu when it isn't plugged in | 0.9.23 | [x] |
 | Clicking a clip: folder, video player or Clip Editor (Locate / Browse) | 0.9.24 | [x] |
+| Settings reorganised (Echoes, Files, Games switches), Save an Echo hotkey changeable in place, Echo size, version in title bar | 0.9.26 | [x] |
 
 ## Out of scope (decided, with reasons)
 

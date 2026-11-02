@@ -1,3 +1,24 @@
+## Encore 0.9.26 (beta), test build 47: tidier Settings, hotkey you can click
+
+### What's new
+- **Click the hotkey on Save an Echo to change it.** It shows "Esc to cancel" while it waits
+  for your keys. Clicking the rest of the button saves an Echo as before.
+- **Echoes shows how big each Echo is**, under Keeps the last.
+- **The version** shows next to Encore in the title bar.
+
+### Changed
+- Settings has an **Echoes** section, **Game detection** and **Desktop Capture** switches in
+  Games, **Files** (where recordings go, and what clicking a clip does), and **Start Encore as
+  administrator** under Advanced.
+- No more browser menu when you right-click, and the browser's reload and print keys do nothing.
+
+### Fixed
+- The lock-game key mentioned in Settings → Games is the one you've actually set.
+- Alt + F4 can no longer be chosen as a hotkey.
+
+### Install
+Update from inside Encore (Main Menu → Help → Update to 0.9.26).
+
 ## Encore 0.9.25 (beta), test build 46: easier to read Settings
 
 ### Changed
