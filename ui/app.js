@@ -1154,6 +1154,15 @@
   document.querySelectorAll('[data-update-mode]').forEach((o) =>
     o.addEventListener('click', async () => { await saveSetting('update_mode', o.dataset.updateMode); renderUpdate(); }));
 
+  // ---------- no browser menu ----------
+  // Right-clicking shows the browser's own menu (Back, Refresh, Print…) unless something here
+  // handles it: clips in Saved this session do. The browser's reload and print keys are off too.
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+  document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (k === 'r' || k === 'p')) || (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))) e.preventDefault();
+  });
+
   // ---------- app menu ----------
   menuButton($('menu-btn'), () => {
     const u = state.update || { status: 'none' };
@@ -1320,7 +1329,7 @@
     $('save-replay').disabled = !on || state.replayBusy;
     const key = s.hotkey_save_replay ? s.hotkey_save_replay.replace(/\+/g, ' + ') : '';
     const disk = sizeText(mbPerMinute(s.quality) * (s.replay_seconds + 6) / 60);
-    $('save-key').textContent = key;
+    if (!$('save-key').classList.contains('listening')) $('save-key').textContent = key || 'Set a hotkey';
     $('echo-btn').dataset.tip = on
       ? `Echoes: On. Keeping the last ${replayLength()}. Click to turn off.`
       : 'Echoes: Off. Click to keep the last few minutes, so you can save great moments after they happen.';
@@ -1484,7 +1493,7 @@
     document.querySelectorAll('[data-hotkey]').forEach((b) => {
       if (b.classList.contains('listening')) return;
       const v = s[b.dataset.hotkey] || '';
-      b.textContent = hotkeyText(v);
+      b.textContent = !v && b.classList.contains('savekey') ? 'Set a hotkey' : hotkeyText(v);
       b.classList.toggle('empty', !v);
     });
     document.querySelectorAll('[data-close-to-tray]').forEach((o) =>
@@ -1541,7 +1550,9 @@
     if (!key) return null; // a modifier on its own, or a key we don't support yet
     // Plain letters and numbers would fire while typing: they need a modifier. F-keys etc. don't.
     if (!mods.length && /^[A-Z0-9]$/.test(key)) return { error: 'Add Ctrl, Alt or Shift to that key, so it doesn\u2019t go off while you type.' };
-    return { combo: [...mods, key].join('+') };
+    const combo = [...mods, key].join('+');
+    if (combo === 'Alt+F4') return { error: 'Alt + F4 closes windows, so it can\u2019t be a hotkey.' };
+    return { combo };
   }
   async function saveHotkey(setting, combo) {
     await saveSetting(setting, combo);
@@ -1563,7 +1574,8 @@
     stopListening();
     listening = b;
     b.classList.add('listening');
-    b.textContent = 'Press the keys\u2026';
+    // The hotkey next to Save an Echo is small: just say how to back out.
+    b.textContent = b.classList.contains('savekey') ? 'Esc to cancel' : 'Press the keys\u2026';
   }));
   document.addEventListener('keydown', (e) => {
     if (!listening) return;

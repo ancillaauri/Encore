@@ -825,9 +825,6 @@ body.gd-game:not(.recording) #picks .pick.on, body.gd-game:not(.recording) #pick
 .echo-btn:has(input:disabled) { cursor: default; opacity: .5; }
 .echo-btn:has(.aswitch:focus-visible) { outline: 2px solid var(--acc); outline-offset: 1px; }
 .savecho { display: flex; align-items: center; justify-content: center; gap: 10px; }
-.savecho .kbd { font-size: 11px; font-weight: 600; color: var(--mute); padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, .06); }
-.savecho .kbd:empty { display: none; }
-.savecho:not(:disabled) .kbd { color: #c9ceff; background: rgba(138, 150, 255, .14); }
 
 /* Setup: Echoes */
 .echo-hero { display: grid; place-items: center; margin: 6px 0 4px; }
@@ -981,3 +978,10 @@ body.pcap-hidden .pcrow, body.pcap-hidden #rail-pcap { display: none; }
 .micwarn[hidden] { display: none; }
 .micwarn:hover, .micwarn.open { background: rgba(240, 178, 50, .16); }
 .micwarn svg { width: 19px; height: 19px; fill: none; stroke: #ffc94d; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 2px rgba(240, 178, 50, .95)) drop-shadow(0 0 6px rgba(240, 178, 50, .5)); }
+
+/* Save an Echo, with its hotkey as a separate part on the right: click the hotkey to change it */
+.saverow { display: flex; width: 100%; margin-top: 8px; }
+.saverow .savecho { flex: 1; min-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.savekey { flex: none; min-width: 96px; padding: 0 14px; font: inherit; font-size: 12.5px; font-weight: 600; color: #c9ceff; background: rgba(138, 150, 255, .14); border: 1px solid var(--line2); border-left: 1px solid rgba(138, 150, 255, .25); border-radius: 0 6px 6px 0; cursor: pointer; white-space: nowrap; transition: background .15s ease, color .15s ease; }
+.savekey:hover { background: rgba(138, 150, 255, .24); color: #e0e3ff; }
+.savekey.listening { color: #fff; background: rgba(88, 101, 242, .32); border-color: var(--acc); box-shadow: 0 0 8px rgba(88, 101, 242, .45); }

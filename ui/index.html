@@ -151,7 +151,10 @@
               <option value="1200">20 minutes</option>
             </select>
           </label>
-          <button type="button" class="btn sm wide savecho" id="save-replay" disabled><span>Save an Echo</span><span class="kbd" id="save-key"></span></button>
+          <div class="saverow">
+            <button type="button" class="btn sm savecho" id="save-replay" disabled><span>Save an Echo</span></button>
+            <button type="button" class="savekey" id="save-key" data-hotkey="hotkey_save_replay" data-tip="Click to change the hotkey"></button>
+          </div>
         </div>
 
         <div class="hero-mid">
