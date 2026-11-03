@@ -371,8 +371,9 @@
         const live = h('span', 'live');
         live.append(h('i'), document.createTextNode('Recording'));
         b.append(live);
-      } else if (m.primary && !cur) {
-        b.append(h('span', 'ps rec-tag', 'Primary · Recommended'));
+      } else if (m.primary) {
+        // Always shown, even while following (the highlight still says it's in use).
+        b.append(h('span', 'ps rec-tag', cur ? 'In use · Recommended' : 'Primary · Recommended'));
       } else {
         b.append(h('span', 'ps', cur ? 'In use' : `${m.width}×${m.height}`));
       }
