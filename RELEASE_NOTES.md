@@ -1,3 +1,19 @@
+## Encore 0.9.34 (beta), test build 55: no false "falling behind", primary monitor first
+
+### Fixed
+- **"Recording is falling behind" showed up with nothing running.** A screen where nothing
+  changes sends no new frames, and Encore took that for falling behind. It now only warns when
+  a game really is using all of your graphics card.
+- The warning no longer says "your game" when no game is open, and points to Settings →
+  Advanced for Priority Capture when it's hidden from the sidebar.
+
+### Changed
+- **Desktop Capture records your primary monitor by default**, and the picker recommends it.
+  Follow is still there. If you'd already picked a screen, nothing changes.
+
+### Install
+Update from inside Encore (Restart to update in the sidebar).
+
 ## Encore 0.9.33 (beta), test build 54: Echoes is now Replay
 
 ### Changed
