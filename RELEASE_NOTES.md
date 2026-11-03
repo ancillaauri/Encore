@@ -1,3 +1,12 @@
+## Encore 0.9.35 (beta), test build 56: Recommended stays on the primary monitor
+
+### Changed
+- The primary monitor keeps its **Recommended** label in the screen picker while you're on
+  Follow ("In use · Recommended" when it's the screen you're using).
+
+### Install
+Update from inside Encore (Restart to update in the sidebar).
+
 ## Encore 0.9.34 (beta), test build 55: no false "falling behind", primary monitor first
 
 ### Fixed
