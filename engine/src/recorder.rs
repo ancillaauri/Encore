@@ -381,7 +381,7 @@ fn watch_progress(
                 if let Some(start) = best {
                     // How far the video written is behind real time.
                     let lag = now.saturating_sub(start).saturating_sub(us.max(0) as u64 * 10);
-                    behind.check(lag, begun.elapsed(), index);
+                    behind.check(lag, us, begun.elapsed(), index);
                 }
                 let due = last_save_time.map(|t| t.elapsed() > Duration::from_secs(2)).unwrap_or(true);
                 if best.is_some() && best != last_saved && due {
@@ -406,8 +406,16 @@ fn watch_progress(
 /// catches up. The interface is told (once per capture part) only when it matters for Replay:
 /// still behind after 30 seconds, or more than 10 seconds behind. A short slip while a game
 /// loads catches up by itself.
+///
+/// A still screen is not falling behind: Windows sends no new frames while nothing on screen
+/// changes, so the video written stops while real time carries on. That gap is excused (see
+/// `excuse`), and so is the catching up once the screen changes again.
 #[derive(Default)]
 struct Behind {
+    /// The video written at the last report (microseconds), to see whether it moved.
+    last_us: Option<i64>,
+    /// Lag that built up while the screen was still (hns); shrinks as the video catches up.
+    excused: u64,
     /// When this slip began (time since the part started).
     since: Option<Duration>,
     logged: bool,
@@ -430,6 +438,20 @@ enum BehindNews {
 }
 
 impl Behind {
+    /// The part of `lag` that is really falling behind. `us`: the video written so far. While it
+    /// doesn't move the screen is still, so all of the lag is excused; once it moves again the
+    /// excuse shrinks with the lag as the video catches up, and only lag beyond it counts.
+    fn excuse(&mut self, lag: u64, us: i64) -> u64 {
+        let still = self.last_us == Some(us);
+        self.last_us = Some(us);
+        if still {
+            self.excused = lag;
+        } else {
+            self.excused = self.excused.min(lag);
+        }
+        lag - self.excused
+    }
+
     /// `lag`: how far behind real time (hns); `at`: time since the part started.
     fn step(&mut self, lag: u64, at: Duration) -> Vec<BehindNews> {
         let mut news = Vec::new();
@@ -457,7 +479,8 @@ impl Behind {
         news
     }
 
-    fn check(&mut self, lag: u64, at: Duration, index: usize) {
+    fn check(&mut self, lag: u64, us: i64, at: Duration, index: usize) {
+        let lag = self.excuse(lag, us);
         let priority = if platform::gpu_top() { "Priority Capture on" } else { "high priority" };
         for n in self.step(lag, at) {
             match n {
@@ -1264,5 +1287,43 @@ mod e2e_replay {
         assert_eq!(c.step(lag(4), s(4)), vec![BehindNews::Slipped(4)]);
         assert!(c.step(lag(4), s(29)).is_empty());
         assert_eq!(c.step(lag(4), s(30)), vec![BehindNews::Warn(4)]);
+    }
+
+    /// Feeds progress reports twice a second, as FFmpeg sends them: `video` is how much video was
+    /// written by each moment (seconds, both). Returns everything the interface was told.
+    fn told(video: impl Fn(f64) -> f64, secs: u64) -> Vec<BehindNews> {
+        let mut b = Behind::default();
+        let mut news = Vec::new();
+        for half in 0..secs * 2 {
+            let t = half as f64 / 2.0;
+            let us = (video(t) * 1e6) as i64;
+            let lag = ((t - video(t)) * 1e7).max(0.0) as u64;
+            let effective = b.excuse(lag, us);
+            news.extend(b.step(effective, Duration::from_secs_f64(t)).into_iter().filter(|n| matches!(n, BehindNews::Warn(_))));
+        }
+        news
+    }
+
+    #[test]
+    fn a_still_desktop_is_not_falling_behind() {
+        // Nothing changes on screen from 5 s to 125 s, so no frames arrive and the video stops.
+        let still = |t: f64| if t < 5.0 { t } else if t < 125.0 { 5.0 } else { t };
+        assert!(told(still, 200).is_empty());
+        // Then it catches up over a few seconds (the gap is filled with copies of the last frame).
+        let catch_up = |t: f64| if t < 5.0 { t } else if t < 125.0 { 5.0 } else { (5.0 + (t - 125.0) * 20.0).min(t) };
+        assert!(told(catch_up, 200).is_empty());
+        // A monitor where only the taskbar clock changes: one new frame a minute, each filling the
+        // gap. Up to 60 s "behind", then caught up, over and over (from a real report).
+        let clock_only = |t: f64| (t / 60.0).floor() * 60.0;
+        assert!(told(clock_only, 900).is_empty());
+    }
+
+    #[test]
+    fn a_game_using_the_whole_graphics_card_is_still_falling_behind() {
+        // Video written at 80% of real time: 12 s behind by a minute.
+        assert!(!told(|t| t * 0.8, 120).is_empty());
+        // The same after the screen sat still for a while first.
+        let after_still = |t: f64| if t < 30.0 { 2.0 } else { 2.0 + (t - 30.0) * 0.8 };
+        assert!(!told(after_still, 200).is_empty());
     }
 }

@@ -85,9 +85,11 @@ Video (step 3):
 
 Monitor selection (built in 0.5):
 - Game mode: not needed; capture follows the game window across monitors.
-- Desktop setting `monitor`: `follow` (default) records the monitor of the window last clicked on
-  (the focused window) and moves with it; `id:<monitor>` always records that monitor. Chosen in the
-  hologram row under the record button: the Follow tile, or a monitor to pin it (0.8.1).
+- Desktop setting `monitor`: `primary` (the default since 0.9.34) always records whichever monitor
+  is the primary one; `id:<monitor>` always records that monitor; `follow` records the monitor of
+  the window last clicked on (the focused window) and moves with it. Chosen in the hologram row
+  under the record button: a monitor (the primary one sets `primary`), or the Follow tile (0.8.1).
+  A choice saved before 0.9.34 is kept.
 - Focus rules (`platform::focus_rule`): Encore's own windows, Alt+Tab and Start are ignored; the
   desktop and taskbars use the monitor under the mouse; anything else uses its window's monitor.
   The focus must stay on the new monitor for 0.3 s before the recording moves.

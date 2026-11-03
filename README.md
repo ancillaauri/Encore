@@ -2,7 +2,7 @@
 
 A lightweight game and screen recorder for Windows 11, made as a pair with the companion clip editor.
 
-- **What to record:** Follow (the screen you click on), always one monitor, or Select Application
+- **What to record:** your primary monitor (recommended), always another monitor, Follow (the screen you click on), or Select Application
   (a single app's window)
 - **Replay:** Encore quietly keeps the last 30 seconds to 20 minutes, so you can save a great
   moment after it happens (Save a replay), or just the last 30 seconds, minute or a length you

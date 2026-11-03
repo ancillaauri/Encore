@@ -666,7 +666,8 @@ impl Engine {
         });
     }
 
-    /// Desktop mode: which monitor, per the "monitor" setting. Falls back to the primary monitor.
+    /// Desktop mode: which monitor, per the "monitor" setting: "primary", "follow" or "id:…".
+    /// Anything else, or a chosen monitor that isn't connected, records the primary monitor.
     fn pick_monitor(&self) -> Result<(Target, String, u32, u32, String), String> {
         let monitors = platform::list_monitors();
         if monitors.is_empty() {

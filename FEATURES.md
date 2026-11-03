@@ -9,7 +9,7 @@ Out-of-scope items are listed at the bottom with the reason, so they are not re-
 |---|---|---|
 | Manual recording (start/stop) | 3 | [x] |
 | Capture modes: Game window / Desktop (game detection, and Desktop Capture on or off) | 3, 6 | [x] 0.9 |
-| Monitor selection for Desktop mode: follow the screen you click on (default) or always one monitor | 3 | [x] 0.5 |
+| Monitor selection for Desktop mode: the primary monitor (default since 0.9.34), always one monitor, or follow the screen you click on | 3 | [x] 0.5 |
 | "What's being recorded" indicator (tray + window: status panel, tray label) | 6 | [x] |
 | Codec choice: H.264 default, HEVC and AV1 optional (HEVC/AV1 not yet tried on a real PC) | 3 | [~] |
 | Quality settings: resolution (native/downscaled), frame rate up to 240, quality presets that scale with resolution and frame rate | 3 | [x] 0.9.19 |

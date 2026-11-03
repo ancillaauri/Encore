@@ -11,7 +11,7 @@
     monitors: [],
     windows: [],
     inputs: [],
-    source: 'desktop', // 'desktop' (Follow or a monitor) or 'window' (Select Application)
+    source: 'desktop', // 'desktop' (a monitor or Follow) or 'window' (Select Application)
     windowHandle: 0,
     windowTitle: '',
     focusMonitor: null, // id of the monitor last clicked on (what "follow" records)
@@ -311,8 +311,15 @@
   $('default-work').addEventListener('click', () => setWorkDir(''));
 
   // ---------- what will be / is being recorded ----------
-  const following = () => !state.settings || state.settings.monitor === 'follow';
-  const pinnedId = () => (state.settings && state.settings.monitor.startsWith('id:') ? state.settings.monitor.slice(3) : null);
+  // The monitor setting: "primary" (the default: whichever monitor is the primary one), "id:…"
+  // (always that monitor) or "follow" (the screen you click on).
+  const onPrimary = () => !state.settings || state.settings.monitor === 'primary';
+  const primaryMonitor = () => state.monitors.find((m) => m.primary) || state.monitors[0];
+  // The monitor always recorded: the chosen one, or the primary. None while following.
+  const pinnedId = () => {
+    if (onPrimary()) { const m = primaryMonitor(); return m ? m.id : null; }
+    return state.settings.monitor.startsWith('id:') ? state.settings.monitor.slice(3) : null;
+  };
   // Windows' own number for a monitor ("\\.\DISPLAY2" is 2).
   const displayNo = (m) => { const n = /(\d+)\s*$/.exec(m.device || ''); return n ? n[1] : '?'; };
   const monitorById = (id) => state.monitors.find((m) => m.id === id);
@@ -321,7 +328,7 @@
   function targetMonitor() {
     const pin = pinnedId();
     if (pin) return monitorById(pin);
-    return monitorById(state.focusMonitor) || state.monitors.find((m) => m.primary) || state.monitors[0];
+    return monitorById(state.focusMonitor) || primaryMonitor();
   }
 
   function describeTarget() {
@@ -364,10 +371,14 @@
         const live = h('span', 'live');
         live.append(h('i'), document.createTextNode('Recording'));
         b.append(live);
+      } else if (m.primary && !cur) {
+        b.append(h('span', 'ps rec-tag', 'Primary · Recommended'));
       } else {
-        b.append(h('span', 'ps', cur ? 'In use' : `${m.width}×${m.height}${m.primary ? ' · Primary' : ''}`));
+        b.append(h('span', 'ps', cur ? 'In use' : `${m.width}×${m.height}`));
       }
-      b.title = `Always record ${m.name} (${m.width}×${m.height}${m.primary ? ', primary' : ''})`;
+      b.title = m.primary
+        ? `Always record your primary monitor, now ${m.name} (${m.width}×${m.height})`
+        : `Always record ${m.name} (${m.width}×${m.height})`;
       b.onclick = () => pickMonitor(m);
       box.append(b);
     }
@@ -390,6 +401,7 @@
     else if (gameActive()) note = `${state.phase === 'recording' ? 'Recording' : 'Records'} ${gameActive().name}.${gamesOnly() ? ' Encore waits for the next game when it closes.' : ' The highlighted screen is used again when it closes.'}`;
     else if (gameWaiting()) note = 'Game detection is on: the green screen is recorded until a game opens.';
     else if (gamesOnly()) note = '';
+    else if (onPrimary()) note = 'Always records your primary monitor. Pick Follow to record whichever screen you click on.';
     else if (pin) note = 'Always records this monitor. Pick Follow to record whichever screen you click on.';
     else note = 'Records the screen you click on and moves with you. Pick a monitor to always record that one.';
     $('pick-note').textContent = note;
@@ -398,7 +410,7 @@
       ? 'Encore only records games. Turn on Desktop Capture to record your screen, or keep Replay running, when no game is open.'
       : s && s.game_detection
         ? 'When no game is open, Encore records the screen you choose below (recordings and Replay). Games take over when they start.'
-        : 'Encore records the screen you choose below, for recordings and Replay. <strong>Follow</strong> is recommended.';
+        : 'Encore records the screen you choose below, for recordings and Replay. <strong>Your primary monitor</strong> is recommended.';
     const dc = !s || !!s.desktop_capture;
     $('dc-on').checked = dc;
     $('dc-on').disabled = !!(s && !s.game_detection) || state.phase !== 'idle';
@@ -434,7 +446,8 @@
   }
   try { new ResizeObserver(() => fitPicks()).observe(document.querySelector('.stage')); } catch (e) { /* older engine */ }
 
-  // Picking a monitor always records that one; Follow records the screen you click on.
+  // Picking a monitor always records that one (the primary: whichever is primary at the time);
+  // Follow records the screen you click on.
   async function pickScreen(value) {
     if (state.phase !== 'idle') return;
     const wasWindow = state.source === 'window';
@@ -443,7 +456,7 @@
     else if (wasWindow) restartReplay();
     renderStage();
   }
-  const pickMonitor = (m) => pickScreen(`id:${m.id}`);
+  const pickMonitor = (m) => pickScreen(m.primary ? 'primary' : `id:${m.id}`);
   $('pick-follow').addEventListener('click', () => pickScreen('follow'));
 
   async function pickApp() {
@@ -2303,9 +2316,11 @@
     const key = game || 'desktop';
     if (behindToldFor === key) return;
     behindToldFor = key;
-    const who = game || 'Your game';
-    const text = `${who} is using all of your graphics card, so Encore can’t keep up. Capping the game’s frame rate a little below your monitor’s usually fixes it.`;
-    toast(`Recording is falling behind. ${text}${data && data.top_priority ? '' : ' Priority Capture (bottom left) fixes it.'}`, 'warning', 15000);
+    const text = game
+      ? `${game} is using all of your graphics card, so Encore can’t keep up. Capping the game’s frame rate a little below your monitor’s refresh rate usually fixes it.`
+      : 'Your graphics card is fully in use, so Encore can’t keep up.';
+    const where = pcapShown() ? 'bottom left' : 'Settings → Advanced';
+    toast(`Recording is falling behind. ${text}${data && data.top_priority ? '' : ` Priority Capture (${where}) fixes it.`}`, 'warning', 15000);
     notify('problem', 'Recording is falling behind', text);
   }
 

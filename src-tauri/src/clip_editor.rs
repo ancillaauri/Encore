@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 /// The editor's program and its name in Windows' list of installed apps: Backstage first, then
 /// its old name (its installer removes Clip Editor, but an older install may still be there).
 const EXES: [&str; 2] = ["Backstage.exe", "Clip Editor.exe"];
+#[cfg(windows)]
 const NAMES: [&str; 2] = ["Backstage", "Clip Editor"];
 const FOLDERS: [&str; 4] = ["backstage", "Backstage", "clip-editor", "Clip Editor"];
 

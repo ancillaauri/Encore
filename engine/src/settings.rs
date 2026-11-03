@@ -61,8 +61,9 @@ pub struct Settings {
     pub resolution: Resolution,
     pub quality: Quality,
     pub capture_cursor: bool,
-    /// Desktop mode monitor: "follow" (the monitor of the window you click on, switching during a
-    /// recording) or "id:<stable monitor id>" (always that monitor).
+    /// Desktop mode monitor: "primary" (the default: whichever monitor is the primary one),
+    /// "id:<stable monitor id>" (always that monitor) or "follow" (the monitor of the window you
+    /// click on, switching during a recording).
     pub monitor: String,
     /// Record everything you hear as the "Full mix" track.
     pub audio_full_mix: bool,
@@ -196,6 +197,10 @@ pub const CUSTOM_SECONDS: std::ops::RangeInclusive<u32> = 5..=1200;
 /// Replay lengths offered: 30 s to 20 minutes.
 pub const REPLAY_SECONDS: [u32; 7] = [30, 60, 120, 300, 600, 900, 1200];
 
+fn monitor_ok(m: &str) -> bool {
+    m == "primary" || m == "follow" || (m.starts_with("id:") && m.len() > 3)
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Settings {
@@ -205,7 +210,7 @@ impl Default for Settings {
             resolution: Resolution::Native,
             quality: Quality::Ultra,
             capture_cursor: true,
-            monitor: "follow".into(),
+            monitor: "primary".into(),
             audio_full_mix: true,
             audio_mic: true,
             mic_device: "default".into(),
@@ -370,9 +375,8 @@ impl Settings {
         if updated.mic_device.trim().is_empty() {
             return Err("Microphone cannot be empty".into());
         }
-        let m = updated.monitor.as_str();
-        if !(m == "follow" || (m.starts_with("id:") && m.len() > 3)) {
-            return Err("Monitor must be follow or a monitor id".into());
+        if !monitor_ok(&updated.monitor) {
+            return Err("Monitor must be primary, follow or a monitor id".into());
         }
         Ok(updated)
     }
@@ -437,9 +441,9 @@ impl Settings {
         if !self.setup_done && paths::legacy_default_dirs().iter().any(|d| d.to_string_lossy() == self.output_dir) {
             self.output_dir = paths::default_output_dir().to_string_lossy().into_owned();
         }
-        // Before 0.5: "primary" (the old default) and "mouse" (chosen at start only).
-        if !(self.monitor == "follow" || (self.monitor.starts_with("id:") && self.monitor.len() > 3)) {
-            self.monitor = "follow".into();
+        // Before 0.5 there was also "mouse" (chosen at start only).
+        if !monitor_ok(&self.monitor) {
+            self.monitor = "primary".into();
         }
         self
     }
@@ -510,6 +514,7 @@ mod tests {
         assert!(s.apply_patch(&json!({"monitor": "left"})).is_err());
         assert!(s.apply_patch(&json!({"monitor": "mouse"})).is_err());
         assert!(s.apply_patch(&json!({"monitor": "follow"})).is_ok());
+        assert!(s.apply_patch(&json!({"monitor": "primary"})).is_ok());
         assert!(s.apply_patch(&json!({"output_dir": "  "})).is_err());
         assert!(s.apply_patch(&json!([1, 2])).is_err());
         assert!(s.apply_patch(&json!({"audio_mic": "yes"})).is_err());
@@ -533,10 +538,15 @@ mod tests {
         let s: Settings = serde_json::from_str(r#"{"fps":30}"#).unwrap();
         assert_eq!(s.fps, 30);
         assert_eq!(s.codec, Codec::H264);
-        assert_eq!(s.monitor, "follow");
-        for old in ["primary", "mouse", ""] {
+        assert_eq!(s.monitor, "primary");
+        for old in ["mouse", ""] {
             let o: Settings = serde_json::from_value(serde_json::json!({ "monitor": old })).unwrap();
-            assert_eq!(o.normalised().monitor, "follow");
+            assert_eq!(o.normalised().monitor, "primary");
+        }
+        // A choice already saved stays as it was.
+        for kept in ["follow", "primary"] {
+            let o: Settings = serde_json::from_value(serde_json::json!({ "monitor": kept })).unwrap();
+            assert_eq!(o.normalised().monitor, kept);
         }
         let o: Settings = serde_json::from_value(serde_json::json!({ "monitor": "id:abc" })).unwrap();
         assert_eq!(o.normalised().monitor, "id:abc");

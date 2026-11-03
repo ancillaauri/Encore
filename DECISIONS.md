@@ -873,3 +873,15 @@ Agreed design for game detection (to build next):
   `replay`). The setting `notify_echo` is now `notify_replay`; the old name is still read, so
   nobody's choice is lost. The notification overlay also still accepts the old kind `echo`.
 
+
+## 2026-11-03: The primary monitor is the default, and a still screen isn't "falling behind"
+- Desktop Capture now records the primary monitor by default, and the picker recommends it
+  (`monitor: "primary"`: whichever monitor Windows calls primary at the time). Follow stays as
+  a choice. A choice already saved is kept.
+- "Recording is falling behind" fired with nothing running. Windows sends no new frames while a
+  screen doesn't change, so the video written stops while real time goes on: on a monitor where
+  only the taskbar clock changed, that read as up to 60 s behind, every minute. Encore now excuses
+  any lag built up while the video isn't moving (FFmpeg reports progress every 0.05 s, so a
+  still screen shows as no movement), and the catching up after it. A game really using the
+  whole graphics card still warns. FFmpeg's newer `dup_frames` option would also fix this, but
+  FFmpeg 9.0, which Encore ships, doesn't have it.
