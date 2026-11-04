@@ -3,6 +3,7 @@
 use crate::paths;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 /// The range for "Set the bitrate myself", in Mbps: from what still looks right at 720p 30 fps
@@ -118,6 +119,9 @@ pub struct Settings {
     /// Program file names always / never treated as games (e.g. "MyGame.exe").
     pub games_always: Vec<String>,
     pub games_never: Vec<String>,
+    /// Names chosen for games, by program file name in lower case ("javaw.exe" -> "Minecraft").
+    /// Used instead of the name Encore works out, for showing and for naming files.
+    pub game_renames: BTreeMap<String, String>,
     /// Hotkeys: lock onto the game in front; move to the next open game.
     pub hotkey_lock_game: String,
     pub hotkey_next_game: String,
@@ -239,6 +243,7 @@ impl Default for Settings {
             game_end: "continue".into(),
             games_always: Vec::new(),
             games_never: Vec::new(),
+            game_renames: BTreeMap::new(),
             hotkey_lock_game: "Ctrl+Alt+G".into(),
             hotkey_next_game: "Ctrl+Alt+N".into(),
             desktop_capture: true,
@@ -334,8 +339,19 @@ impl Settings {
         if !["continue", "stop"].contains(&updated.game_end.as_str()) {
             return Err("When a game closes must be continue or stop".into());
         }
-        if updated.games_always.len() > 200 || updated.games_never.len() > 200 {
+        if updated.games_always.len() > 200 || updated.games_never.len() > 200 || updated.game_renames.len() > 200 {
             return Err("That list is too long".into());
+        }
+        for (exe, name) in &updated.game_renames {
+            if exe.trim().is_empty() || exe.chars().any(|c| c.is_control()) || exe.len() > 260 {
+                return Err("A renamed game needs its program's file name".into());
+            }
+            if name.trim().is_empty() {
+                return Err("A game's name can't be empty".into());
+            }
+            if name.chars().count() > 60 || name.chars().any(|c| c.is_control()) {
+                return Err("A game's name must be one line of at most 60 characters".into());
+            }
         }
         for k in [&updated.hotkey_save_replay, &updated.hotkey_save_30s, &updated.hotkey_save_60s, &updated.hotkey_save_custom, &updated.hotkey_lock_game, &updated.hotkey_next_game] {
             if k.len() > 64 {

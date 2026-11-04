@@ -398,6 +398,9 @@ impl Engine {
         updated.save()?;
         platform::set_gpu_top(updated.gpu_realtime);
         crate::denoise::set(&updated.mic_denoise);
+        if updated.game_renames != self.settings.game_renames {
+            self.game_names.clear(); // names are worked out again, with the new choices
+        }
         let changed = updated.gpu_realtime != self.settings.gpu_realtime;
         if changed {
             log(&format!("Priority Capture {}", if updated.gpu_realtime { "on" } else { "off" }));
@@ -775,6 +778,24 @@ impl Engine {
         }
     }
 
+    /// A game's name: the one chosen for it in Settings, else the one Encore works out (kept per
+    /// process, as reading it takes a moment). A runtime's (Java's) is worked out again each time,
+    /// as its window's title, which names the game, can change after it opens.
+    fn name_of(&mut self, w: &platform::TopWindow) -> String {
+        if let Some(name) = self.settings.game_renames.get(&w.exe.to_ascii_lowercase()) {
+            let name = name.trim().to_string();
+            self.game_names.insert(w.pid, name.clone());
+            return name;
+        }
+        if let Some(n) = self.game_names.get(&w.pid).filter(|_| !games::is_runtime(&w.exe)) {
+            return n.clone();
+        }
+        let description = if games::is_runtime(&w.exe) { String::new() } else { platform::app_display_name(w.pid) };
+        let n = games::game_name(w, &description);
+        self.game_names.insert(w.pid, n.clone());
+        n
+    }
+
     /// The game being played, whether or not game detection is on: detected games, or (with
     /// detection off) open windows Encore knows are games (not just ones that fill the screen).
     fn game_being_played(&mut self) -> Option<String> {
@@ -788,14 +809,8 @@ impl Engine {
             .filter(|w| matches!(games::classify(w, &self.settings.games_always, &self.settings.games_never), Some(games::Why::Always | games::Why::Known | games::Why::Library)))
             .collect();
         let w = games.iter().find(|w| w.handle == front).or_else(|| games.first())?; // else the one used most recently (top of the window order)
-        let name = match self.game_names.get(&w.pid) {
-            Some(n) => n.clone(),
-            None => {
-                let n = games::game_name(w, &platform::app_display_name(w.pid));
-                self.game_names.insert(w.pid, n.clone());
-                n
-            }
-        };
+        let w = w.clone();
+        let name = self.name_of(&w);
         self.game_exes.insert(name.clone(), w.exe.clone());
         Some(name)
     }
@@ -1016,15 +1031,11 @@ impl Engine {
                     continue;
                 }
             }
-            let name = match self.game_names.get(&w.pid) {
-                Some(n) => n.clone(),
-                None => {
-                    let n = games::game_name(&w, &platform::app_display_name(w.pid));
-                    log(&format!("game found: {n} ({}, {:?})", w.exe, why));
-                    self.game_names.insert(w.pid, n.clone());
-                    n
-                }
-            };
+            let new = !self.game_names.contains_key(&w.pid);
+            let name = self.name_of(&w);
+            if new {
+                log(&format!("game found: {name} ({}, {:?})", w.exe, why));
+            }
             found.push((w, name, why));
         }
         self.fullscreen_seen.retain(|h, _| still_fullscreen.contains(h));

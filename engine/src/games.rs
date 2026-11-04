@@ -124,7 +124,7 @@ pub fn classify(w: &TopWindow, always: &[String], never: &[String]) -> Option<Wh
     if NOT_GAMES.contains(&exe.as_str()) {
         return None;
     }
-    if KNOWN_GAMES.iter().any(|(e, _)| *e == exe) {
+    if KNOWN_GAMES.iter().any(|(e, _)| *e == exe) || title_game(w).is_some() {
         return Some(Why::Known);
     }
     let path = w.path.to_ascii_lowercase();
@@ -138,12 +138,36 @@ pub fn classify(w: &TopWindow, always: &[String], never: &[String]) -> Option<Wh
     None
 }
 
+/// Programs that run games written for them (Java runs Minecraft), whose own name and
+/// description say nothing about the game: the window's title does.
+const RUNTIMES: &[&str] = &["javaw.exe", "java.exe"];
+
+pub fn is_runtime(exe: &str) -> bool {
+    RUNTIMES.iter().any(|r| r.eq_ignore_ascii_case(exe))
+}
+
+/// A game known by its window's title, run by a runtime: Minecraft's window is called
+/// "Minecraft 1.21.4" or "Minecraft* 1.21.4 - Singleplayer", whichever launcher started it.
+fn title_game(w: &TopWindow) -> Option<&'static str> {
+    (is_runtime(&w.exe) && w.title.trim_start().starts_with("Minecraft")).then_some("Minecraft")
+}
+
 /// The name to show and to name files and folders after. `description` is the program's own
 /// description (e.g. "League of Legends (TM) Client"), if it has one.
 pub fn game_name(w: &TopWindow, description: &str) -> String {
     let exe = w.exe.to_ascii_lowercase();
     if let Some((_, name)) = KNOWN_GAMES.iter().find(|(e, _)| *e == exe) {
         return (*name).to_string();
+    }
+    if let Some(name) = title_game(w) {
+        return name.to_string();
+    }
+    if is_runtime(&exe) {
+        // "OpenJDK Platform binary" names Java, not the game: the window's title is better.
+        let from_title = clean_name(&w.title);
+        if !from_title.is_empty() {
+            return from_title;
+        }
     }
     if let Some(name) = steam_name(Path::new(&w.path)) {
         return name;
@@ -482,5 +506,25 @@ mod tests {
         w.update(vec![(splash.clone(), "G".into(), Why::Known), (main.clone(), "G".into(), Why::Known)], 0);
         assert_eq!(w.games.len(), 1);
         assert_eq!(w.games[0].handle, 2);
+    }
+
+    #[test]
+    fn minecraft_is_found_and_named_from_its_window() {
+        let mc = |title: &str, exe: &str| TopWindow { title: title.into(), ..win(9, 90, exe, r"C:\Users\a\AppData\Roaming\PrismLauncher\java\bin\javaw.exe") };
+        for title in ["Minecraft 1.21.4", "Minecraft* 1.21.4 - Singleplayer", "Minecraft* 1.20.1 - Multiplayer (3rd-party Server)"] {
+            let w = mc(title, "javaw.exe");
+            assert_eq!(classify(&w, &[], &[]), Some(Why::Known), "{title}");
+            assert_eq!(game_name(&w, "OpenJDK Platform binary"), "Minecraft");
+        }
+        // Java running something else isn't a game on its own, and is named from its window.
+        let other = mc("Some Tool", "javaw.exe");
+        assert_eq!(classify(&other, &[], &[]), None);
+        assert_eq!(game_name(&other, "OpenJDK Platform binary"), "Some Tool");
+        // Added as a game by hand: still named from its window, never "OpenJDK Platform binary".
+        assert_eq!(classify(&other, &["javaw.exe".into()], &[]), Some(Why::Always));
+        // A program called Minecraft that isn't Java goes the usual way.
+        assert_eq!(classify(&mc("Minecraft", "notepad.exe"), &[], &[]), None);
+        // Never a game still wins.
+        assert_eq!(classify(&mc("Minecraft 1.21.4", "javaw.exe"), &[], &["javaw.exe".into()]), None);
     }
 }

@@ -908,3 +908,15 @@ Agreed design for game detection (to build next):
   `encore_markers`, `encore_monitor`.
 - The ID is made from the system's random hashing seed, the time and a counter, rather than
   adding a crate for it.
+
+## 2026-11-04: Minecraft is found by its window, and games can be renamed
+- Java games were named "OpenJDK Platform binary" (Java's own description) and Minecraft wasn't
+  found at all: it runs in a window, through Java, from whichever launcher. Java (`javaw.exe`,
+  `java.exe`) is now a "runtime": its games are named after their window, and a Java window whose
+  title starts with "Minecraft" is a known game, named Minecraft (vanilla, Prism Launcher, mods,
+  single and multiplayer titles alike).
+- Any game can be renamed (right-click it under the screens → Rename), kept in the setting
+  `game_renames` by program file name. The name is used on screen and for clip folders and
+  files from then on; clips already saved keep theirs. Settings → Games lists the names chosen,
+  each with × to go back to Encore's. A rename is by program, so renaming `javaw.exe` names
+  every Java game that way.

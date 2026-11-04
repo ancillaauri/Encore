@@ -2235,8 +2235,11 @@
         b.addEventListener('click', () => lockGame(isLocked ? null : game.pid));
         b.addEventListener('contextmenu', (e) => {
           e.preventDefault();
+          const renamed = !!renameOf(game.exe);
           openMenu(e.clientX, e.clientY, [
             { text: isLocked ? 'Unlock' : 'Record this game', run: () => lockGame(isLocked ? null : game.pid) },
+            { text: 'Rename…', run: () => startGameRename(b, game) },
+            ...(renamed ? [{ text: 'Use Encore’s name', run: () => setGameName(game.exe, '') }] : []),
             '-',
             { text: `Never a game (${game.exe})`, run: () => addGameToList('games_never', game.exe) },
           ]);
@@ -2418,6 +2421,60 @@
         box.append(chip);
       }
     }
+    const names = $('games-renamed');
+    names.textContent = '';
+    const renames = Object.entries(s.game_renames || {});
+    if (!renames.length) names.append(h('span', 'gb-empty', 'None'));
+    for (const [exe, name] of renames) {
+      const chip = h('span', 'lchip', `${name} (${exe})`);
+      const x = h('button', 'lx');
+      x.type = 'button';
+      x.setAttribute('aria-label', `Use Encore’s name for ${exe}`);
+      x.title = 'Use Encore’s name again';
+      x.textContent = '\u00d7';
+      x.addEventListener('click', () => setGameName(exe, ''));
+      chip.append(x);
+      names.append(chip);
+    }
+  }
+  // Names chosen for games, by program (lower case): shown and used for files instead of Encore's.
+  const renameOf = (exe) => (state.settings && state.settings.game_renames || {})[String(exe).toLowerCase()];
+  async function setGameName(exe, name) {
+    if (!state.settings || !exe) return;
+    const renames = { ...(state.settings.game_renames || {}) };
+    const key = exe.toLowerCase();
+    const clean = name.replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (clean) renames[key] = clean; else delete renames[key];
+    await saveSetting('game_renames', renames); // says so itself if it couldn't
+    renderGames();
+    if ((renameOf(exe) || '') !== clean) return;
+    toast(clean ? `${exe} is now called ${clean}. New clips of it are saved under that name.` : `${exe} uses Encore’s name again.`, 'ok', 5000);
+  }
+  // Renames a game in place, on its chip under the screens: Enter saves, Escape cancels.
+  function startGameRename(chip, game) {
+    const input = h('input', 'rinput');
+    input.type = 'text';
+    input.maxLength = 60;
+    input.value = game.name;
+    input.setAttribute('aria-label', `New name for ${game.name}`);
+    chip.replaceChildren(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const finish = (save) => {
+      if (done) return;
+      done = true;
+      const wanted = input.value.trim();
+      if (save && wanted && wanted !== game.name) setGameName(game.exe, wanted);
+      else renderGames();
+    };
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') finish(true);
+      if (e.key === 'Escape') finish(false);
+    });
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('blur', () => finish(true));
   }
   async function addGameToList(key, exe) {
     if (!state.settings || !exe) return;
