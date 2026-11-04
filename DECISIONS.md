@@ -885,3 +885,14 @@ Agreed design for game detection (to build next):
   still screen shows as no movement), and the catching up after it. A game really using the
   whole graphics card still warns. FFmpeg's newer `dup_frames` option would also fix this, but
   FFmpeg 9.0, which Encore ships, doesn't have it.
+
+## 2026-11-04: Files say whether they're a replay or a recording, and which game
+- The clip editor asked to tell replays from recordings. Every saved file now carries
+  `encore_kind` (`replay` or `recording`) and, when it's of a game, `encore_game` (the editor
+  groups by it instead of the folder name). Names and folders are unchanged; no `.json` file next
+  to each clip (it would clutter the folder and get lost when a video is moved on its own).
+- Written with `-movflags +use_metadata_tags`: without it, MP4 drops tags of our own without a
+  word (checked). Audio track names come through the same way with it.
+- `rec-format` stays at 2: the tags are extra, nothing about the layout changed, and the editor
+  reads files either way. Older files, and recovered ones, have no tags; the editor shows those
+  under Recordings.

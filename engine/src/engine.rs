@@ -12,7 +12,7 @@ use crate::recorder::{self, Active, Saved};
 use crate::settings::{Codec, Settings};
 use serde::Serialize;
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -94,6 +94,8 @@ pub struct Engine {
     no_game_since: Option<Instant>,
     /// Names already worked out for each game process (reading them takes a moment).
     game_names: HashMap<u32, String>,
+    /// Names recorded as games this session: a saved file named after one is tagged with it.
+    game_labels: HashSet<String>,
     /// What the interface last heard about games (to send updates only when something changes).
     games_sent: String,
     /// What the current capture was started for: "desktop" (Follow / a monitor) or "window"
@@ -200,6 +202,7 @@ impl Engine {
             last_game_scan: None,
             no_game_since: None,
             game_names: HashMap::new(),
+            game_labels: HashSet::new(),
             games_sent: String::new(),
             session_source: "desktop".into(),
             replay_waiting: false,
@@ -482,6 +485,7 @@ impl Engine {
                 // The output size is set once, from the screen, so switching to and from the
                 // game doesn't change it (the game is scaled to fit if it's windowed).
                 let (mw, mh) = self.pick_monitor().map(|m| (m.2, m.3)).unwrap_or((w, h));
+                self.game_labels.insert(g.name.clone());
                 (Target::Window { handle: g.handle }, g.name.clone(), mw.max(w), mh.max(h), format!("Game: {}", g.name))
             }
             "desktop" => self.pick_monitor()?,
@@ -643,8 +647,10 @@ impl Engine {
         if replay {
             send_event("replay_saving", json!({ "seconds": (to.saturating_sub(from) + 5_000_000) / 10_000_000 }));
         }
+        let game = self.game_of(&label);
+        let tags = if replay { ffmpeg::Tags::replay(game) } else { ffmpeg::Tags::recording(game) };
         std::thread::spawn(move || {
-            let result = recorder::save_window(&ffmpeg, &dir, &snapshot, from, to, &out_path);
+            let result = recorder::save_window(&ffmpeg, &dir, &snapshot, from, to, &out_path, &tags);
             {
                 let mut p = pins.lock().unwrap();
                 if let Some(i) = p.iter().position(|&x| x == from) {
@@ -727,12 +733,17 @@ impl Engine {
                 }
                 let label = active.label.clone();
                 send_event("status", json!({ "state": "saving" }));
-                let saved = active.stop_and_save(&self.ffmpeg);
+                let saved = active.stop_and_save(&self.ffmpeg, &ffmpeg::Tags::recording(self.game_of(&label)));
                 thumbnail_later(&self.ffmpeg, &saved);
                 report_saved(saved, &label, false);
             }
             None => {}
         }
+    }
+
+    /// The game a file named `label` is of, if that name was recorded as a game.
+    fn game_of(&self, label: &str) -> Option<String> {
+        self.game_labels.contains(label).then(|| label.to_string())
     }
 
     /// A save of the screen ("Desktop") while a game is open goes in that game's folder, named
@@ -745,6 +756,7 @@ impl Engine {
         match self.game_being_played() {
             Some(game) => {
                 log(&format!("screen recording saved while {game} is open: saving it in {game}'s folder"));
+                self.game_labels.insert(game.clone());
                 game
             }
             None => label,
@@ -1061,6 +1073,7 @@ impl Engine {
         match (self.current_game(), current) {
             (Some(g), Target::Window { handle }) if handle == g.handle => {}
             (Some(g), _) => {
+                self.game_labels.insert(g.name.clone());
                 if self.switch_capture(Target::Window { handle: g.handle }, &g.name) {
                     log(&format!("game: recording {}", g.name));
                     self.focus_candidate = None;
@@ -1216,7 +1229,7 @@ impl Engine {
             let reason = if detail.is_empty() { String::new() } else { format!(" FFmpeg said: {detail}") };
             send_event("warning", json!({ "message": format!("Recording stopped unexpectedly (for example the window closed). Saving what was captured.{reason}") }));
             let label = active.label.clone();
-            let saved = active.stop_and_save(&self.ffmpeg);
+            let saved = active.stop_and_save(&self.ffmpeg, &ffmpeg::Tags::recording(self.game_of(&label)));
             thumbnail_later(&self.ffmpeg, &saved);
             report_saved(saved, &label, false);
         }
@@ -1271,7 +1284,8 @@ impl Engine {
             log(&format!("recovering {}", dir.display()));
             let out_dir = PathBuf::from(&self.settings.output_dir);
             let out_path = recorder::output_path(&out_dir, "Recovered", platform::local_time());
-            report_saved(recorder::finalise(&self.ffmpeg, &dir, &out_path, 0), "Recovered", true);
+            // Encore can't tell what a recovered file was, so it isn't tagged.
+            report_saved(recorder::finalise(&self.ffmpeg, &dir, &out_path, 0, &ffmpeg::Tags::default()), "Recovered", true);
         }
     }
 

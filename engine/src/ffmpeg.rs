@@ -297,11 +297,29 @@ pub struct AudioOut {
     pub files: Vec<PathBuf>,
 }
 
+/// What a saved file is, written into it as tags for the clip editor: `encore_kind` ("replay" or
+/// "recording") and `encore_game` (the game's name, when it was a game). A file recovered after a
+/// crash has neither, as Encore can't tell.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct Tags {
+    pub kind: Option<&'static str>,
+    pub game: Option<String>,
+}
+
+impl Tags {
+    pub fn replay(game: Option<String>) -> Tags {
+        Tags { kind: Some("replay"), game }
+    }
+    pub fn recording(game: Option<String>) -> Tags {
+        Tags { kind: Some("recording"), game }
+    }
+}
+
 /// Joins video segments (listed in `list_file`) without re-encoding them, and attaches the audio
 /// tracks in order (encoded to AAC). `audio_skip` seconds are cut from the start of every audio
 /// file so audio and video start at the same moment. The first audio track is the default one
 /// players use.
-pub fn finalise_args(list_file: &Path, audio: &[AudioOut], audio_skip: f64, out: &Path) -> Vec<String> {
+pub fn finalise_args(list_file: &Path, audio: &[AudioOut], audio_skip: f64, out: &Path, tags: &Tags) -> Vec<String> {
     let mut a: Vec<String> = vec![
         "-hide_banner".into(),
         "-loglevel".into(),
@@ -400,14 +418,15 @@ pub fn finalise_args(list_file: &Path, audio: &[AudioOut], audio_skip: f64, out:
         // Audio is padded to the moment recording stopped; stop at whichever stream ends first.
         a.push("-shortest".into());
     }
-    a.extend([
-        "-movflags".into(),
-        "+faststart".into(),
-        "-metadata".into(),
-        "comment=rec-format:2".into(),
-        "-y".into(),
-        out.to_string_lossy().into_owned(),
-    ]);
+    // use_metadata_tags: without it, MP4 files silently drop tags of Encore's own.
+    a.extend(["-movflags".into(), "+faststart+use_metadata_tags".into(), "-metadata".into(), "comment=rec-format:2".into()]);
+    if let Some(kind) = tags.kind {
+        a.extend(["-metadata".into(), format!("encore_kind={kind}")]);
+    }
+    if let Some(game) = &tags.game {
+        a.extend(["-metadata".into(), format!("encore_game={game}")]);
+    }
+    a.extend(["-y".into(), out.to_string_lossy().into_owned()]);
     a
 }
 
@@ -634,10 +653,20 @@ mod tests {
 
     #[test]
     fn finalise_tags_file_for_the_editor() {
-        let a = finalise_args(Path::new("list.txt"), &[], 0.0, Path::new("out.mp4"));
+        let a = finalise_args(Path::new("list.txt"), &[], 0.0, Path::new("out.mp4"), &Tags::default());
         assert!(a.windows(2).any(|w| w[0] == "-metadata" && w[1] == "comment=rec-format:2"));
+        assert!(a.windows(2).any(|w| w[0] == "-movflags" && w[1] == "+faststart+use_metadata_tags"));
         assert!(a.windows(2).any(|w| w[0] == "-c:v" && w[1] == "copy"));
         assert!(!a.contains(&"-shortest".to_string()));
+        assert!(!a.iter().any(|x| x.starts_with("encore_"))); // recovered: nothing known
+        // A replay of a game, and a recording of the screen.
+        let r = finalise_args(Path::new("l"), &[], 0.0, Path::new("o.mp4"), &Tags::replay(Some("Valorant".into())));
+        assert!(r.windows(2).any(|w| w[0] == "-metadata" && w[1] == "encore_kind=replay"));
+        assert!(r.windows(2).any(|w| w[0] == "-metadata" && w[1] == "encore_game=Valorant"));
+        let d = finalise_args(Path::new("l"), &[], 0.0, Path::new("o.mp4"), &Tags::recording(None));
+        assert!(d.windows(2).any(|w| w[0] == "-metadata" && w[1] == "encore_kind=recording"));
+        assert!(!d.iter().any(|x| x.starts_with("encore_game")));
+        assert_eq!(d.last().unwrap(), "o.mp4");
     }
 
     #[test]
@@ -649,7 +678,7 @@ mod tests {
             AudioOut { title: "Desktop audio".into(), files: vec![p("a00_full.pcm")] },
             AudioOut { title: "Spotify".into(), files: vec![p("a02_app.pcm")] },
         ];
-        let a = finalise_args(Path::new("list.txt"), &audio, 0.3125, Path::new("out.mp4"));
+        let a = finalise_args(Path::new("list.txt"), &audio, 0.3125, Path::new("out.mp4"), &Tags::default());
         let j = a.join(" ");
         // each file opened once
         assert_eq!(a.iter().filter(|x| x.ends_with(".pcm")).count(), 3);
@@ -693,7 +722,7 @@ file 'p002_000000.mkv'\n"
             AudioOut { title: "Full mix".into(), files: vec![PathBuf::from("a.pcm")] },
             AudioOut { title: "Spotify".into(), files: vec![PathBuf::from("b.pcm")] },
         ];
-        let a = finalise_args(Path::new("l"), &audio, 0.0, Path::new("o.mp4"));
+        let a = finalise_args(Path::new("l"), &audio, 0.0, Path::new("o.mp4"), &Tags::default());
         assert!(!a.contains(&"-filter_complex".to_string()));
         assert!(a.join(" ").contains("-map 0:v:0 -map 1:a:0 -map 2:a:0"));
     }

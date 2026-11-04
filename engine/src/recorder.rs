@@ -671,7 +671,7 @@ impl Active {
     }
 
     /// Asks FFmpeg to finish cleanly, waits, then joins the segments into the final file.
-    pub fn stop_and_save(mut self, ffmpeg_path: &Path) -> Result<Saved, String> {
+    pub fn stop_and_save(mut self, ffmpeg_path: &Path, tags: &ffmpeg::Tags) -> Result<Saved, String> {
         let duration_ms = self.elapsed_ms();
         let end_hns = platform::now_hns();
         if let Some(p) = self.pending.take() {
@@ -706,7 +706,7 @@ impl Active {
             }
         }
         manifest.save(&self.seg_dir);
-        finalise(ffmpeg_path, &self.seg_dir, &self.out_path, duration_ms)
+        finalise(ffmpeg_path, &self.seg_dir, &self.out_path, duration_ms, tags)
     }
 }
 
@@ -849,6 +849,7 @@ pub fn save_window(
     from: u64,
     to: u64,
     out_path: &Path,
+    tags: &ffmpeg::Tags,
 ) -> Result<Saved, String> {
     let ((plan, video_start), behind) = plan_or_newest(seg_dir, &manifest.parts, from, to)
         .ok_or("Nothing has been recorded for that moment yet.")?;
@@ -889,7 +890,7 @@ pub fn save_window(
             .map(|t| AudioOut { title: t.title, files: t.sources.iter().map(|&i| PathBuf::from(&tracks[i].file)).collect() })
             .collect();
         let out = ffmpeg::hidden_command(ffmpeg_path)
-            .args(ffmpeg::finalise_args(&list, &audio, 0.0, out_path))
+            .args(ffmpeg::finalise_args(&list, &audio, 0.0, out_path, tags))
             .stdin(Stdio::null())
             .output()
             .map_err(|e| format!("Could not run FFmpeg to save the file: {e}"))?;
@@ -905,7 +906,7 @@ pub fn save_window(
 }
 
 /// Joins every finished segment in `seg_dir` into `out_path`. Removes the temp folder only on success.
-pub fn finalise(ffmpeg_path: &Path, seg_dir: &Path, out_path: &Path, duration_ms: u64) -> Result<Saved, String> {
+pub fn finalise(ffmpeg_path: &Path, seg_dir: &Path, out_path: &Path, duration_ms: u64, tags: &ffmpeg::Tags) -> Result<Saved, String> {
     let files = segments(seg_dir);
     if files.is_empty() {
         let detail = tail(&seg_dir.join("ffmpeg.log"), 6);
@@ -919,7 +920,7 @@ pub fn finalise(ffmpeg_path: &Path, seg_dir: &Path, out_path: &Path, duration_ms
     std::fs::write(&list, ffmpeg::concat_list_parts(&plan)).map_err(|e| format!("Could not write segment list: {e}"))?;
     let (audio, skip) = audio_inputs(seg_dir);
     let out = ffmpeg::hidden_command(ffmpeg_path)
-        .args(ffmpeg::finalise_args(&list, &audio, skip, out_path))
+        .args(ffmpeg::finalise_args(&list, &audio, skip, out_path, tags))
         .stdin(Stdio::null())
         .output()
         .map_err(|e| format!("Could not run FFmpeg to save the file: {e}"))?;
@@ -1086,7 +1087,7 @@ mod tests {
     fn finalise_with_no_segments_reports_clearly() {
         let dir = std::env::temp_dir().join(format!("encore-empty-{}", unix_ms()));
         std::fs::create_dir_all(&dir).unwrap();
-        let err = finalise(Path::new("ffmpeg"), &dir, &dir.join("out.mp4"), 0).err().unwrap();
+        let err = finalise(Path::new("ffmpeg"), &dir, &dir.join("out.mp4"), 0, &ffmpeg::Tags::default()).err().unwrap();
         assert!(err.starts_with("No video was captured."));
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -1127,7 +1128,7 @@ mod e2e {
         };
         m.save(&dir);
         let out = std::env::temp_dir().join(format!("encore-e2e-{}.mp4", std::process::id()));
-        finalise(Path::new("ffmpeg"), &dir, &out, 4000).unwrap();
+        finalise(Path::new("ffmpeg"), &dir, &out, 4000, &ffmpeg::Tags::default()).unwrap();
         println!("OUT {}", out.display());
     }
 }
@@ -1174,7 +1175,7 @@ mod e2e_switch {
         };
         m.save(&dir);
         let out = std::env::temp_dir().join(format!("encore-e2e-sw-{}.mp4", std::process::id()));
-        finalise(Path::new("ffmpeg"), &dir, &out, 7500).unwrap();
+        finalise(Path::new("ffmpeg"), &dir, &out, 7500, &ffmpeg::Tags::default()).unwrap();
         println!("OUT {}", out.display());
     }
 }
@@ -1239,7 +1240,7 @@ mod e2e_replay {
             ],
         };
         let out = std::env::temp_dir().join(format!("encore-e2e-rp-{}.mp4", std::process::id()));
-        let saved = save_window(Path::new("ffmpeg"), &dir, &m, s0 + 53_000_000, s0 + 110_000_000, &out).unwrap();
+        let saved = save_window(Path::new("ffmpeg"), &dir, &m, s0 + 53_000_000, s0 + 110_000_000, &out, &ffmpeg::Tags::default()).unwrap();
         assert_eq!(saved.duration_ms, 7000);
         assert!(dir.join("seg_000004.mkv").exists(), "the session's files are left alone");
         println!("OUT {}", out.display());
