@@ -175,11 +175,14 @@ Replay, the instant replay (built in 0.7; called Echoes from 0.9.1 to 0.9.32, Re
 - File-level metadata `comment` = `rec-format:2` so the companion editor can recognise our files.
   History: `rec-format:1` (0.2–0.3.x, and 0.4.0) had Full mix without the mic and no Desktop audio
   track (0.4.0 files have the new layout but the old marker; only test builds made them).
-- File-level tags (since 0.9.36; written with `-movflags +use_metadata_tags`, without which MP4
-  drops them silently): `encore_kind` = `replay` or `recording`; `encore_game` = the game's name,
-  when the file is of a game (a game Encore recorded, or a screen recording saved while one was
-  open). A file recovered after a crash has neither; files from before 0.9.36 have neither. The
-  editor treats a missing `encore_kind` as a recording. Adding these didn't change `rec-format`.
+- File-level tags (since 0.9.36), written with `-movflags +use_metadata_tags` (without it, MP4
+  drops tags of our own silently): `encore_kind` (`replay`/`recording`), `encore_source`
+  (`game`/`screen`/`app`), `encore_game` and `encore_game_exe` (when it's of a game: a game
+  Encore recorded, or a screen recording saved while one was open), `encore_id` (a v4 UUID),
+  `encore_version`, and the standard `creation_time` (when the clip starts, UTC). A file recovered
+  after a crash has only `encore_id` and `encore_version`. Values are cleaned to one line of at
+  most 200 characters. Adding tags doesn't change `rec-format`. The full list and rules for the
+  editor are in BACKSTAGE.md; keep it up to date when a tag is added.
 - Apps that start mid-recording still get a full-length track, silent before they started.
 - Filename: `<Game or App> YYYY.MM.DD - HH.MM.SS.mp4`, saved in
   `<chosen folder>\Encore\<Game, app or Desktop>\` (default chosen folder: Videos). A chosen folder

@@ -1,3 +1,14 @@
+## Encore 0.9.36 (beta), test build 57: clips say what they are
+
+### What's new
+- **Every saved clip now says what it is**, for Backstage and other apps that read it: replay or
+  recording; game, screen or app; the game and its program; when it was recorded; the Encore
+  version; and an ID that stays with the clip if it's renamed or moved. File names and folders
+  don't change. Clips saved before this update don't have it.
+
+### Install
+Update from inside Encore (Restart to update in the sidebar).
+
 ## Encore 0.9.35 (beta), test build 56: Recommended stays on the primary monitor
 
 ### Changed

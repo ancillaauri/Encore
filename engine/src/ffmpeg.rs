@@ -297,21 +297,95 @@ pub struct AudioOut {
     pub files: Vec<PathBuf>,
 }
 
-/// What a saved file is, written into it as tags for the clip editor: `encore_kind` ("replay" or
-/// "recording") and `encore_game` (the game's name, when it was a game). A file recovered after a
-/// crash has neither, as Encore can't tell.
+/// What a saved file is, written into it as tags for the clip editor (see ARCHITECTURE.md,
+/// "File tags"). Every tag starts with `encore_`, holds plain text, and never changes meaning: new
+/// information gets a new tag. A tag that isn't known is left out rather than guessed.
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Tags {
+    /// `encore_kind`: "replay" or "recording". Left out of a file recovered after a crash.
     pub kind: Option<&'static str>,
+    /// `encore_source`: what was captured: "game", "screen" or "app" (Select Application).
+    pub source: Option<&'static str>,
+    /// `encore_game` and `encore_game_exe`: the game's name and program, when it's of a game.
     pub game: Option<String>,
+    pub game_exe: Option<String>,
+    /// `encore_id`: unique to this file, so the editor can follow it through renames and moves.
+    pub id: Option<String>,
+    /// `encore_version`: the Encore version that wrote the file.
+    pub version: Option<String>,
+    /// `creation_time` (the standard MP4 field): when the clip starts, UTC.
+    pub created: Option<String>,
+}
+
+/// A tag value, cleaned: no line breaks or control characters, single spaces, at most 200
+/// characters. Empty means there's nothing worth writing.
+pub fn clean_tag(value: &str) -> Option<String> {
+    let cleaned: String = value.chars().map(|c| if c.is_control() { ' ' } else { c }).collect();
+    let s: String = cleaned.split_whitespace().collect::<Vec<_>>().join(" ").chars().take(200).collect();
+    (!s.is_empty()).then_some(s)
+}
+
+/// `unix_ms` as `2026-11-04T08:07:00.000000Z`, the form MP4's `creation_time` takes.
+pub fn iso_utc(unix_ms: u64) -> String {
+    let secs = unix_ms / 1000;
+    let (h, mi, s) = (secs / 3600 % 24, secs / 60 % 60, secs % 60);
+    // Days since 1970 to a calendar date (Howard Hinnant's civil_from_days).
+    let z = (secs / 86_400) as i64 + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+    format!("{y:04}-{m:02}-{d:02}T{h:02}:{mi:02}:{s:02}.{:06}Z", unix_ms % 1000 * 1000)
+}
+
+/// A new random ID in the usual 8-4-4-4-12 form (a version 4 UUID).
+pub fn new_id() -> String {
+    use std::hash::{BuildHasher, Hasher};
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNT: AtomicU64 = AtomicU64::new(0);
+    let half = || {
+        // Each RandomState is seeded randomly by the system.
+        let mut h = std::collections::hash_map::RandomState::new().build_hasher();
+        h.write_u64(COUNT.fetch_add(1, Ordering::Relaxed));
+        h.write_u128(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0));
+        h.finish()
+    };
+    let (a, b) = (half(), half());
+    let b = (b & 0x3fff_ffff_ffff_ffff) | 0x8000_0000_0000_0000; // variant
+    let a = (a & 0xffff_ffff_ffff_0fff) | 0x0000_0000_0000_4000; // version 4
+    format!("{:08x}-{:04x}-{:04x}-{:04x}-{:012x}", a >> 32, (a >> 16) & 0xffff, a & 0xffff, b >> 48, b & 0xffff_ffff_ffff)
 }
 
 impl Tags {
-    pub fn replay(game: Option<String>) -> Tags {
-        Tags { kind: Some("replay"), game }
+    /// A replay or recording (`kind`) of `source`, starting at `started_ms` (Unix time).
+    pub fn new(kind: &'static str, source: &'static str, game: Option<(String, String)>, started_ms: u64) -> Tags {
+        let (game, game_exe) = match game {
+            Some((name, exe)) => (clean_tag(&name), clean_tag(&exe)),
+            None => (None, None),
+        };
+        Tags { kind: Some(kind), source: Some(source), game, game_exe, created: Some(iso_utc(started_ms)), ..Tags::recovered() }
     }
-    pub fn recording(game: Option<String>) -> Tags {
-        Tags { kind: Some("recording"), game }
+
+    /// A file recovered after a crash: only what's certain.
+    pub fn recovered() -> Tags {
+        Tags { id: Some(new_id()), version: Some(env!("CARGO_PKG_VERSION").to_string()), ..Tags::default() }
+    }
+
+    fn args(&self) -> Vec<String> {
+        let pairs = [
+            ("encore_kind", self.kind.map(String::from)),
+            ("encore_source", self.source.map(String::from)),
+            ("encore_game", self.game.clone()),
+            ("encore_game_exe", self.game_exe.clone()),
+            ("encore_id", self.id.clone()),
+            ("encore_version", self.version.clone()),
+            ("creation_time", self.created.clone()),
+        ];
+        pairs.into_iter().filter_map(|(k, v)| v.map(|v| ["-metadata".to_string(), format!("{k}={v}")])).flatten().collect()
     }
 }
 
@@ -420,12 +494,7 @@ pub fn finalise_args(list_file: &Path, audio: &[AudioOut], audio_skip: f64, out:
     }
     // use_metadata_tags: without it, MP4 files silently drop tags of Encore's own.
     a.extend(["-movflags".into(), "+faststart+use_metadata_tags".into(), "-metadata".into(), "comment=rec-format:2".into()]);
-    if let Some(kind) = tags.kind {
-        a.extend(["-metadata".into(), format!("encore_kind={kind}")]);
-    }
-    if let Some(game) = &tags.game {
-        a.extend(["-metadata".into(), format!("encore_game={game}")]);
-    }
+    a.extend(tags.args());
     a.extend(["-y".into(), out.to_string_lossy().into_owned()]);
     a
 }
@@ -658,15 +727,46 @@ mod tests {
         assert!(a.windows(2).any(|w| w[0] == "-movflags" && w[1] == "+faststart+use_metadata_tags"));
         assert!(a.windows(2).any(|w| w[0] == "-c:v" && w[1] == "copy"));
         assert!(!a.contains(&"-shortest".to_string()));
-        assert!(!a.iter().any(|x| x.starts_with("encore_"))); // recovered: nothing known
-        // A replay of a game, and a recording of the screen.
-        let r = finalise_args(Path::new("l"), &[], 0.0, Path::new("o.mp4"), &Tags::replay(Some("Valorant".into())));
-        assert!(r.windows(2).any(|w| w[0] == "-metadata" && w[1] == "encore_kind=replay"));
-        assert!(r.windows(2).any(|w| w[0] == "-metadata" && w[1] == "encore_game=Valorant"));
-        let d = finalise_args(Path::new("l"), &[], 0.0, Path::new("o.mp4"), &Tags::recording(None));
-        assert!(d.windows(2).any(|w| w[0] == "-metadata" && w[1] == "encore_kind=recording"));
-        assert!(!d.iter().any(|x| x.starts_with("encore_game")));
+        assert!(!a.iter().any(|x| x.starts_with("encore_"))); // no tags given
+        let has = |a: &[String], tag: &str| a.windows(2).any(|w| w[0] == "-metadata" && w[1] == tag);
+        let starts = |a: &[String], key: &str| a.iter().any(|x| x.starts_with(&format!("{key}=")));
+        // A replay of a game.
+        let game = Some(("Valorant".to_string(), "VALORANT-Win64-Shipping.exe".to_string()));
+        let r = finalise_args(Path::new("l"), &[], 0.0, Path::new("o.mp4"), &Tags::new("replay", "game", game, 1_793_779_620_250));
+        assert!(has(&r, "encore_kind=replay") && has(&r, "encore_source=game"));
+        assert!(has(&r, "encore_game=Valorant") && has(&r, "encore_game_exe=VALORANT-Win64-Shipping.exe"));
+        assert!(has(&r, &format!("encore_version={}", env!("CARGO_PKG_VERSION"))));
+        assert!(has(&r, "creation_time=2026-11-04T08:07:00.250000Z"));
+        assert!(starts(&r, "encore_id"));
+        // A recording of the screen: no game.
+        let d = finalise_args(Path::new("l"), &[], 0.0, Path::new("o.mp4"), &Tags::new("recording", "screen", None, 0));
+        assert!(has(&d, "encore_kind=recording") && has(&d, "encore_source=screen"));
+        assert!(!starts(&d, "encore_game") && !starts(&d, "encore_game_exe"));
         assert_eq!(d.last().unwrap(), "o.mp4");
+        // Recovered after a crash: only what's certain.
+        let c = finalise_args(Path::new("l"), &[], 0.0, Path::new("o.mp4"), &Tags::recovered());
+        assert!(starts(&c, "encore_id") && starts(&c, "encore_version"));
+        assert!(!starts(&c, "encore_kind") && !starts(&c, "encore_source") && !starts(&c, "creation_time"));
+    }
+
+    #[test]
+    fn tag_values_are_cleaned() {
+        assert_eq!(clean_tag("  Elden\nRing\t\u{0}  Nightreign "), Some("Elden Ring Nightreign".into()));
+        assert_eq!(clean_tag(" \n "), None);
+        assert_eq!(clean_tag(&"x".repeat(300)).unwrap().len(), 200);
+        assert_eq!(clean_tag("a=b"), Some("a=b".into())); // FFmpeg splits on the first = only
+    }
+
+    #[test]
+    fn dates_and_ids() {
+        assert_eq!(iso_utc(0), "1970-01-01T00:00:00.000000Z");
+        assert_eq!(iso_utc(951_782_400_000), "2000-02-29T00:00:00.000000Z");
+        assert_eq!(iso_utc(1_793_779_620_250), "2026-11-04T08:07:00.250000Z");
+        let (a, b) = (new_id(), new_id());
+        assert_ne!(a, b);
+        assert_eq!(a.len(), 36);
+        assert_eq!(&a[14..15], "4");
+        assert!(a.chars().all(|c| c.is_ascii_hexdigit() || c == '-'));
     }
 
     #[test]

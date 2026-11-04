@@ -896,3 +896,15 @@ Agreed design for game detection (to build next):
 - `rec-format` stays at 2: the tags are extra, nothing about the layout changed, and the editor
   reads files either way. Older files, and recovered ones, have no tags; the editor shows those
   under Recordings.
+
+## 2026-11-04: More file tags, and rules for adding them
+- Added to the tags above: `encore_source` (`game`, `screen`, `app`: tells a Select Application
+  recording from a screen one), `encore_game_exe` (the game's program, steadier than its name for
+  grouping), `encore_id` (a v4 UUID, so the editor can follow a clip through renames and moves),
+  `encore_version` (to recognise files from a version with a known problem) and the standard
+  `creation_time` (joining the pieces left it empty).
+- Rules, written down in BACKSTAGE.md for the editor: every tag starts with `encore_`, plain
+  one-line text, a tag's meaning never changes, unknown tags are ignored. Names kept for later:
+  `encore_markers`, `encore_monitor`.
+- The ID is made from the system's random hashing seed, the time and a counter, rather than
+  adding a crate for it.
