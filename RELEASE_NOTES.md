@@ -1,3 +1,17 @@
+## Encore 0.9.37 (beta), test build 58: Minecraft, and renaming games
+
+### What's new
+- **Rename a game:** right-click it under the screens and choose Rename. The name is used on
+  screen and for new clips' folders and files. Settings → Games lists the names you've chosen,
+  with × to go back to Encore's.
+
+### Fixed
+- **Minecraft is found by itself**, from any launcher (Prism Launcher included), and is called
+  Minecraft instead of "OpenJDK Platform binary". Other Java games are named after their window.
+
+### Install
+Update from inside Encore (Restart to update in the sidebar).
+
 ## Encore 0.9.36 (beta), test build 57: clips say what they are
 
 ### What's new
