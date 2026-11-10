@@ -230,12 +230,15 @@ impl Write for ChunkedWriter {
 }
 
 /// Copies frames `from..to` of a chunked track into one plain file, with silence where pieces are
-/// missing (already deleted, or not written yet). Returns the number of frames written.
-pub fn extract_frames(base: &std::path::Path, from: u64, to: u64, out: &std::path::Path) -> io::Result<u64> {
+/// missing (already deleted, or not written yet). Returns whether any of it is sound: false
+/// when every sample is exactly zero (digital silence), with no threshold, so the quietest real
+/// sound still counts.
+pub fn extract_frames(base: &std::path::Path, from: u64, to: u64, out: &std::path::Path) -> io::Result<bool> {
     use std::io::{Read, Seek, SeekFrom};
     let mut w = std::io::BufWriter::new(std::fs::File::create(out)?);
     let mut frame = from;
     let mut buf = vec![0u8; 64 * 1024];
+    let mut heard = false;
     while frame < to {
         let index = frame / CHUNK_FRAMES;
         let chunk_end = ((index + 1) * CHUNK_FRAMES).min(to);
@@ -249,6 +252,7 @@ pub fn extract_frames(base: &std::path::Path, from: u64, to: u64, out: &std::pat
                     break;
                 }
                 w.write_all(&buf[..n])?;
+                heard = heard || buf[..n].iter().any(|&b| b != 0);
                 want -= n as u64;
             }
         }
@@ -262,7 +266,7 @@ pub fn extract_frames(base: &std::path::Path, from: u64, to: u64, out: &std::pat
         frame = chunk_end;
     }
     w.flush()?;
-    Ok(to.saturating_sub(from))
+    Ok(heard)
 }
 
 #[cfg(test)]
@@ -303,7 +307,7 @@ mod tests {
         // Extract 22.5 s .. 31.25 s and check every frame.
         let out = dir.join("x.pcm");
         let (from, to) = (RATE * 45 / 2, RATE * 125 / 4);
-        extract_frames(&base, from, to, &out).unwrap();
+        assert!(extract_frames(&base, from, to, &out).unwrap(), "sound");
         let data = std::fs::read(&out).unwrap();
         assert_eq!(data.len() as u64, (to - from) * FRAME_BYTES);
         for (i, fr) in data.chunks_exact(4).enumerate() {
@@ -311,7 +315,7 @@ mod tests {
             assert_eq!(i16::from_le_bytes([fr[0], fr[1]]), want);
         }
         // Before what was kept: silence, not an error.
-        extract_frames(&base, 0, RATE, &out).unwrap();
+        assert!(!extract_frames(&base, 0, RATE, &out).unwrap(), "silence");
         assert!(std::fs::read(&out).unwrap().iter().all(|&b| b == 0));
         let _ = std::fs::remove_dir_all(&dir);
     }

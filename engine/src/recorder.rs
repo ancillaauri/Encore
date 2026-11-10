@@ -937,6 +937,7 @@ pub fn save_window(
         let from_frame = timeline::hns_to_frames(start).max(0) as u64;
         let to_frame = timeline::hns_to_frames(to as i64 - manifest.origin_hns as i64).max(0) as u64;
         let mut tracks: Vec<audio::TrackInfo> = Vec::new();
+        let mut silent: Vec<audio::TrackInfo> = Vec::new();
         for t in &manifest.tracks {
             let base = seg_dir.join(&t.file);
             // An app that hasn't made sound by the end of the moment has nothing to add.
@@ -946,10 +947,24 @@ pub fn save_window(
                 continue;
             }
             let out = work.join(&t.file);
-            timeline::extract_frames(&base, from_frame, to_frame.max(from_frame), &out)
+            let heard = timeline::extract_frames(&base, from_frame, to_frame.max(from_frame), &out)
                 .map_err(|e| format!("Could not read the audio for {}: {e}", t.title))?;
+            // An app that was completely silent the whole time (every sample exactly zero) has
+            // nothing to add: no track for it. Mixes are unchanged, as adding zeros changes nothing.
+            if !heard && t.kind == audio::TrackKind::App {
+                silent.push(audio::TrackInfo { file: out.to_string_lossy().into_owned(), ..t.clone() });
+                continue;
+            }
             let out = clean_mic(t, out, &work);
             tracks.push(audio::TrackInfo { file: out.to_string_lossy().into_owned(), ..t.clone() });
+        }
+        if tracks.is_empty() {
+            // Apps were the only sound and all were silent: keep them, so the file still has
+            // sound (silence) like every other.
+            tracks = silent;
+        } else if !silent.is_empty() {
+            let titles: Vec<&str> = silent.iter().map(|t| t.title.as_str()).collect();
+            log(&format!("left out silent app tracks: {}", titles.join(", ")));
         }
         let audio: Vec<AudioOut> = audio::plan_output(&tracks)
             .into_iter()
@@ -1310,10 +1325,28 @@ mod e2e_replay {
         }
         std::io::Write::write_all(&mut w, &buf).unwrap();
         std::io::Write::flush(&mut w).unwrap();
+        // Two apps that opened sound but: one stayed completely silent, the other made a single
+        // faint sample near the end of the window (S+10.9 s). The first is left out, the second
+        // kept: any non-zero sample counts.
+        let app = |file: &str, sample_at: Option<u64>| {
+            let mut w = ChunkedWriter::new(dir.join(file), Arc::new(AtomicU64::new(0)));
+            let mut buf = vec![0u8; (total * 4) as usize];
+            if let Some(at) = sample_at {
+                buf[(at * 4) as usize] = 3; // 3 out of 32,767, left channel
+            }
+            std::io::Write::write_all(&mut w, &buf).unwrap();
+            std::io::Write::flush(&mut w).unwrap();
+        };
+        app("a02_app.pcm", None);
+        app("a03_app.pcm", Some((RATE as f64 * 11.4) as u64));
         let m = Manifest {
             origin_hns: origin,
             video_start_hns: Some(s0),
-            tracks: vec![TrackInfo { file: "a01_mic.pcm".into(), title: "Microphone".into(), kind: TrackKind::Mic }],
+            tracks: vec![
+                TrackInfo { file: "a01_mic.pcm".into(), title: "Microphone".into(), kind: TrackKind::Mic },
+                TrackInfo { file: "a02_app.pcm".into(), title: "Silent App".into(), kind: TrackKind::App },
+                TrackInfo { file: "a03_app.pcm".into(), title: "Quiet App".into(), kind: TrackKind::App },
+            ],
             parts: vec![
                 VideoPart { prefix: "seg_".into(), start_hns: Some(s0), dropped: false, label: None },
                 VideoPart { prefix: "p001_".into(), start_hns: Some(s0 + 70_000_000), dropped: false, label: None },
@@ -1323,6 +1356,15 @@ mod e2e_replay {
         let saved = save_window(Path::new("ffmpeg"), &dir, &m, s0 + 53_000_000, s0 + 110_000_000, &out, &ffmpeg::Tags::default()).unwrap();
         assert_eq!(saved.duration_ms, 7000);
         assert!(dir.join("seg_000004.mkv").exists(), "the session's files are left alone");
+        // Tracks: Full mix (mic + the quiet app), Microphone, Quiet App. No Silent App.
+        let probe = std::process::Command::new("ffprobe")
+            .args(["-v", "error", "-select_streams", "a", "-show_entries", "stream_tags=handler_name", "-of", "csv=p=0"])
+            .arg(&out)
+            .output()
+            .unwrap();
+        let titles = String::from_utf8_lossy(&probe.stdout);
+        let titles: Vec<&str> = titles.lines().map(str::trim).collect();
+        assert_eq!(titles, ["Full mix", "Microphone", "Quiet App"], "{titles:?}");
         println!("OUT {}", out.display());
     }
 
