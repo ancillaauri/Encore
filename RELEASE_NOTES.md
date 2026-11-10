@@ -1,3 +1,19 @@
+## Encore 0.9.38 (beta), test build 59: faster saves, notifications from the tray
+
+### Fixed
+- **Notifications didn't show when Encore had started with Windows** and stayed in the tray.
+  They do now, whether or not you've opened the window.
+
+### Changed
+- **Replays save faster:** joining the recorded pieces takes about a third of the time.
+- **A clip only appears in its folder once it's complete.** It's written in a hidden `.saving`
+  folder first, so other apps (Backstage included) never see a half-saved file.
+- **App tracks that were completely silent are left out** of replays. Any sound at all keeps
+  a track, and Full mix is unchanged.
+
+### Install
+Update from inside Encore (Restart to update in the sidebar).
+
 ## Encore 0.9.37 (beta), test build 58: Minecraft, and renaming games
 
 ### What's new
