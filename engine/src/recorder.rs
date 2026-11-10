@@ -106,14 +106,79 @@ pub fn file_name(label: &str, t: LocalTime) -> String {
 pub fn output_path(out_dir: &Path, label: &str, t: LocalTime) -> PathBuf {
     let folder = crate::paths::encore_root(out_dir).join(sanitise(label));
     let first = folder.join(file_name(label, t));
-    if !first.exists() {
+    // A name is taken once its file exists, or while it's being saved.
+    let taken = |p: &PathBuf| p.exists() || saving_path(p).exists();
+    if !taken(&first) {
         return first;
     }
     let stem = first.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     (2..1000)
         .map(|n| folder.join(format!("{stem} ({n}).mp4")))
-        .find(|p| !p.exists())
+        .find(|p| !taken(p))
         .unwrap_or(first)
+}
+
+/// The folder files are written in until they're complete, inside Encore's recordings folder:
+/// hidden, and skipped by the clip editor. Same drive, so moving a file out is instant.
+pub const SAVING_FOLDER: &str = ".saving";
+
+/// Where `out` (…\Encore\<game>\<file>.mp4) is written until it's complete:
+/// …\Encore\.saving\<game>\<file>.mp4. Nothing else ever sees a half-written clip.
+pub fn saving_path(out: &Path) -> PathBuf {
+    match (out.parent(), out.parent().and_then(Path::parent), out.file_name()) {
+        (Some(folder), Some(root), Some(name)) => {
+            root.join(SAVING_FOLDER).join(folder.file_name().unwrap_or_default()).join(name)
+        }
+        _ => out.with_extension("mp4.part"),
+    }
+}
+
+/// Claims the name `out` while it's saved, so a second save in the same second gets "(2)".
+pub fn claim(out: &Path) {
+    let tmp = saving_path(out);
+    if let Some(dir) = tmp.parent() {
+        let _ = std::fs::create_dir_all(dir);
+        if let Some(saving) = dir.parent() {
+            crate::platform::hide(saving);
+        }
+    }
+    let _ = std::fs::File::create(&tmp);
+}
+
+/// Gives up the name `out`: its saving didn't work.
+pub fn unclaim(out: &Path) {
+    // Its folder stays: another save may be about to write there. Emptied ones go at start.
+    let _ = std::fs::remove_file(saving_path(out));
+}
+
+/// Moves the finished file from the saving folder to `out`, where it appears complete.
+fn move_into_place(out: &Path) -> Result<(), String> {
+    let tmp = saving_path(out);
+    if let Some(dir) = out.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| format!("Could not create output folder {}: {e}", dir.display()))?;
+    }
+    let moved = std::fs::rename(&tmp, out).map_err(|e| format!("Could not move the saved file into {}: {e}", out.display()));
+    if moved.is_err() {
+        unclaim(out);
+    }
+    moved
+}
+
+/// At start: removes files left in the saving folder by a save that never finished (Encore
+/// closed or crashed part-way). Only files untouched for 10 minutes, so a save still running
+/// in another copy of Encore is left alone.
+pub fn clear_unfinished(root: &Path) {
+    let saving = root.join(SAVING_FOLDER);
+    let Ok(folders) = std::fs::read_dir(&saving) else { return };
+    for folder in folders.flatten().map(|e| e.path()).filter(|p| p.is_dir()) {
+        for f in std::fs::read_dir(&folder).into_iter().flatten().flatten() {
+            let old = f.metadata().and_then(|m| m.modified()).ok().and_then(|t| t.elapsed().ok()).is_some_and(|age| age.as_secs() > 600);
+            if old && std::fs::remove_file(f.path()).is_ok() {
+                log(&format!("removed an unfinished save: {}", f.path().display()));
+            }
+        }
+        let _ = std::fs::remove_dir(&folder);
+    }
 }
 
 fn segments(seg_dir: &Path) -> Vec<PathBuf> {
@@ -860,9 +925,10 @@ pub fn save_window(
     let to = to.saturating_sub(behind * 10_000_000);
     let work = seg_dir.join(format!("save-{}", unix_ms()));
     std::fs::create_dir_all(&work).map_err(|e| format!("Could not create temp folder: {e}"))?;
+    let tmp = saving_path(out_path);
     let result = (|| {
-        if let Some(dir) = out_path.parent() {
-            std::fs::create_dir_all(dir).map_err(|e| format!("Could not create output folder {}: {e}", dir.display()))?;
+        if !tmp.exists() {
+            claim(out_path); // normally claimed when the save was asked for
         }
         let list = work.join("segments.ffconcat");
         std::fs::write(&list, ffmpeg::concat_list_parts(&plan)).map_err(|e| format!("Could not write segment list: {e}"))?;
@@ -890,18 +956,22 @@ pub fn save_window(
             .map(|t| AudioOut { title: t.title, files: t.sources.iter().map(|&i| PathBuf::from(&tracks[i].file)).collect() })
             .collect();
         let out = ffmpeg::hidden_command(ffmpeg_path)
-            .args(ffmpeg::finalise_args(&list, &audio, 0.0, out_path, tags))
+            .args(ffmpeg::finalise_args(&list, &audio, 0.0, &tmp, tags))
             .stdin(Stdio::null())
             .output()
             .map_err(|e| format!("Could not run FFmpeg to save the file: {e}"))?;
-        let size = std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0);
+        let size = std::fs::metadata(&tmp).map(|m| m.len()).unwrap_or(0);
         if !out.status.success() || size == 0 {
             return Err(format!("Saving failed. FFmpeg said:\n{}", String::from_utf8_lossy(&out.stderr).trim()));
         }
+        move_into_place(out_path)?;
         log(&format!("saved replay {} ({} bytes)", out_path.display(), size));
         Ok(Saved { path: out_path.to_path_buf(), duration_ms: (to.saturating_sub(video_start)) / 10_000, size_bytes: size })
     })();
     let _ = std::fs::remove_dir_all(&work);
+    if result.is_err() {
+        unclaim(out_path);
+    }
     result
 }
 
@@ -912,20 +982,29 @@ pub fn finalise(ffmpeg_path: &Path, seg_dir: &Path, out_path: &Path, duration_ms
         let detail = tail(&seg_dir.join("ffmpeg.log"), 6);
         return Err(format!("No video was captured.{}", if detail.is_empty() { String::new() } else { format!(" FFmpeg said:\n{detail}") }));
     }
-    if let Some(dir) = out_path.parent() {
+    let tmp = saving_path(out_path);
+    if let Some(dir) = tmp.parent() {
         std::fs::create_dir_all(dir).map_err(|e| format!("Could not create output folder {}: {e}", dir.display()))?;
+        if let Some(saving) = dir.parent() {
+            crate::platform::hide(saving);
+        }
     }
+    let _ = std::fs::File::create(&tmp); // claims the name while it's saved
     let list = seg_dir.join("segments.ffconcat");
     let plan = join_plan(seg_dir, Manifest::load(seg_dir).as_ref());
     std::fs::write(&list, ffmpeg::concat_list_parts(&plan)).map_err(|e| format!("Could not write segment list: {e}"))?;
     let (audio, skip) = audio_inputs(seg_dir);
     let out = ffmpeg::hidden_command(ffmpeg_path)
-        .args(ffmpeg::finalise_args(&list, &audio, skip, out_path, tags))
+        .args(ffmpeg::finalise_args(&list, &audio, skip, &tmp, tags))
         .stdin(Stdio::null())
         .output()
-        .map_err(|e| format!("Could not run FFmpeg to save the file: {e}"))?;
-    let size = std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0);
+        .map_err(|e| {
+            unclaim(out_path);
+            format!("Could not run FFmpeg to save the file: {e}")
+        })?;
+    let size = std::fs::metadata(&tmp).map(|m| m.len()).unwrap_or(0);
     if !out.status.success() || size == 0 {
+        unclaim(out_path);
         let err = String::from_utf8_lossy(&out.stderr);
         return Err(format!(
             "Saving failed; the raw segments are kept in {}. FFmpeg said:\n{}",
@@ -933,6 +1012,7 @@ pub fn finalise(ffmpeg_path: &Path, seg_dir: &Path, out_path: &Path, duration_ms
             err.trim()
         ));
     }
+    move_into_place(out_path).map_err(|e| format!("{e}. The raw segments are kept in {}.", seg_dir.display()))?;
     let _ = std::fs::remove_dir_all(seg_dir);
     log(&format!("saved {} ({} bytes)", out_path.display(), size));
     Ok(Saved { path: out_path.to_path_buf(), duration_ms, size_bytes: size })
@@ -1127,7 +1207,7 @@ mod e2e {
             parts: Vec::new(),
         };
         m.save(&dir);
-        let out = std::env::temp_dir().join(format!("encore-e2e-{}.mp4", std::process::id()));
+        let out = std::env::temp_dir().join(format!("encore-e2e-out-{}", std::process::id())).join("Game").join(format!("encore-e2e-{}.mp4", std::process::id()));
         finalise(Path::new("ffmpeg"), &dir, &out, 4000, &ffmpeg::Tags::default()).unwrap();
         println!("OUT {}", out.display());
     }
@@ -1174,7 +1254,7 @@ mod e2e_switch {
             ],
         };
         m.save(&dir);
-        let out = std::env::temp_dir().join(format!("encore-e2e-sw-{}.mp4", std::process::id()));
+        let out = std::env::temp_dir().join(format!("encore-e2e-out-{}", std::process::id())).join("Game").join(format!("encore-e2e-sw-{}.mp4", std::process::id()));
         finalise(Path::new("ffmpeg"), &dir, &out, 7500, &ffmpeg::Tags::default()).unwrap();
         println!("OUT {}", out.display());
     }
@@ -1239,7 +1319,7 @@ mod e2e_replay {
                 VideoPart { prefix: "p001_".into(), start_hns: Some(s0 + 70_000_000), dropped: false, label: None },
             ],
         };
-        let out = std::env::temp_dir().join(format!("encore-e2e-rp-{}.mp4", std::process::id()));
+        let out = std::env::temp_dir().join(format!("encore-e2e-out-{}", std::process::id())).join("Game").join(format!("encore-e2e-rp-{}.mp4", std::process::id()));
         let saved = save_window(Path::new("ffmpeg"), &dir, &m, s0 + 53_000_000, s0 + 110_000_000, &out, &ffmpeg::Tags::default()).unwrap();
         assert_eq!(saved.duration_ms, 7000);
         assert!(dir.join("seg_000004.mkv").exists(), "the session's files are left alone");
@@ -1326,5 +1406,39 @@ mod e2e_replay {
         // The same after the screen sat still for a while first.
         let after_still = |t: f64| if t < 30.0 { 2.0 } else { 2.0 + (t - 30.0) * 0.8 };
         assert!(!told(after_still, 200).is_empty());
+    }
+
+    #[test]
+    fn saves_are_written_out_of_sight_then_moved_into_place() {
+        let base = std::env::temp_dir().join(format!("encore-saving-{}", unix_ms()));
+        let root = base.join("Encore");
+        let out = root.join("World of Warcraft").join("World of Warcraft 2026.11.10 - 19.10.00.mp4");
+        assert_eq!(saving_path(&out), root.join(".saving").join("World of Warcraft").join("World of Warcraft 2026.11.10 - 19.10.00.mp4"));
+        // Claimed: nothing appears in the game's folder, and the name counts as taken.
+        claim(&out);
+        assert!(saving_path(&out).exists() && !out.exists());
+        let t = LocalTime { year: 2026, month: 11, day: 10, hour: 19, minute: 10, second: 0 };
+        let second = output_path(&root, "World of Warcraft", t);
+        assert!(second.to_string_lossy().ends_with("19.10.00 (2).mp4"), "{}", second.display());
+        // Finished: moved in whole, and the saving folder tidied.
+        std::fs::write(saving_path(&out), b"video").unwrap();
+        move_into_place(&out).unwrap();
+        assert_eq!(std::fs::read(&out).unwrap(), b"video");
+        assert!(!saving_path(&out).exists());
+        // A save that failed gives its name back.
+        let failed = root.join("Desktop").join("Desktop 2026.11.10 - 19.11.00.mp4");
+        claim(&failed);
+        unclaim(&failed);
+        assert!(!saving_path(&failed).exists() && !failed.exists());
+        // A leftover from a crash is cleared only once it's old; a fresh one may still be saving.
+        claim(&failed);
+        clear_unfinished(&root);
+        assert!(saving_path(&failed).exists());
+        let old = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+        std::fs::File::options().write(true).open(saving_path(&failed)).unwrap().set_modified(old).unwrap();
+        clear_unfinished(&root);
+        assert!(!saving_path(&failed).exists());
+        assert!(!root.join(SAVING_FOLDER).join("Desktop").exists(), "emptied folders go at start");
+        let _ = std::fs::remove_dir_all(&base);
     }
 }

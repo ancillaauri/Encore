@@ -139,6 +139,9 @@ pub use other::*;
 
 #[cfg(not(windows))]
 mod other {
+    /// Hidden files are a Windows idea: elsewhere, the folder's leading dot hides it.
+    pub fn hide(_path: &std::path::Path) {}
+
     use super::*;
     pub fn init_dpi() {}
     pub fn list_monitors() -> Vec<Monitor> {
@@ -540,6 +543,19 @@ mod win {
             let text = std::slice::from_raw_parts(ptr as *const u16, len as usize);
             let s = wide_to_string(text).trim().to_string();
             if s.is_empty() { None } else { Some(s) }
+        }
+    }
+
+    /// Marks a file or folder hidden, as Explorer shows it (a no-op if it's gone).
+    pub fn hide(path: &std::path::Path) {
+        use std::os::windows::ffi::OsStrExt;
+        use windows_sys::Win32::Storage::FileSystem::{GetFileAttributesW, SetFileAttributesW, FILE_ATTRIBUTE_HIDDEN, INVALID_FILE_ATTRIBUTES};
+        let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+        unsafe {
+            let now = GetFileAttributesW(wide.as_ptr());
+            if now != INVALID_FILE_ATTRIBUTES && now & FILE_ATTRIBUTE_HIDDEN == 0 {
+                SetFileAttributesW(wide.as_ptr(), now | FILE_ATTRIBUTE_HIDDEN);
+            }
         }
     }
 

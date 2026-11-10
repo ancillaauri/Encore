@@ -268,6 +268,9 @@ pub fn concat_list_parts(parts: &[PartFiles]) -> String {
             }
             let p = f.to_string_lossy().replace('\\', "/").replace('\'', "'\\''");
             s.push_str(&format!("file '{p}'\n"));
+            // Every piece is Encore's own, made the same way: no need to study each one in
+            // depth before joining (that took most of a save's time).
+            s.push_str("option probesize 65536\noption analyzeduration 0\n");
             let mut cut = false;
             if let Some(keep) = part.keep_secs {
                 if keep < begins + seg - 0.0005 {
@@ -636,11 +639,11 @@ mod tests {
             PartFiles { files: vec![PathBuf::from("b0.mkv")], first_index: 0, keep_secs: None },
         ];
         let list = concat_list_parts(&parts);
-        assert!(list.contains("file 'a1.mkv'\nduration 3.000000\n"), "{list}");
+        assert!(list.contains("file 'a1.mkv'\noption probesize 65536\noption analyzeduration 0\nduration 3.000000\n"), "{list}");
         // A normal hand-over (the part reached the moment) is cut with outpoint, no duration.
         let normal = vec![PartFiles { files: vec![PathBuf::from("a0.mkv"), PathBuf::from("a1.mkv"), PathBuf::from("a2.mkv")], first_index: 0, keep_secs: Some(5.0) }];
         let l2 = concat_list_parts(&normal);
-        assert!(l2.contains("file 'a2.mkv'\noutpoint 1.000000\n") && !l2.contains("duration"), "{l2}");
+        assert!(l2.contains("file 'a2.mkv'\noption probesize 65536\noption analyzeduration 0\noutpoint 1.000000\n") && !l2.contains("\nduration "), "{l2}");
     }
 
     #[test]
@@ -807,6 +810,9 @@ mod tests {
             PartFiles { files: vec![f("p002_000000.mkv")], first_index: 0, keep_secs: None },
         ];
         let l = concat_list_parts(&parts);
+        // Every file is joined without studying it in depth first.
+        assert_eq!(l.matches("file '").count(), l.matches("option probesize 65536\noption analyzeduration 0\n").count());
+        let l = l.replace("option probesize 65536\noption analyzeduration 0\n", "");
         assert_eq!(
             l,
             "ffconcat version 1.0\n\

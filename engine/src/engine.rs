@@ -643,10 +643,7 @@ impl Engine {
     fn save_in_background(&self, from: u64, to: u64, out_path: PathBuf, label: String, tags: ffmpeg::Tags, replay: bool) {
         let Some(a) = self.active.as_ref() else { return };
         // Claim the file name now, so a second save in the same second gets "(2)".
-        if let Some(dir) = out_path.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        let _ = std::fs::File::create(&out_path);
+        recorder::claim(&out_path);
         self.pins.lock().unwrap().push(from);
         let (ffmpeg, dir, snapshot, pins) = (self.ffmpeg.clone(), a.seg_dir.clone(), a.snapshot(), self.pins.clone());
         if replay {
@@ -659,9 +656,6 @@ impl Engine {
                 if let Some(i) = p.iter().position(|&x| x == from) {
                     p.remove(i);
                 }
-            }
-            if result.is_err() {
-                let _ = std::fs::remove_file(&out_path); // the placeholder
             }
             let thumb = result.as_ref().ok().map(|s| (s.path.clone(), s.duration_ms));
             if replay {
@@ -1302,6 +1296,8 @@ impl Engine {
     /// Saves recordings left in the working folder by a crash or power cut (the default one, and
     /// the chosen one if different).
     pub fn recover_leftovers(&self) {
+        // Files from saves that never finished (Encore closed part-way): never complete clips.
+        recorder::clear_unfinished(&paths::encore_root(&PathBuf::from(&self.settings.output_dir)));
         let mut roots = vec![paths::temp_dir()];
         if self.work_root() != roots[0] {
             roots.push(self.work_root());
