@@ -920,3 +920,19 @@ Agreed design for game detection (to build next):
   files from then on; clips already saved keep theirs. Settings → Games lists the names chosen,
   each with × to go back to Encore's. A rename is by program, so renaming `javaw.exe` names
   every Java game that way.
+
+## 2026-11-10: Faster saves, whole clips only, no silent app tracks
+From the clip editor's measurements (Ryzen 9800X3D, NVMe, 2-minute replays):
+- **Join:** each file in the join list gets `option probesize 65536` and `option analyzeduration 0`.
+  FFmpeg's concat demuxer studied every 2-second piece in depth first, most of a save's time
+  (6.5 s down to 2.1 s there). Checked here: byte-identical output for H.264, HEVC and AV1,
+  including a part cut with `outpoint` and one stretched with `duration`.
+- **Saving out of sight:** files are written in a hidden `.saving` folder inside Encore's own
+  recordings folder (same drive, so moving out is a rename) and moved into place when complete.
+  This replaces the empty placeholder file that claimed a name: the file in `.saving` claims it.
+  Not Encore's temp folder on C:, which may be another drive (a slow copy, half-visible again).
+- **Silent app tracks:** an app track is left out when every sample in the moment is exactly zero.
+  No threshold (real tracks can peak at 1,078 of 32,767). Kept if they'd be the only sound.
+- Not done: joining MPEG-TS pieces byte for byte (0.4 s instead of 2.1 s) can't carry AV1 and
+  can't cut a piece at a part change, so it isn't worth it yet. Keeping `faststart` and the
+  default AAC encoder: each costs under a second and they matter more.

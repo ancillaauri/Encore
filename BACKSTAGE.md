@@ -48,6 +48,22 @@ Encore only knows it's a game when game detection found it.
 5. `rec-format` only goes up if the file's layout changes (tracks, their order or names), and
    that's always announced first. Adding tags doesn't change it.
 
+## Files being saved (from Encore 0.9.38)
+
+Encore writes each clip in a hidden folder, `.saving`, at the top of its recordings folder
+(`<Encore folder>\.saving\<game>\<name>.mp4`), and moves it into its game's folder only
+once it's complete. A clip in a game's folder is always whole: no empty or half-written files.
+Skip `.saving` and everything in it. It can hold a file for a moment, or one left by a save
+that never finished (Encore removes those when it next starts).
+
+## Silent app tracks (from Encore 0.9.38)
+
+A replay leaves out an app's track if every sample in the saved moment is exactly zero. No
+threshold, so one non-zero sample keeps the track. Full mix and Desktop audio don't change,
+since they're plain sums. The one exception: if apps were the only sound (no Full System Audio,
+no microphone) and all were silent, they're kept, so the file still has audio. Clips saved
+before 0.9.38 can still have silent app tracks.
+
 ## Kept for later (the names are taken)
 
 - `encore_markers`: moments marked with a hotkey while playing.

@@ -169,7 +169,13 @@ Replay, the instant replay (built in 0.7; called Echoes from 0.9.1 to 0.9.32, Re
   - `Desktop audio`: everything the PC played, without the mic (only present when there is a mic
     track). Contains every app track.
   - then one per app, named from the app's file description (e.g. `Spotify`, `Google Chrome`,
-    `Discord`, the game's name); duplicates become `Discord 2` etc.
+    `Discord`, the game's name); duplicates become `Discord 2` etc. A replay leaves out an app
+    whose every sample in the saved moment is exactly zero (since 0.9.38; no threshold), unless
+    silent apps would be the file's only sound.
+- Saving (since 0.9.38): a file is written to `<Encore folder>\.saving\<game>\<name>.mp4` (the
+  folder hidden) and moved to `<Encore folder>\<game>\<name>.mp4` once complete, so the `.mp4`
+  either isn't there yet or is whole. Same drive, so the move is instant. A name being saved
+  counts as taken ("(2)"). Leftovers older than 10 minutes are removed at start.
 - The track name is stored in each audio stream's `handler_name` (the MP4 muxer does not keep a
   separate `title` tag). NVIDIA's own multi-track files use the same field.
 - File-level metadata `comment` = `rec-format:2` so the companion editor can recognise our files.
