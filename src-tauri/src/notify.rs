@@ -66,12 +66,26 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
     std::thread::Builder::new().name("notifications".into()).spawn(move || run(app, rx)).map(|_| ()).map_err(tauri::Error::Io)
 }
 
+/// Encore's own window is open, not minimised, and the one in front.
+fn encore_in_front(app: &AppHandle) -> bool {
+    use tauri::Manager;
+    app.get_webview_window("main")
+        .map(|w| w.is_visible().unwrap_or(false) && !w.is_minimized().unwrap_or(false) && w.is_focused().unwrap_or(false))
+        .unwrap_or(false)
+}
+
 /// Shows one notification. `device` is the chosen screen's Windows name ("\\.\DISPLAY2"), or
 /// None for the screen in use: the screen of `window` (the game being recorded) if given, else
 /// the one holding the window in front. A screen that isn't connected falls back the same way.
-/// `item`: kind, title, text, seconds.
+/// `item`: kind, title, text, seconds; `unless_in_front`: skip it while Encore's own window is
+/// open and in front, as you're looking at Encore anyway.
 #[tauri::command]
 pub fn show_notification(app: AppHandle, device: Option<String>, window: Option<u64>, pos: String, item: Value) -> Result<(), String> {
+    // Asked of Windows, not the page: a page whose window was hidden as Encore started (with
+    // Windows, to the tray) never hears it lost focus, and would think it's still in front.
+    if item.get("unless_in_front").and_then(|v| v.as_bool()).unwrap_or(false) && encore_in_front(&app) {
+        return Ok(());
+    }
     let monitors = app.available_monitors().unwrap_or_default();
     let chosen = device.and_then(|d| monitors.iter().find(|m| m.name().map(|n| n == &d).unwrap_or(false)));
     let screen = match chosen {

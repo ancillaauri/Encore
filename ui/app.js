@@ -2343,11 +2343,11 @@
   function notify(kind, title, text, test = false, opts = {}) {
     const s = state.settings;
     if (!s) return;
-    if (!test && (!s.notifications || s.do_not_disturb || !s[NOTIFY_KEYS[kind]] || document.hasFocus())) return;
+    if (!test && (!s.notifications || s.do_not_disturb || !s[NOTIFY_KEYS[kind]])) return;
     const id = s.notify_screen.startsWith('id:') ? s.notify_screen.slice(3) : null;
     const m = id && monitorById(id);
     const g = gameActive();
-    bridge.showNotification(m ? m.device : null, g ? g.handle : null, s.notify_pos, { kind, title, text: text || '', seconds: opts.seconds || s.notify_seconds, size: s.notify_size || 100, id: opts.id || null, timer: opts.timer !== false })
+    bridge.showNotification(m ? m.device : null, g ? g.handle : null, s.notify_pos, { kind, title, text: text || '', seconds: opts.seconds || s.notify_seconds, size: s.notify_size || 100, id: opts.id || null, timer: opts.timer !== false, unless_in_front: !test })
       .catch((e) => { if (test) toast(String(e), 'error'); });
   }
 
